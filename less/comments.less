@@ -1,0 +1,14 @@
+@comment-grid-columns: 50;
+.comment-offset-1 {
+    margin-left: percentage((1 / @comment-grid-columns));
+}
+
+.comment-well {
+    .well();
+    margin-bottom: 0px;
+}
+
+.comment-well.warning {
+    background-color: @state-warning-bg;
+    border-color: @state-warning-border;
+}

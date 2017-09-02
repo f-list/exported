@@ -1,0 +1,40 @@
+@import "../variables/dark.less";
+
+.nav-tabs > li > a:hover {
+    background-color: @gray-darker;
+}
+
+.modal .nav-tabs > li.active > a {
+    background-color: @gray-dark;
+}
+
+.message-own {
+    background-color: @gray-darker;
+}
+
+// Apply variables to theme.
+@import "../theme_base_chat.less";
+
+* {
+    &::-webkit-scrollbar-track {
+        box-shadow: inset 0 0 8px @panel-default-border;
+        border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.8);
+        background-color: @gray-dark;
+        &:hover {
+            background-color: @gray;
+        }
+
+        &:active {
+            background-color: @gray-light;
+        }
+    }
+}

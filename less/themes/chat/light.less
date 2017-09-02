@@ -1,0 +1,36 @@
+@import "../variables/light.less";
+
+.message-own {
+    background-color: @gray-lighter;
+}
+
+.whiteText {
+    text-shadow: 1px 1px @gray;
+}
+
+// Apply variables to theme.
+@import "../theme_base_chat.less";
+
+* {
+    &::-webkit-scrollbar-track {
+        box-shadow: inset 0 0 8px @gray-light;
+        border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.8);
+        background-color: @gray-lighter;
+        &:hover {
+            background-color: @gray-light;
+        }
+
+        &:active {
+            background-color: @gray;
+        }
+    }
+}

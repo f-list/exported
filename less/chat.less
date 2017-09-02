@@ -1,0 +1,193 @@
+@import "~bootstrap/less/variables.less";
+
+.bg-solid-text {
+    background: @text-background-color
+}
+
+.link-preview {
+    background: @text-background-color;
+    border-top-right-radius: 2px;
+    bottom: 0;
+    left: 0;
+    max-width: 40%;
+    overflow-x: hidden;
+    padding: 0.2em 0.5em;
+    font-size: 12px;
+    position: fixed;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    z-index: 100000;
+
+    &.right {
+        left: auto;
+        right: 0;
+        border-top-left-radius: 2px;
+        border-top-right-radius: 0;
+    }
+}
+
+.has-new {
+    background-color: @state-danger-bg !important;
+}
+
+.overlay-disable {
+    position: absolute;
+    opacity: 0.8;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+    background: #ddd;
+    color: #000;
+}
+
+.sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: @body-bg;
+    z-index: 10;
+
+    .body {
+        display: none;
+    }
+
+    .expander {
+        display: block;
+        position: absolute;
+        padding: 5px 6px;
+        border-color: @btn-default-border;
+        border-top-right-radius: 0;
+        border-top-left-radius: 0;
+        @media(min-width: @screen-sm-min) {
+            .name {
+                display: none;
+            }
+
+            &:hover .name {
+                display: inline;
+            }
+        }
+    }
+
+    &.sidebar-left {
+        border-right: solid 1px @panel-default-border;
+        left: 0;
+
+        .expander {
+            transform: rotate(270deg) translate3d(0, 0, 0);
+            transform-origin: 100% 0;
+            right: 0;
+        }
+    }
+
+    &.sidebar-right {
+        border-left: solid 1px @panel-default-border;
+        right: 0;
+
+        .expander {
+            transform: rotate(90deg) translate3d(0, 0, 0);
+            transform-origin: 0 0;
+        }
+    }
+}
+
+.sidebar-fixed() {
+    position: static;
+    .body {
+        display: block;
+    }
+    .expander {
+        display: none;
+    }
+}
+
+.chat-text-box {
+    min-height: initial !important;
+    max-height: 250px;
+    resize: none;
+}
+
+.border-top {
+    border-top: solid 1px @panel-default-border;
+}
+
+.message {
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.message-block {
+    padding: 1px 0;
+    &:not(:last-child) {
+        border-bottom: solid 1px @panel-default-border;
+    }
+}
+
+.message-warn {
+    background-color: @state-danger-bg;
+    color: @state-danger-text;
+}
+
+.messages-both {
+    .message-ad {
+        background-color: @state-info-bg;
+    }
+}
+
+.message-event {
+    color: @gray-light;
+}
+
+.message-highlight {
+    background-color: @state-success-bg;
+}
+
+.message-action .bbcode {
+    font-style: italic;
+    i, em {
+        font-style: normal;
+    }
+}
+
+.last-read {
+    border-bottom: solid 2px @state-success-bg !important;
+}
+
+.fa.active {
+    color: @brand-success;
+}
+
+.gender-shemale {
+    color: #CC66FF;
+}
+
+.gender-herm {
+    color: #9B30FF;
+}
+
+.gender-none {
+    color: @gray;
+}
+
+.gender-female {
+    color: #FF6699;
+}
+
+.gender-male {
+    color: #6699FF;
+}
+
+.gender-male-herm {
+    color: #007FFF;
+}
+
+.gender-transgender {
+    color: #EE8822;
+}
+
+.gender-cunt-boy {
+    color: #00CC66;
+}

@@ -1,0 +1,46 @@
+{
+    "name": "fchat",
+    "version": "3.0.0",
+    "author": "The F-List Team",
+    "description": "F-List.net Chat Client",
+    "main": "main.js",
+    "license": "MIT",
+    "dependencies": {
+        "keytar": "^4.0.4",
+        "spellchecker": "^3.4.3"
+    },
+    "devDependencies": {
+        "electron": "^1.8.0",
+        "electron-builder": "^19.33.0",
+        "electron-log": "^2.2.9",
+        "electron-updater": "^2.8.9",
+        "extract-text-webpack-plugin": "^3.0.0"
+    },
+    "scripts": {
+        "build": "../node_modules/.bin/webpack",
+        "build:dist": "../node_modules/.bin/webpack --env production",
+        "watch": "../node_modules/.bin/webpack --watch",
+        "start": "electron app"
+    },
+    "build": {
+        "appId": "net.f-list.f-chat",
+        "productName": "F-Chat",
+        "files": [
+            "*",
+            "sounds",
+            "themes",
+            "!**/*.map",
+            "!node_modules/",
+            "node_modules/**/*.node"
+        ],
+        "asar": false,
+        "linux": {
+            "category": "Network"
+        },
+        "publish": {
+            "provider": "generic",
+            "url": "https://toys.in.newtsin.space/chat-updater",
+            "channel": "latest"
+        }
+    }
+}

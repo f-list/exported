@@ -1,0 +1,7 @@
+node_modules/
+/electron/app
+/electron/dist
+/cordova/platforms
+/cordova/plugins
+/cordova/www
+*.vue.ts

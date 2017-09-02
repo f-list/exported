@@ -1,0 +1,15 @@
+{
+  "name": "fchat",
+  "version": "0.1.29",
+  "author": "The F-List Team",
+  "description": "F-List.net Chat Client",
+  "main": "main.js",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^1.8.0"
+  },
+  "dependencies": {
+    "keytar": "^4.0.4",
+    "spellchecker": "^3.4.3"
+  }
+}
