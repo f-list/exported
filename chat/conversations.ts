@@ -7,6 +7,7 @@ import {Channel, Character, Connection, Conversation as Interfaces} from './inte
 import l from './localize';
 import {CommandContext, isCommand, parse as parseCommand} from './slash_commands';
 import MessageType = Interfaces.Message.Type;
+
 function createMessage(this: void, type: MessageType, sender: Character, text: string, time?: Date): Message {
     if(type === MessageType.Message && text.match(/^\/me\b/) !== null) {
         type = MessageType.Action;
@@ -179,7 +180,7 @@ class PrivateConversation extends Conversation implements Interfaces.PrivateConv
         core.connection.send('PRI', {recipient: this.name, message: this.enteredText});
         const message = createMessage(MessageType.Message, core.characters.ownCharacter, this.enteredText);
         this.safeAddMessage(message);
-        core.logs.logMessage(this, message);
+        if(core.state.settings.logMessages) this.logPromise.then(() => core.logs.logMessage(this, message));
         this.enteredText = '';
     }
 
@@ -205,7 +206,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
         this.chat.unshift(...this.both.filter((x) => x.type !== MessageType.Ad));
         this.ads.unshift(...this.both.filter((x) => x.type === MessageType.Ad));
         this.lastRead = this.messages[this.messages.length - 1];
-        this.mode = this.channel.mode;
+        this.messages = this.allMessages.slice(-this.maxMessages);
     });
 
     constructor(readonly channel: Channel) {
@@ -218,6 +219,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
             this.mode = value;
             if(value !== 'both') this.isSendingAds = value === 'ads';
         });
+        this.mode = this.channel.mode;
     }
 
     get maxMessageLength(): number {
@@ -552,7 +554,8 @@ export default function(this: void): Interfaces.State {
     });
     connection.onMessage('HLO', (data, time) => addEventMessage(new EventMessage(data.message, time)));
     connection.onMessage('BRO', (data, time) => {
-        const text = l('events.broadcast', `[user]${data.character}[/user]`, decodeHTML(data.message.substr(data.character.length + 23)));
+        const text = data.character === undefined ? decodeHTML(data.message) :
+            l('events.broadcast', `[user]${data.character}[/user]`, decodeHTML(data.message.substr(data.character.length + 23)));
         addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('CIU', (data, time) => {

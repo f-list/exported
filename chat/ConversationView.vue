@@ -42,7 +42,7 @@
                     </li>
                 </ul>
             </div>
-            <div style="z-index:5; position:absolute; left:0; right:32px; max-height:60%; overflow:auto;"
+            <div style="z-index:5;position:absolute;left:0;right:0;max-height:60%;overflow:auto"
                 :style="'display:' + (descriptionExpanded ? 'block' : 'none')" class="bg-solid-text">
                 <bbcode :text="conversation.channel.description"></bbcode>
             </div>
@@ -53,21 +53,18 @@
         </div>
         <div class="border-top messages" :class="'messages-' + conversation.mode" style="flex:1;overflow:auto;margin-top:2px"
             ref="messages" @scroll="onMessagesScroll">
-            <template v-if="!isConsoleTab">
-                <message-view v-for="message in conversation.messages" :message="message" :channel="conversation.channel"
-                    :classes="message == conversation.lastRead ? 'last-read' : ''" :key="message.id">
+            <template v-for="message in conversation.messages">
+                <message-view :message="message" :channel="conversation.channel" :key="message.id"
+                    :classes="message == conversation.lastRead ? 'last-read' : ''">
                 </message-view>
-            </template>
-            <template v-else>
-                <div v-for="message in conversation.messages" :key="message.id">
-                    <message-view :message="message"></message-view>
-                    <span v-if="message.sfc && message.sfc.action == 'report'">
-                        <a :href="'https://www.f-list.net/fchat/getLog.php?log=' + message.sfc.logid">{{l('events.report.viewLog')}}</a>
-                        <span v-show="!message.sfc.confirmed">
-                            | <a href="#" @click.prevent="acceptReport(message.sfc)">{{l('events.report.confirm')}}</a>
-                        </span>
+                <span v-if="message.sfc && message.sfc.action == 'report'" :key="message.id">
+                    <a :href="'https://www.f-list.net/fchat/getLog.php?log=' + message.sfc.logid"
+                        v-if="message.sfc.logid">{{l('events.report.viewLog')}}</a>
+                    <span v-else>{{l('events.report.noLog')}}</span>
+                    <span v-show="!message.sfc.confirmed">
+                        | <a href="#" @click.prevent="acceptReport(message.sfc)">{{l('events.report.confirm')}}</a>
                     </span>
-                </div>
+                </span>
             </template>
         </div>
         <div>
@@ -185,8 +182,8 @@
         }
 
         onMessagesScroll(): void {
-            const messageView = <HTMLElement>this.$refs['messages'];
-            if(messageView.scrollTop < 50) this.conversation.loadMore();
+            const messageView = <HTMLElement | undefined>this.$refs['messages'];
+            if(messageView !== undefined && messageView.scrollTop < 50) this.conversation.loadMore();
         }
 
         @Watch('conversation.errorText')

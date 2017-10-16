@@ -69,7 +69,7 @@
         character: Character | null = null;
         position = {left: '', top: ''};
         characterImage: string | null = null;
-        touchTimer: number;
+        touchTimer: number | undefined;
         channel: Channel | null = null;
         memo = '';
         memoId: number;
@@ -145,8 +145,7 @@
         }
 
         handleEvent(e: MouseEvent | TouchEvent): void {
-            if(e.type === 'touchend') return clearTimeout(this.touchTimer);
-            const touch = e instanceof TouchEvent ? e.touches[0] : e;
+            const touch = e instanceof TouchEvent ? e.changedTouches[0] : e;
             let node = <Node & {character?: Character, channel?: Channel}>touch.target;
             while(node !== document.body) {
                 if(node.character !== undefined || node.parentNode === null) break;
@@ -158,18 +157,32 @@
             }
             switch(e.type) {
                 case 'click':
-                    this.character = node.character;
-                    if(core.state.settings.clickOpensMessage) this.openConversation(true);
-                    else window.open(this.profileLink);
-                    this.showContextMenu = false;
+                    this.onClick(node.character);
                     break;
                 case 'touchstart':
-                    this.touchTimer = window.setTimeout(() => this.openMenu(touch, node.character!, node.channel), 500);
+                    this.touchTimer = window.setTimeout(() => {
+                        this.openMenu(touch, node.character!, node.channel);
+                        this.touchTimer = undefined;
+                    }, 500);
+                    break;
+                case 'touchend':
+                    if(this.touchTimer !== undefined) {
+                        clearTimeout(this.touchTimer);
+                        this.touchTimer = undefined;
+                        this.onClick(node.character);
+                    }
                     break;
                 case 'contextmenu':
                     this.openMenu(touch, node.character, node.channel);
             }
             e.preventDefault();
+        }
+
+        private onClick(character: Character): void {
+            this.character = character;
+            if(core.state.settings.clickOpensMessage) this.openConversation(true);
+            else window.open(this.profileLink);
+            this.showContextMenu = false;
         }
 
         private openMenu(touch: MouseEvent | Touch, character: Character, channel: Channel | undefined): void {

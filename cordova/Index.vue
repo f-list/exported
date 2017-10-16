@@ -51,10 +51,11 @@
     import Vue from 'vue';
     import Component from 'vue-class-component';
     import Chat from '../chat/Chat.vue';
-    import Connection from '../chat/connection';
     import core, {init as initCore} from '../chat/core';
     import l from '../chat/localize';
+    import Socket from '../chat/WebSocket';
     import Modal from '../components/Modal.vue';
+    import Connection from '../fchat/connection';
     import {GeneralSettings, getGeneralSettings, Logs, setGeneralSettings, SettingsStore} from './filesystem';
     import Notifications from './notifications';
 
@@ -91,18 +92,23 @@
             this.loggingIn = true;
             try {
                 const data = <{ticket?: string, error: string, characters: string[], default_character: string}>
-                    (await Axios.post('https://www.f-list.net/json/getApiTicket.php',
-                    qs.stringify({account: this.settings!.account, password: this.settings!.password, no_friends: true, no_bookmarks: true})
-                )).data;
+                    (await Axios.post('https://www.f-list.net/json/getApiTicket.php', qs.stringify(
+                        {account: this.settings!.account, password: this.settings!.password, no_friends: true, no_bookmarks: true})
+                    )).data;
                 if(data.error !== '') {
                     this.error = data.error;
                     return;
                 }
                 if(this.saveLogin)
                     await setGeneralSettings(this.settings!);
-                const connection = new Connection(this.settings!.host, this.settings!.account, this.getTicket.bind(this));
-                connection.onEvent('connected', () => Raven.setUserContext({username: core.connection.character}));
-                connection.onEvent('closed', () => Raven.setUserContext());
+                Socket.host = this.settings!.host;
+                const connection = new Connection(Socket, this.settings!.account, this.getTicket.bind(this));
+                connection.onEvent('connected', () => {
+                    Raven.setUserContext({username: core.connection.character});
+                });
+                connection.onEvent('closed', () => {
+                    Raven.setUserContext();
+                });
                 initCore(connection, Logs, SettingsStore, Notifications);
                 this.characters = data.characters.sort();
                 this.defaultCharacter = data.default_character;

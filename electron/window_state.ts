@@ -23,8 +23,8 @@ function mapToScreen(state: SavedWindowState): SavedWindowState {
         x /= primaryDisplay.scaleFactor;
         y /= primaryDisplay.scaleFactor;
     }
-    state.x = x > 0 ? x : undefined;
-    state.y = y > 0 ? y : undefined;
+    state.x = x !== 0 ? x : undefined;
+    state.y = y !== 0 ? y : undefined;
     return state;
 }
 

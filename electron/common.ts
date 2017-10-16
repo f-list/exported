@@ -8,7 +8,9 @@ export function mkdir(dir: string): void {
         if(!(e instanceof Error)) throw e;
         switch((<Error & {code: string}>e).code) {
             case 'ENOENT':
-                mkdir(path.dirname(dir));
+                const dirname = path.dirname(dir);
+                if(dirname === dir) throw e;
+                mkdir(dirname);
                 mkdir(dir);
                 break;
             default:

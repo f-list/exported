@@ -77,7 +77,11 @@ export default class Connection implements Interfaces.Connection {
             data.ticket = this.ticket = await this.ticketProvider();
             res = <{error: string}>(await queryApi(endpoint, data)).data;
         }
-        if(res.error !== '') throw new Error(res.error);
+        if(res.error !== '') {
+            const error = new Error(res.error);
+            (<Error & {request: true}>error).request = true;
+            throw error;
+        }
         return res;
     }
 

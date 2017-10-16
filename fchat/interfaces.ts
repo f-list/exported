@@ -55,7 +55,7 @@ export namespace Connection {
     export type ServerCommands = {
         ADL: {ops: ReadonlyArray<string>},
         AOP: {character: string},
-        BRO: {message: string, character: string},
+        BRO: {message: string, character?: string},
         CBU: {operator: string, channel: string, character: string},
         CDS: {channel: string, description: string},
         CHA: {channels: ReadonlyArray<{name: string, mode: Channel.Mode, characters: number}>},

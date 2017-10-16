@@ -169,6 +169,12 @@
                         core.connection.send('STA', {status: 'idle', statusmsg: ownCharacter.statusText});
                     }, core.state.settings.idleTimer * 60000);
             };
+            core.connection.onEvent('closed', () => {
+                if(idleTimer !== undefined) {
+                    window.clearTimeout(idleTimer);
+                    idleTimer = undefined;
+                }
+            });
         }
 
         logOut(): void {

@@ -67,7 +67,10 @@ module.exports = function(env) {
     }));
     if(dist) {
         config.devtool = 'source-map';
-        config.plugins.push(new UglifyPlugin({sourceMap: true}));
+        config.plugins.push(
+            new UglifyPlugin({sourceMap: true}),
+            new webpack.LoaderOptionsPlugin({minimize: true})
+        );
     }
     return config;
 };

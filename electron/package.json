@@ -39,7 +39,7 @@
         },
         "publish": {
             "provider": "generic",
-            "url": "https://toys.in.newtsin.space/chat-updater",
+            "url": "https://client.f-list.net/",
             "channel": "latest"
         }
     }

@@ -2,7 +2,113 @@
 @import "~bootstrap/less/variables.less";
 @import "../../flist_variables.less";
 
+@gray-base: #080810;
+@gray-darker:            lighten(@gray-base, 15%);
+@gray-dark:              lighten(@gray-base, 25%);
+@gray:                   lighten(@gray-base, 55%);
+@gray-light:             lighten(@gray-base, 76.7%);
+@gray-lighter:           lighten(@gray-base, 93.5%);
 
-// Update variables here.
-// @body-bg:   #00ff00;
+// @body-bg: #262626;
+@body-bg: darken(@text-background-color-disabled, 3%);
+@text-color: @gray-lighter;
+@text-color-disabled: @gray;
+@link-color: darken(@gray-lighter, 15%);
+
+@brand-warning: #c26c00;
+@brand-danger: #930300;
+@brand-success: #009900;
+@brand-info: #0447af;
+@brand-primary: @brand-info;
+
+@state-info-bg: darken(@brand-info, 15%);
+@state-info-text: lighten(@brand-info, 30%);
+@state-success-bg: darken(@brand-success, 15%);
+@state-success-text: lighten(@brand-success, 30%);
+@state-warning-bg: darken(@brand-warning, 15%);
+@state-warning-text: lighten(@brand-warning, 30%);
+@state-danger-bg: darken(@brand-danger, 15%);
+@state-danger-text: lighten(@brand-danger, 30%);
+
+@text-background-color: @gray-dark;
+@text-background-color-disabled: @gray-darker;
+@border-color: lighten(spin(@text-background-color, -10), 15%);
+@border-color-active: lighten(spin(@text-background-color, -10), 25%);
+@border-color-disabled: darken(spin(@text-background-color-disabled, -10), 8%);
+
+@hover-bg: lighten(@gray-dark, 15%);
+
+
 @hr-border: @text-color;
+
+@panel-bg: @text-background-color;
+@panel-default-heading-bg: @gray;
+@panel-default-border: @border-color;
+
+@input-color: @gray-light;
+@input-bg: @text-background-color;
+@input-bg-disabled: @text-background-color-disabled;
+@input-border: @border-color;
+@input-border-focus: @gray;
+
+@dropdown-bg: @text-background-color;
+@dropdown-color: @text-color;
+@dropdown-link-color: @link-color;
+@dropdown-link-hover-color: @gray-dark;
+@dropdown-link-hover-bg: @gray-light;
+
+@navbar-default-bg: @text-background-color;
+@navbar-default-color: @text-color;
+@navbar-default-link-color: @link-color;
+@navbar-default-link-hover-color: @link-hover-color;
+
+@nav-link-hover-bg: @gray-light;
+@nav-link-hover-color: @gray-dark;
+
+@nav-tabs-border-color: @border-color;
+@nav-tabs-link-hover-border-color: @border-color;
+@nav-tabs-active-link-hover-bg: @body-bg;
+@nav-tabs-active-link-hover-color: @text-color;
+@nav-tabs-active-link-hover-border-color: @border-color;
+
+@component-active-color: @gray-dark;
+@component-active-bg: @gray-light;
+
+@list-group-bg: @gray-darker;
+@list-group-border: @gray-dark;
+@list-group-link-color: @text-color;
+@list-group-hover-bg: @gray-dark;
+
+@btn-default-bg: @text-background-color;
+@btn-default-color: @text-color;
+@btn-default-border: @border-color;
+
+@pagination-bg: @text-background-color;
+@pagination-color: @text-color;
+@pagination-border: @border-color;
+@pagination-disabled-bg: @text-background-color-disabled;
+@pagination-disabled-color: @text-color-disabled;
+@pagination-disabled-border: @border-color-disabled;
+@pagination-active-bg: @gray;
+@pagination-active-color: @gray-lighter;
+@pagination-active-border: @border-color-active;
+
+@modal-content-bg: @text-background-color;
+@modal-footer-border-color: lighten(spin(@modal-content-bg, -10), 15%);
+@modal-header-border-color: @modal-footer-border-color;
+
+@badge-color: @gray-darker;
+
+@close-color: saturate(@text-color, 10%);
+@close-text-shadow: 0 1px 0 @text-color;
+
+@well-bg: @text-background-color;
+@well-border: @border-color;
+
+@blockquote-border-color: @border-color-active;
+
+@collapse-border: desaturate(@well-border, 20%);
+@collapse-header-bg: desaturate(@well-bg, 20%);
+
+@white-color: @text-color;
+@purple-color: @gray-light;

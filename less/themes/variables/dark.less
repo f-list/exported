@@ -2,23 +2,22 @@
 @import "~bootstrap/less/variables.less";
 @import "../../flist_variables.less";
 
-@gray-base: #080810;
-@gray-darker:            lighten(@gray-base, 15%);
-@gray-dark:              lighten(@gray-base, 25%);
+@gray-base: #000000;
+@gray-darker:            lighten(@gray-base, 4%);
+@gray-dark:              lighten(@gray-base, 20%);
 @gray:                   lighten(@gray-base, 55%);
-@gray-light:             lighten(@gray-base, 76.7%);
-@gray-lighter:           lighten(@gray-base, 93.5%);
+@gray-light:             lighten(@gray-base, 85%);
+@gray-lighter:           lighten(@gray-base, 95%);
 
-// @body-bg: #262626;
-@body-bg: darken(@text-background-color-disabled, 3%);
+@body-bg: @gray-darker;
 @text-color: @gray-lighter;
 @text-color-disabled: @gray;
 @link-color: darken(@gray-lighter, 15%);
 
-@brand-warning: #c26c00;
-@brand-danger: #930300;
-@brand-success: #009900;
-@brand-info: #0447af;
+@brand-warning: #a50;
+@brand-danger: #800;
+@brand-success: #080;
+@brand-info: #13b;
 @brand-primary: @brand-info;
 
 @state-info-bg: darken(@brand-info, 15%);

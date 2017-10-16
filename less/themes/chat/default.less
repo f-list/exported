@@ -1,11 +1,15 @@
 @import "../variables/default.less";
 
-.message-own {
-    background-color: @gray-lighter;
+.nav-tabs > li > a:hover {
+    background-color: @gray-darker;
 }
 
-.whiteText {
-    text-shadow: 1px 1px @gray;
+.modal .nav-tabs > li.active > a {
+    background-color: @gray-dark;
+}
+
+.message-own {
+    background-color: @gray-darker;
 }
 
 // Apply variables to theme.
@@ -13,7 +17,7 @@
 
 * {
     &::-webkit-scrollbar-track {
-        box-shadow: inset 0 0 8px @gray;
+        box-shadow: inset 0 0 8px @panel-default-border;
         border-radius: 10px;
     }
 
@@ -24,13 +28,13 @@
     &::-webkit-scrollbar-thumb {
         border-radius: 10px;
         box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.8);
-        background-color: @gray-lighter;
+        background-color: @gray-dark;
         &:hover {
-            background-color: @gray-light;
+            background-color: @gray;
         }
 
         &:active {
-            background-color: @gray;
+            background-color: @gray-light;
         }
     }
 }

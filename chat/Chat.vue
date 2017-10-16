@@ -84,7 +84,12 @@
 
         connect(): void {
             this.connecting = true;
-            core.connection.connect(this.selectedCharacter);
+            try {
+                core.connection.connect(this.selectedCharacter);
+            } catch(e) {
+                if(e.request !== undefined) this.error = l('login.connectError'); //catch axios network errors
+                else throw e;
+            }
         }
     }
 </script>

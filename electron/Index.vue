@@ -88,10 +88,12 @@
         {label: l('action.open'), click: () => mainWindow!.show()},
         {
             label: l('action.quit'),
+            role: 'quit',
             click: () => {
                 isClosing = true;
                 mainWindow!.close();
                 mainWindow = undefined;
+                electron.remote.app.quit();
             }
         }
     ];
@@ -100,7 +102,7 @@
     let isClosing = false;
     let mainWindow: Electron.BrowserWindow | undefined = electron.remote.getCurrentWindow(); //TODO
     //tslint:disable-next-line:no-require-imports
-    const tray = new electron.remote.Tray(path.join(__dirname, <string>require('./build/icon.png')));
+    const tray = new electron.remote.Tray(path.join(__dirname, <string>require('./build/tray.png')));
     tray.setToolTip(l('title'));
     tray.on('click', (_) => mainWindow!.show());
     tray.setContextMenu(trayMenu);
@@ -199,13 +201,7 @@
                 },
                 {type: 'separator'},
                 {role: 'minimize'},
-                {
-                    label: l('action.quit'),
-                    click(): void {
-                        isClosing = true;
-                        mainWindow!.close();
-                    }
-                }
+                {role: 'quit'}
             ];
             electron.remote.Menu.setApplicationMenu(electron.remote.Menu.buildFromTemplate(appMenu));
 

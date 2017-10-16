@@ -38,7 +38,7 @@ import {init as fsInit} from './filesystem';
 import Index from './Index.vue';
 
 if(process.env.NODE_ENV === 'production') {
-    Raven.config('https://af3e6032460e418cb794b1799e536f37@sentry.newtsin.space/2', {
+    Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
         release: `android-${require('./package.json').version}`, //tslint:disable-line:no-require-imports no-unsafe-any
         dataCallback: (data: {culprit: string, exception: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
             data.culprit = `~${data.culprit.substr(data.culprit.lastIndexOf('/'))}`;

@@ -34,11 +34,13 @@ import 'bootstrap/js/modal.js';
 import * as electron from 'electron';
 import * as Raven from 'raven-js';
 import Vue from 'vue';
+import {getKey} from '../chat/common';
+import l from '../chat/localize';
 import VueRaven from '../chat/vue-raven';
 import Index from './Index.vue';
 
 if(process.env.NODE_ENV === 'production') {
-    Raven.config('https://af3e6032460e418cb794b1799e536f37@sentry.newtsin.space/2', {
+    Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
         release: electron.remote.app.getVersion(),
         dataCallback(data: {culprit: string, exception: {values: {stacktrace: {frames: {filename: string}[]}}[]}}): void {
             data.culprit = `~${data.culprit.substr(data.culprit.lastIndexOf('/'))}`;
@@ -52,6 +54,15 @@ if(process.env.NODE_ENV === 'production') {
     (<Window & {onunhandledrejection(e: PromiseRejectionEvent): void}>window).onunhandledrejection = (e: PromiseRejectionEvent) => {
         Raven.captureException(<Error>e.reason);
     };
+
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+        if(e.ctrlKey && e.shiftKey && getKey(e) === 'I')
+            electron.remote.getCurrentWebContents().toggleDevTools();
+    });
+    electron.remote.getCurrentWebContents().on('devtools-opened', () => {
+        console.log(`%c${l('consoleWarning.head')}`, 'background: red; color: yellow; font-size: 30pt');
+        console.log(`%c${l('consoleWarning.body')}`, 'font-size: 16pt; color:red');
+    });
 }
 
 //tslint:disable-next-line:no-unused-expression
@@ -60,8 +71,3 @@ new Index({
 });
 
 electron.ipcRenderer.on('focus', (_: Event, message: boolean) => message ? window.focus() : window.blur());
-
-document.addEventListener('keydown', (e: KeyboardEvent) => {
-    if(e.which === 123)
-        electron.remote.getCurrentWebContents().toggleDevTools();
-});

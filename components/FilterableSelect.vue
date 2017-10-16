@@ -106,5 +106,10 @@
             display: flex;
             text-align: left
         }
+
+        input[type=checkbox] {
+            vertical-align: text-bottom;
+            margin-right: 5px;
+        }
     }
 </style>

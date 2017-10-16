@@ -73,7 +73,7 @@ export function errorToString(e: any): string {
 //tslint:enable
 
 export async function requestNotificationsPermission(): Promise<void> {
-    if(<object | undefined>Notification !== undefined) await Notification.requestPermission();
+    if((<Window & {Notification: Notification | undefined}>window).Notification !== undefined) await Notification.requestPermission();
 }
 
 let messageId = 0;
@@ -84,6 +84,7 @@ export class Message implements Conversation.ChatMessage {
 
     constructor(readonly type: Conversation.Message.Type, readonly sender: Character, readonly text: string,
                 readonly time: Date = new Date()) {
+        if(Conversation.Message.Type[type] === undefined) throw new Error('Unknown type'); /*tslint:disable-line*/ //TODO debug code
     }
 }
 

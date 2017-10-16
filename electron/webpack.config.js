@@ -85,9 +85,8 @@ module.exports = function(env) {
         config.devtool = 'source-map';
         config.plugins.push(
             new UglifyPlugin({sourceMap: true}),
-            new webpack.DefinePlugin({
-                'process.env.NODE_ENV': JSON.stringify('production')
-            })
+            new webpack.DefinePlugin({'process.env.NODE_ENV': JSON.stringify('production')}),
+            new webpack.LoaderOptionsPlugin({minimize: true})
         );
     } else {
         //config.devtool = 'cheap-module-eval-source-map';

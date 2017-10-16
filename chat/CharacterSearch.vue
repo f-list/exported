@@ -12,10 +12,15 @@
             </filterable-select>
             <div v-show="!data.kinks.length" class="alert alert-warning">{{l('characterSearch.kinkNotice')}}</div>
         </div>
-        <div v-else-if="results">
-            <h5>{{l('characterSearch.results')}}</h5>
-            <div v-for="character in results">
-                <user :character="character"></user>
+        <div v-else-if="results" class="results">
+            <h4>{{l('characterSearch.results')}}</h4>
+            <div v-for="character in results" :key="character.name" :class="'status-' + character.status">
+                <template v-if="character.status === 'looking'" v-once>
+                    <img :src="characterImage(character.name)" v-if="showAvatars"/>
+                    <user :character="character" :showStatus="true"></user>
+                    <bbcode :text="character.statusText"></bbcode>
+                </template>
+                <user v-else :character="character" :showStatus="true" v-once></user>
             </div>
         </div>
     </modal>
@@ -27,6 +32,8 @@
     import CustomDialog from '../components/custom_dialog';
     import FilterableSelect from '../components/FilterableSelect.vue';
     import Modal from '../components/Modal.vue';
+    import {BBCodeView} from './bbcode';
+    import {characterImage} from './common';
     import core from './core';
     import {Character, Connection} from './interfaces';
     import l from './localize';
@@ -41,8 +48,16 @@
 
     type Kink = {id: number, name: string, description: string};
 
+    function sort(x: Character, y: Character): number {
+        if(x.status === 'looking' && y.status !== 'looking') return -1;
+        if(x.status !== 'looking' && y.status === 'looking') return 1;
+        if(x.name < y.name) return -1;
+        if(x.name > y.name) return 1;
+        return 0;
+    }
+
     @Component({
-        components: {modal: Modal, user: UserView, 'filterable-select': FilterableSelect}
+        components: {modal: Modal, user: UserView, 'filterable-select': FilterableSelect, bbcode: BBCodeView}
     })
     export default class CharacterSearch extends CustomDialog {
         //tslint:disable:no-null-keyword
@@ -50,6 +65,7 @@
         kinksFilter = '';
         error = '';
         results: Character[] | null = null;
+        characterImage = characterImage;
         options: {
             kinks: Kink[]
             genders: string[]
@@ -82,7 +98,6 @@
                 roles: options.listitems.filter((x) => x.name === 'subdom').map((x) => x.value),
                 positions: options.listitems.filter((x) => x.name === 'position').map((x) => x.value)
             };
-            this.$nextTick(() => (<Modal>this.$children[0]).fixDropdowns());
         }
 
         mounted(): void {
@@ -98,13 +113,18 @@
                         this.error = l('characterSearch.error.tooManyResults');
                 }
             });
-            core.connection.onMessage('FKS', (data) => this.results = data.characters.map((x: string) => core.characters.get(x)));
+            core.connection.onMessage('FKS', (data) => this.results = data.characters.map((x: string) => core.characters.get(x)).sort(sort));
+            (<Modal>this.$children[0]).fixDropdowns();
         }
 
         filterKink(filter: RegExp, kink: Kink): boolean {
             if(this.data.kinks.length >= 5)
                 return this.data.kinks.indexOf(kink) !== -1;
             return filter.test(kink.name);
+        }
+
+        get showAvatars(): boolean {
+            return core.state.settings.showAvatars;
         }
 
         submit(): void {
@@ -122,8 +142,25 @@
     }
 </script>
 
-<style>
-    .character-search .dropdown {
-        margin-bottom: 10px;
+<style lang="less">
+    .character-search {
+        .dropdown {
+            margin-bottom: 10px;
+        }
+
+        .results {
+            .user-view {
+                display: block;
+            }
+            & > .status-looking {
+                margin-bottom: 5px;
+                min-height: 50px;
+            }
+            img {
+                float: left;
+                margin-right: 5px;
+                width: 50px;
+            }
+        }
     }
 </style>
