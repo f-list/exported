@@ -75,6 +75,7 @@ module.exports = function(env) {
     const themes = fs.readdirSync(themesDir);
     const cssOptions = {use: [{loader: 'css-loader', options: {minimize: dist}}, 'less-loader']};
     for(const theme of themes) {
+        if(!theme.endsWith('.less')) continue;
         const absPath = path.join(themesDir, theme);
         config.entry.chat.push(absPath);
         const plugin = new ExtractTextPlugin('themes/' + theme.slice(0, -5) + '.css');
