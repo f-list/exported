@@ -60,6 +60,13 @@ export default class Connection implements Interfaces.Connection {
         socket.onError((error: Error) => {
             for(const handler of this.errorHandlers) handler(error);
         });
+        return new Promise<void>((resolve) => {
+            const handler = () => {
+                resolve();
+                this.offEvent('connected', handler);
+            };
+            this.onEvent('connected', handler);
+        });
     }
 
     close(): void {

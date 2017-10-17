@@ -30,10 +30,9 @@ export function getStatusIcon(status: Character.Status): string {
 //tslint:disable-next-line:variable-name
 const UserView = Vue.extend({
     functional: true,
-    render(this: Vue, createElement: CreateElement, context?: RenderContext): VNode {
+    render(this: void | Vue, createElement: CreateElement, context?: RenderContext): VNode {
         const props = <{character: Character, channel?: Channel, showStatus?: true}>(
-            /*tslint:disable-next-line:no-unsafe-any*///false positive
-            context !== undefined && context.props !== undefined ? context.props : this.$options.propsData);
+            context !== undefined ? context.props : (<Vue>this).$options.propsData);
         const character = props.character;
         let rankIcon;
         if(character.isChatOp) rankIcon = 'fa-diamond';

@@ -10,7 +10,7 @@
                 <div class="col-sm-10">
                     <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
                         buttonClass="form-control" :placeholder="l('filter')">
-                        <template scope="s">{{s.option && ((s.option.id[0] == '#' ? '#' : '') + s.option.name)}}</template>
+                        <template slot-scope="s">{{s.option && ((s.option.id[0] == '#' ? '#' : '') + s.option.name)}}</template>
                     </filterable-select>
                 </div>
             </div>

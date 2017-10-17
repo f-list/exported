@@ -51,7 +51,7 @@
     import * as qs from 'querystring';
     import * as Raven from 'raven-js';
     import {promisify} from 'util';
-    import Vue from 'vue';
+    import Vue, {ComponentOptions} from 'vue';
     import Component from 'vue-class-component';
     import Chat from '../chat/Chat.vue';
     import {Settings} from '../chat/common';
@@ -137,7 +137,7 @@
         isConnected = false;
         importProgress = 0;
 
-        constructor(options?: Vue.ComponentOptions<Index>) {
+        constructor(options?: ComponentOptions<Index>) {
             super(options);
             let settings = getGeneralSettings();
             if(settings === undefined) {
@@ -270,7 +270,7 @@
                     setGeneralSettings(this.currentSettings);
                 }
                 Socket.host = this.host;
-                const connection = new Connection(Socket, this.account, this.getTicket.bind(this));
+                const connection = new Connection(Socket, this.account, this.password);
                 connection.onEvent('connecting', async() => {
                     if((await this.settings.get('settings')) === undefined && SlimcatImporter.canImportCharacter(core.connection.character)) {
                         if(!confirm(l('importer.importGeneral'))) return this.settings.set('settings', new Settings());
@@ -318,13 +318,6 @@
             }
             preview.textContent = '';
             preview.style.display = 'none';
-        }
-
-        async getTicket(): Promise<string> {
-            const data = <{ticket?: string, error: string}>(await Axios.post('https://www.f-list.net/json/getApiTicket.php', qs.stringify(
-                {account: this.account, password: this.password, no_friends: true, no_bookmarks: true, no_characters: true}))).data;
-            if(data.ticket !== undefined) return data.ticket;
-            throw new Error(data.error);
         }
 
         get styling(): string {

@@ -211,7 +211,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
 
     constructor(readonly channel: Channel) {
         super(`#${channel.id.replace(/[^\w- ]/gi, '')}`, state.pinned.channels.indexOf(channel.id) !== -1);
-        core.watch(function(): Channel.Mode | undefined {
+        core.watch<Channel.Mode | undefined>(function(): Channel.Mode | undefined {
             const c = this.channels.getChannel(channel.id);
             return c !== undefined ? c.mode : undefined;
         }, (value) => {

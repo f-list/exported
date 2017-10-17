@@ -11,7 +11,7 @@ import UserView from './user_view';
 
 export const BBCodeView: Component = {
     functional: true,
-    render(this: Vue, createElement: CreateElement, context: RenderContext): VNode {
+    render(createElement: CreateElement, context: RenderContext): VNode {
         /*tslint:disable:no-unsafe-any*///because we're not actually supposed to do any of this
         context.data.hook = {
             insert(): void {

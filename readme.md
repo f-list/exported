@@ -5,14 +5,14 @@ All necessary files to build F-Chat 3.0 as an Electron, Cordova or web applicati
 ## Setting up a Dev Environment
  - Clone the repo
  - Install [Yarn](https://yarnpkg.com/en/docs/install)
- - Change into the cloned directory and run `yarn install`.
- - To build native Node assets, you will need to install Python 2.7 and the Visual C++ 2015 Build tools. [More information can be found in the node-gyp docs.](https://github.com/nodejs/node-gyp#installation)
+ - Change into the cloned directory and run `yarn install`. If you only want to make a custom theme, you do not need to do this!
  - IntelliJ IDEA is recommended for development.
  
 ## Building for Electron
+ - To build native Node assets, you will need to install Python 2.7 and the Visual C++ 2015 Build tools. [More information can be found in the node-gyp docs.](https://github.com/nodejs/node-gyp#installation)
  - Change into the `electron` directory.
  - Run `yarn install` and then `yarn build`/`yarn watch` to build assets. They are placed into the `app` directory.
- - You will probably need to rebuild the native dependencies (`spellchecker` and `keytar´) for electron. To do so, run `npm rebuild {NAME} --target={ELECTRON_VERSION} --arch=x64 --dist-url=https://atom.io/download/electron`. [See the electron documentation for more info.](https://github.com/electron/electron/blob/master/docs/tutorial/using-native-node-modules.md)
+ - You will probably need to rebuild the native dependencies (`spellchecker` and `keytar`) for electron. To do so, run `npm rebuild {NAME} --target={ELECTRON_VERSION} --arch=x64 --dist-url=https://atom.io/download/electron`. [See the electron documentation for more info.](https://github.com/electron/electron/blob/master/docs/tutorial/using-native-node-modules.md)
  - Run `yarn start` to start the app in debug mode. Use `Ctrl+Shift+I` to open the Chromium debugger.
 
 ### Packaging
@@ -28,6 +28,12 @@ See https://electron.atom.io/docs/tutorial/application-distribution/
  - Run `cordova requirements` to see whether all requirements for building are installed.
  - Run `yarn build`/`yarn watch` to build assets. They are placed into the `www` directory.
  - Run `cordova build`. For Android, the generated APK is now in `platforms/android/build/outputs/apk`.
+
+## Building a custom theme
+See [the wiki](https://wiki.f-list.net/F-Chat_3.0/Themes) for instructions on how to create a custom theme.
+ - Change into the `less/themes/chat` directory.
+ - Run `yarn install`.
+ - Run `yarn build {name}.less {name}.css`.
 
 ## Dependencies
 Note: Adding *and upgrading* dependencies should only be done with prior consideration and subsequent testing.

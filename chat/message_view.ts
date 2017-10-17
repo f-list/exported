@@ -1,4 +1,4 @@
-import Vue, {Component, CreateElement, RenderContext, VNode, VNodeChildren} from 'vue';
+import {Component, CreateElement, RenderContext, VNode, VNodeChildren} from 'vue';
 import {BBCodeView} from './bbcode';
 import {formatTime} from './common';
 import core from './core';
@@ -20,7 +20,7 @@ const userPostfix: {[key: number]: string | undefined} = {
 //tslint:disable-next-line:variable-name
 const MessageView: Component = {
     functional: true,
-    render(this: Vue, createElement: CreateElement, context: RenderContext): VNode {
+    render(createElement: CreateElement, context: RenderContext): VNode {
         /*tslint:disable:no-unsafe-any*///context.props is any
         const message: Conversation.Message = context.props.message;
         const children: (VNode | string | VNodeChildren)[] = [`[${formatTime(message.time)}] `];

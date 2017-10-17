@@ -102,7 +102,7 @@
                 if(this.saveLogin)
                     await setGeneralSettings(this.settings!);
                 Socket.host = this.settings!.host;
-                const connection = new Connection(Socket, this.settings!.account, this.getTicket.bind(this));
+                const connection = new Connection(Socket, this.settings!.account, this.settings!.password);
                 connection.onEvent('connected', () => {
                     Raven.setUserContext({username: core.connection.character});
                 });
@@ -118,18 +118,6 @@
             } finally {
                 this.loggingIn = false;
             }
-        }
-
-        async getTicket(): Promise<string> {
-            const data = <{ticket?: string, error: string}>(await Axios.post('https://www.f-list.net/json/getApiTicket.php', qs.stringify({
-                account: this.settings!.account,
-                password: this.settings!.password,
-                no_friends: true,
-                no_bookmarks: true,
-                no_characters: true
-            }))).data;
-            if(data.ticket !== undefined) return data.ticket;
-            throw new Error(data.error);
         }
     }
 </script>

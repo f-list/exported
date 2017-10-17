@@ -46,7 +46,7 @@ export function importGeneral(): GeneralSettings | undefined {
             return fs.readdirSync(subdir).map((y) => path.join(subdir, y, 'user.config'));
         }));
     dir = getRoamingDir();
-    if(dir !== undefined) files.push(path.join(dir, '!preferences.xml'));
+    if(dir !== undefined && fs.existsSync(dir)) files.push(path.join(dir, '!preferences.xml'));
     let file = '';
     for(let max = 0, i = 0; i < files.length; ++i) {
         const time = fs.statSync(files[i]).mtime.getTime();
@@ -98,7 +98,7 @@ function createMessage(line: string, ownCharacter: string, name: string, isChann
         let endIndex = line.indexOf('[', lineIndex += 6);
         if(endIndex - lineIndex > 20) endIndex = lineIndex + 20;
         sender = line.substring(lineIndex, endIndex);
-        text = line.substring(endIndex + 6);
+        text = line.substring(endIndex + 6, 65535);
     } else {
         if(lineIndex + ownCharacter.length <= line.length && line.substr(lineIndex, ownCharacter.length) === ownCharacter)
             sender = ownCharacter;
@@ -117,7 +117,7 @@ function createMessage(line: string, ownCharacter: string, name: string, isChann
                 lineIndex += 3;
             }
         } else type = Conversation.Message.Type.Action;
-        text = line.substr(lineIndex);
+        text = line.substr(lineIndex, 65535);
     }
     return {type, sender: {name: sender}, text, time: addMinutes(date, h * 60 + m)};
 }

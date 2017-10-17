@@ -1,5 +1,4 @@
-import Vue from 'vue';
-import {WatchHandler} from 'vue/types/options';
+import Vue, {WatchHandler} from 'vue';
 import BBCodeParser from './bbcode';
 import {Settings as SettingsImpl} from './common';
 import {Channel, Character, Connection, Conversation, Logs, Notifications, Settings, State as StateInterface} from './interfaces';
@@ -60,7 +59,7 @@ const data = {
         Vue.set(vue, module, subState);
         data[module] = subState;
     },
-    watch<T>(getter: (this: VueState) => T, callback: WatchHandler<VueState, T>): void {
+    watch<T>(getter: (this: VueState) => T, callback: WatchHandler<T>): void {
         vue.$watch(getter, callback);
     },
     async reloadSettings(): Promise<void> {
@@ -98,7 +97,7 @@ const core = <{
     register(module: 'channels', state: Channel.State): void
     register(module: 'characters', state: Character.State): void
     reloadSettings(): void
-    watch<T>(getter: (this: VueState) => T, callback: WatchHandler<VueState, T>): void
+    watch<T>(getter: (this: VueState) => T, callback: WatchHandler<T>): void
 }><any>data; /*tslint:disable-line:no-any*///hack
 
 export default core;
