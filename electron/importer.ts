@@ -98,7 +98,7 @@ function createMessage(line: string, ownCharacter: string, name: string, isChann
         let endIndex = line.indexOf('[', lineIndex += 6);
         if(endIndex - lineIndex > 20) endIndex = lineIndex + 20;
         sender = line.substring(lineIndex, endIndex);
-        text = line.substring(endIndex + 6, 65535);
+        text = line.substring(endIndex + 6, 50000);
     } else {
         if(lineIndex + ownCharacter.length <= line.length && line.substr(lineIndex, ownCharacter.length) === ownCharacter)
             sender = ownCharacter;
@@ -117,7 +117,7 @@ function createMessage(line: string, ownCharacter: string, name: string, isChann
                 lineIndex += 3;
             }
         } else type = Conversation.Message.Type.Action;
-        text = line.substr(lineIndex, 65535);
+        text = line.substr(lineIndex, 50000);
     }
     return {type, sender: {name: sender}, text, time: addMinutes(date, h * 60 + m)};
 }

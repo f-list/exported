@@ -27,7 +27,7 @@ export class GeneralSettings {
     account = '';
     password = '';
     host = 'wss://chat.f-list.net:9799';
-    theme = 'dark';
+    theme = 'default';
 }
 
 type Index = {[key: string]: {name: string, index: {[key: number]: number | undefined}} | undefined};
@@ -99,12 +99,13 @@ function serializeMessage(message: Conversation.Message): Blob {
     dv.setUint8(5, senderLength);
     const textLength = getByteLength(message.text);
     dv.setUint16(6, textLength);
-    return new Blob([buffer, name, message.text, String.fromCharCode(senderLength + textLength + 10)]);
+    const length = senderLength + textLength + 8;
+    return new Blob([buffer, name, message.text, String.fromCharCode(length >> 255), String.fromCharCode(length % 255)]);
 }
 
 function deserializeMessage(buffer: ArrayBuffer): {message: Conversation.Message, end: number} {
     const dv = new DataView(buffer, 0, 8);
-    const time = dv.getUint32(0);
+    const time = dv.getUint32(0) * 1000;
     const type = dv.getUint8(4);
     const senderLength = dv.getUint8(5);
     const messageLength = dv.getUint16(6);
@@ -183,7 +184,7 @@ export class Logs implements Logging.Persistent {
         let messages = new Array<Conversation.Message>(count);
         let pos = file.size;
         while(pos > 0 && count > 0) {
-            const length = new DataView(await readAsArrayBuffer(file)).getUint16(0);
+            const length = new DataView(await readAsArrayBuffer(file.slice(pos - 2, pos))).getUint16(0);
             pos = pos - length - 2;
             messages[--count] = deserializeMessage(await readAsArrayBuffer(file.slice(pos, pos + length))).message;
         }

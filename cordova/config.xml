@@ -6,6 +6,7 @@
     </description>
     <author email="maya@f-list.net" href="https://www.f-list.net">The F-list Team</author>
     <content src="index.html" />
+    <icon src="../electron/build/icon.png" />
     <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />

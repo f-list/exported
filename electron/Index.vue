@@ -88,7 +88,6 @@
         {label: l('action.open'), click: () => mainWindow!.show()},
         {
             label: l('action.quit'),
-            role: 'quit',
             click: () => {
                 isClosing = true;
                 mainWindow!.close();
@@ -201,7 +200,13 @@
                 },
                 {type: 'separator'},
                 {role: 'minimize'},
-                {role: 'quit'}
+                process.platform === 'darwin' ? {role: 'quit'} : {
+                    label: l('action.quit'),
+                    click(): void {
+                        isClosing = true;
+                        mainWindow!.close();
+                    }
+                }
             ];
             electron.remote.Menu.setApplicationMenu(electron.remote.Menu.buildFromTemplate(appMenu));
 
@@ -220,6 +225,9 @@
                                 electron.ipcRenderer.send('install-update');
                             }
                         }
+                    }, {
+                        label: l('help.changelog'),
+                        click: () => electron.shell.openExternal('https://wiki.f-list.net/F-Chat_3.0#Changelog')
                     }])
                 }));
                 electron.remote.Menu.setApplicationMenu(menu);

@@ -439,19 +439,33 @@ export default function(this: void): Interfaces.State {
         for(const item of state.pinned.private) state.getPrivate(core.characters.get(item));
         queuedJoin(state.pinned.channels.slice());
     });
-    core.channels.onEvent((type, channel) => {
+    core.channels.onEvent((type, channel, member) => {
         const key = channel.id.toLowerCase();
-        if(type === 'join') {
-            const conv = new ChannelConversation(channel);
-            state.channelMap[key] = conv;
-            state.channelConversations.push(conv);
-            state.addRecent(conv);
-        } else {
+        if(type === 'join')
+            if(member === undefined) {
+                const conv = new ChannelConversation(channel);
+                state.channelMap[key] = conv;
+                state.channelConversations.push(conv);
+                state.addRecent(conv);
+            } else {
+                const conv = state.channelMap[channel.id]!;
+                if(conv.settings.joinMessages === Interfaces.Setting.False || conv.settings.joinMessages === Interfaces.Setting.Default &&
+                    !core.state.settings.joinMessages) return;
+                const text = l('events.channelJoin', `[user]${member.character.name}[/user]`);
+                conv.addMessage(new EventMessage(text));
+            }
+        else if(member === undefined) {
             const conv = state.channelMap[key]!;
             state.channelConversations.splice(state.channelConversations.indexOf(conv), 1);
             delete state.channelMap[key];
             state.savePinned();
             if(state.selectedConversation === conv) state.show(state.consoleTab);
+        } else {
+            const conv = state.channelMap[channel.id]!;
+            if(conv.settings.joinMessages === Interfaces.Setting.False || conv.settings.joinMessages === Interfaces.Setting.Default &&
+                !core.state.settings.joinMessages) return;
+            const text = l('events.channelLeave', `[user]${member.character.name}[/user]`);
+            conv.addMessage(new EventMessage(text));
         }
     });
 
@@ -469,14 +483,10 @@ export default function(this: void): Interfaces.State {
         const message = createMessage(MessageType.Message, char, decodeHTML(data.message), time);
         conversation.addMessage(message);
 
-        let words: string[];
-        if(conversation.settings.highlight !== Interfaces.Setting.Default) {
-            words = conversation.settings.highlightWords.slice();
-            if(conversation.settings.highlight === Interfaces.Setting.True) words.push(core.connection.character);
-        } else {
-            words = core.state.settings.highlightWords.slice();
-            if(core.state.settings.highlight) words.push(core.connection.character);
-        }
+        const words = conversation.settings.highlightWords.slice();
+        if(conversation.settings.defaultHighlights) words.push(...core.state.settings.highlightWords);
+        if(conversation.settings.highlight === Interfaces.Setting.Default && core.state.settings.highlight ||
+            conversation.settings.highlight === Interfaces.Setting.True) words.push(core.connection.character);
         //tslint:disable-next-line:no-null-keyword
         const results = words.length > 0 ? message.text.match(new RegExp(`\\b(${words.join('|')})\\b`, 'i')) : null;
         if(results !== null) {
@@ -523,7 +533,7 @@ export default function(this: void): Interfaces.State {
         const message = new EventMessage(l('events.login', `[user]${data.identity}[/user]`), time);
         if(isOfInterest(core.characters.get(data.identity))) addEventMessage(message);
         const conv = state.privateMap[data.identity.toLowerCase()];
-        if(conv !== undefined && core.state.settings.eventMessages && conv !== state.selectedConversation) conv.addMessage(message);
+        if(conv !== undefined && (!core.state.settings.eventMessages || conv !== state.selectedConversation)) conv.addMessage(message);
     });
     connection.onMessage('FLN', (data, time) => {
         const message = new EventMessage(l('events.logout', `[user]${data.character}[/user]`), time);
@@ -531,7 +541,7 @@ export default function(this: void): Interfaces.State {
         const conv = state.privateMap[data.character.toLowerCase()];
         if(conv === undefined) return;
         conv.typingStatus = 'clear';
-        if(core.state.settings.eventMessages && conv !== state.selectedConversation) conv.addMessage(message);
+        if(!core.state.settings.eventMessages || conv !== state.selectedConversation) conv.addMessage(message);
     });
     connection.onMessage('TPN', (data) => {
         const conv = state.privateMap[data.character.toLowerCase()];
@@ -659,22 +669,6 @@ export default function(this: void): Interfaces.State {
     connection.onMessage('SYS', (data, time) => {
         state.selectedConversation.infoText = data.message;
         addEventMessage(new EventMessage(data.message, time));
-    });
-    connection.onMessage('JCH', (data, time) => {
-        if(data.character.identity === core.connection.character) return;
-        const conv = state.channelMap[data.channel.toLowerCase()]!;
-        if(conv.settings.joinMessages === Interfaces.Setting.False || conv.settings.joinMessages === Interfaces.Setting.Default &&
-            !core.state.settings.joinMessages) return;
-        const text = l('events.channelJoin', `[user]${data.character.identity}[/user]`);
-        conv.addMessage(new EventMessage(text, time));
-    });
-    connection.onMessage('LCH', (data, time) => {
-        if(data.character === core.connection.character) return;
-        const conv = state.channelMap[data.channel.toLowerCase()]!;
-        if(conv.settings.joinMessages === Interfaces.Setting.False || conv.settings.joinMessages === Interfaces.Setting.Default &&
-            !core.state.settings.joinMessages) return;
-        const text = l('events.channelLeave', `[user]${data.character}[/user]`);
-        conv.addMessage(new EventMessage(text, time));
     });
     connection.onMessage('ZZZ', (data, time) => {
         state.selectedConversation.infoText = data.message;

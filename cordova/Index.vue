@@ -59,6 +59,10 @@
     import {GeneralSettings, getGeneralSettings, Logs, setGeneralSettings, SettingsStore} from './filesystem';
     import Notifications from './notifications';
 
+    function confirmBack(): void {
+        if(confirm(l('chat.confirmLeave'))) (<Navigator & {app: {exitApp(): void}}>navigator).app.exitApp();
+    }
+
     @Component({
         components: {chat: Chat, modal: Modal}
     })
@@ -105,9 +109,11 @@
                 const connection = new Connection(Socket, this.settings!.account, this.settings!.password);
                 connection.onEvent('connected', () => {
                     Raven.setUserContext({username: core.connection.character});
+                    document.addEventListener('backbutton', confirmBack);
                 });
                 connection.onEvent('closed', () => {
                     Raven.setUserContext();
+                    document.removeEventListener('backbutton', confirmBack);
                 });
                 initCore(connection, Logs, SettingsStore, Notifications);
                 this.characters = data.characters.sort();

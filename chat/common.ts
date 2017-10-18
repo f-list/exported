@@ -46,6 +46,7 @@ export class ConversationSettings implements Conversation.Settings {
     highlight = Conversation.Setting.Default;
     highlightWords: string[] = [];
     joinMessages = Conversation.Setting.Default;
+    defaultHighlights = true;
 }
 
 export function formatTime(this: void | never, date: Date): string {

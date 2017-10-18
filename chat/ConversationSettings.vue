@@ -17,9 +17,14 @@
             </select>
         </div>
         <div class="form-group">
+            <label class="control-label" for="defaultHighlights">
+                <input type="checkbox" id="defaultHighlights" v-model="defaultHighlights"/>
+                {{l('settings.defaultHighlights')}}
+            </label>
+        </div>
+        <div class="form-group">
             <label class="control-label" :for="'highlightWords' + conversation.key">{{l('settings.highlightWords')}}</label>
-            <input :id="'highlightWords' + conversation.key" class="form-control" v-model="highlightWords"
-                   :disabled="highlight == setting.Default"/>
+            <input :id="'highlightWords' + conversation.key" class="form-control" v-model="highlightWords"/>
         </div>
         <div class="form-group">
             <label class="control-label" :for="'joinMessages' + conversation.key">{{l('settings.joinMessages')}}</label>
@@ -52,6 +57,7 @@
         highlight: Conversation.Setting;
         highlightWords: string;
         joinMessages: Conversation.Setting;
+        defaultHighlights: boolean;
 
         constructor() {
             super();
@@ -64,6 +70,7 @@
             this.highlight = settings.highlight;
             this.highlightWords = settings.highlightWords.join(',');
             this.joinMessages = settings.joinMessages;
+            this.defaultHighlights = settings.defaultHighlights;
         };
 
         @Watch('conversation')
@@ -76,7 +83,8 @@
                 notify: this.notify,
                 highlight: this.highlight,
                 highlightWords: this.highlightWords.split(',').filter((x) => x.length),
-                joinMessages: this.joinMessages
+                joinMessages: this.joinMessages,
+                defaultHighlights: this.defaultHighlights
             };
         }
     }

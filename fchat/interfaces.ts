@@ -180,7 +180,7 @@ export namespace Character {
 export type Character = Character.Character;
 
 export namespace Channel {
-    export type EventHandler = (type: 'join' | 'leave', channel: Channel) => void;
+    export type EventHandler = (type: 'join' | 'leave', channel: Channel, member?: Member) => void;
 
     export interface State {
         readonly officialChannels: {readonly [key: string]: (ListItem | undefined)};

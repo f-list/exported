@@ -92,6 +92,7 @@ export namespace Conversation {
         readonly highlight: Setting;
         readonly highlightWords: ReadonlyArray<string>;
         readonly joinMessages: Setting;
+        readonly defaultHighlights: boolean;
     }
 
     export const enum UnreadState { None, Unread, Mention }

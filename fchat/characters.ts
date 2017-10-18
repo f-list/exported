@@ -128,22 +128,28 @@ export default function(this: void, connection: Connection): Interfaces.State {
         char.isChatOp = false;
     });
     connection.onMessage('RTB', (data) => {
+        if(data.type !== 'trackadd' && data.type !== 'trackrem' && data.type !== 'friendadd' && data.type !== 'friendremove') return;
+        const character = state.get(data.name);
         switch(data.type) {
             case 'trackadd':
                 state.bookmarkList.push(data.name);
-                state.get(data.name).isBookmarked = true;
+                character.isBookmarked = true;
+                if(character.status !== 'offline') state.bookmarks.push(character);
                 break;
             case 'trackrem':
                 state.bookmarkList.splice(state.bookmarkList.indexOf(data.name), 1);
-                state.get(data.name).isBookmarked = false;
+                character.isBookmarked = false;
+                if(character.status !== 'offline') state.bookmarks.splice(state.bookmarks.indexOf(character), 1);
                 break;
             case 'friendadd':
                 state.friendList.push(data.name);
-                state.get(data.name).isFriend = true;
+                character.isFriend = true;
+                if(character.status !== 'offline') state.friends.push(character);
                 break;
             case 'friendremove':
                 state.friendList.splice(state.friendList.indexOf(data.name), 1);
-                state.get(data.name).isFriend = false;
+                character.isFriend = false;
+                if(character.status !== 'offline') state.friends.splice(state.friends.indexOf(character), 1);
         }
     });
     return state;

@@ -18,6 +18,10 @@ function sortMember(this: void | never, array: Interfaces.Member[], member: Inte
         if(member.character.isChatOp && !other.character.isChatOp) break;
         if(other.rank > member.rank) continue;
         if(member.rank > other.rank) break;
+        if(other.character.isFriend && !member.character.isFriend) continue;
+        if(member.character.isFriend && !other.character.isFriend) break;
+        if(other.character.isBookmarked && !member.character.isBookmarked) continue;
+        if(member.character.isBookmarked && !other.character.isBookmarked) break;
         if(name < other.character.name) break;
     }
     array.splice(i, 0, member);
@@ -37,6 +41,7 @@ class Channel implements Interfaces.Channel {
     addMember(member: Interfaces.Member): void {
         this.members[member.character.name] = member;
         sortMember(this.sortedMembers, member);
+        for(const handler of state.handlers) handler('join', this, member);
     }
 
     removeMember(name: string): void {
@@ -44,6 +49,7 @@ class Channel implements Interfaces.Channel {
         if(member !== undefined) {
             delete this.members[name];
             this.sortedMembers.splice(this.sortedMembers.indexOf(member), 1);
+            for(const handler of state.handlers) handler('leave', this, member);
         }
     }
 
@@ -105,12 +111,17 @@ let state: State;
 export default function(this: void, connection: Connection, characters: Character.State): Interfaces.State {
     state = new State(connection);
     let getChannelTimer: NodeJS.Timer | undefined;
-    connection.onEvent('connecting', () => {
+    let rejoin: string[] | undefined;
+    connection.onEvent('connecting', (isReconnect) => {
+        if(isReconnect) rejoin = Object.keys(state.joinedMap);
         state.joinedChannels = [];
         state.joinedMap = {};
     });
-    connection.onEvent('connected', (isReconnect) => {
-        if(isReconnect) queuedJoin(Object.keys(state.joinedChannels));
+    connection.onEvent('connected', () => {
+        if(rejoin !== undefined) {
+            queuedJoin(rejoin);
+            rejoin = undefined;
+        }
         const getChannels = () => {
             connection.send('CHA');
             connection.send('ORS');
@@ -152,7 +163,8 @@ export default function(this: void, connection: Connection, characters: Characte
             if(item !== undefined) item.isJoined = true;
         } else {
             const channel = state.getChannel(data.channel)!;
-            channel.addMember(channel.createMember(characters.get(data.character.identity)));
+            const member = channel.createMember(characters.get(data.character.identity));
+            channel.addMember(member);
             if(item !== undefined) item.memberCount++;
         }
     });

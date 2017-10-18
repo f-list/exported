@@ -44,7 +44,8 @@ const UserView = Vue.extend({
             else rankIcon = '';
         } else rankIcon = '';
 
-        const html = (props.showStatus !== undefined ? `<span class="fa fa-fw ${getStatusIcon(character.status)}"></span>` : '') +
+        const html = (props.showStatus !== undefined || character.status === 'crown'
+            ? `<span class="fa fa-fw ${getStatusIcon(character.status)}"></span>` : '') +
             (rankIcon !== '' ? `<span class="fa ${rankIcon}"></span>` : '') + character.name;
         return createElement('span', {
             attrs: {class: `user-view gender-${character.gender !== undefined ? character.gender.toLowerCase() : 'none'}`},

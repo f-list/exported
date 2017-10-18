@@ -148,6 +148,7 @@
             const touch = e instanceof TouchEvent ? e.changedTouches[0] : e;
             let node = <Node & {character?: Character, channel?: Channel}>touch.target;
             while(node !== document.body) {
+                if(e.type === 'touchstart' && node === this.$refs['menu']) return;
                 if(node.character !== undefined || node.parentNode === null) break;
                 node = node.parentNode;
             }

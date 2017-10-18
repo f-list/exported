@@ -31,9 +31,9 @@ See https://electron.atom.io/docs/tutorial/application-distribution/
 
 ## Building a custom theme
 See [the wiki](https://wiki.f-list.net/F-Chat_3.0/Themes) for instructions on how to create a custom theme.
- - Change into the `less/themes/chat` directory.
+ - Change into the `less` directory.
  - Run `yarn install`.
- - Run `yarn build {name}.less {name}.css`.
+ - Run `yarn build themes/chat/{name}.less {name}.css`.
 
 ## Dependencies
 Note: Adding *and upgrading* dependencies should only be done with prior consideration and subsequent testing.

@@ -137,7 +137,7 @@
 
         onKeyDown(e: KeyboardEvent): void {
             const key = getKey(e);
-            if(e.ctrlKey && !e.shiftKey && key !== 'Control') { //tslint:disable-line:curly
+            if((e.metaKey || e.ctrlKey) && !e.shiftKey && key !== 'Control' && key !== 'Meta') { //tslint:disable-line:curly
                 for(const button of this.buttons)
                     if(button.key === key) {
                         e.stopPropagation();

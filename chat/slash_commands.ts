@@ -42,7 +42,7 @@ export function parse(this: void | never, input: string, context: CommandContext
             switch(param.type) {
                 case ParamType.String:
                     if(i === command.params.length - 1) values[i] = args.substr(index);
-                    continue;
+                    break;
                 case ParamType.Enum:
                     if((param.options !== undefined ? param.options : []).indexOf(value) === -1)
                         return l('commands.invalidParam', l(`commands.${name}.param${i}`));
@@ -62,7 +62,7 @@ export function parse(this: void | never, input: string, context: CommandContext
                     const char = core.characters.get(value);
                     if(char.status === 'offline') return l('commands.invalidCharacter');
             }
-            index = endIndex + 1;
+            index = endIndex === -1 ? args.length : endIndex + 1;
         }
     if(command.context !== undefined)
         return function(this: Conversation): void {
