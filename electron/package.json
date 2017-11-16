@@ -3,6 +3,7 @@
     "version": "3.0.0",
     "author": "The F-List Team",
     "description": "F-List.net Chat Client",
+    "homepage": "https://f-list.net",
     "main": "main.js",
     "license": "MIT",
     "dependencies": {
@@ -35,7 +36,9 @@
         ],
         "asar": false,
         "linux": {
-            "category": "Network"
+            "category": "Network",
+            "icon": "build/icons/",
+            "maintainer": "The F-List Team <team@f-list.net>"
         },
         "publish": {
             "provider": "generic",
