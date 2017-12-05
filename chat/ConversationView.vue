@@ -81,7 +81,7 @@
             </div>
             <div style="position:relative; margin-top:5px;">
                 <div class="overlay-disable" v-show="adCountdown">{{adCountdown}}</div>
-                <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" @keypress="onKeyPress" :extras="extraButtons"
+                <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="onInput"
                     classes="form-control chat-text-box" :disabled="adCountdown" ref="textBox" style="position:relative;"
                     :maxlength="conversation.maxMessageLength">
                     <div style="float:right;text-align:right;display:flex;align-items:center">
@@ -197,15 +197,13 @@
             if(oldValue === 'clear') this.keepScroll();
         }
 
-        onKeyPress(e: KeyboardEvent): void {
+        onInput(): void {
             const messageView = <HTMLElement>this.$refs['messages'];
             const oldHeight = messageView.offsetHeight;
-            setTimeout(() => messageView.scrollTop += oldHeight - messageView.offsetHeight);
-            if(getKey(e) === 'Enter') {
-                if(e.shiftKey) return;
-                e.preventDefault();
-                this.conversation.send();
-            }
+            if(messageView.scrollTop + messageView.offsetHeight >= messageView.scrollHeight - 15)
+                setTimeout(() => {
+                    if(oldHeight > messageView.offsetHeight) messageView.scrollTop += oldHeight - messageView.offsetHeight;
+                });
         }
 
         onKeyDown(e: KeyboardEvent): void {
@@ -222,7 +220,7 @@
                         selection.text = editor.text.substring(selection.start, selection.end);
                         if(selection.text.length === 0) return;
                     }
-                    const search = new RegExp(`^${selection.text.replace(/[^\w]/, '\\$&')}`, 'i');
+                    const search = new RegExp(`^${selection.text.replace(/[^\w]/gi, '\\$&')}`, 'i');
                     const c = (<Conversation.PrivateConversation>this.conversation);
                     let options: ReadonlyArray<{character: Character}>;
                     options = Conversation.isChannel(this.conversation) ? this.conversation.channel.sortedMembers :
@@ -246,6 +244,11 @@
                 if(this.tabOptions !== undefined) this.tabOptions = undefined;
                 if(getKey(e) === 'ArrowUp' && this.conversation.enteredText.length === 0)
                     this.conversation.loadLastSent();
+                else if(getKey(e) === 'Enter') {
+                    if(e.shiftKey) return;
+                    e.preventDefault();
+                    this.conversation.send();
+                }
             }
         }
 

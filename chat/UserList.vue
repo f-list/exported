@@ -25,7 +25,7 @@
             </div>
             <div v-if="channel" v-show="memberTabShown" class="users" style="padding: 5px;">
                 <div v-for="member in channel.sortedMembers" :key="member.character.name">
-                    <user :character="member.character" :channel="channel"></user>
+                    <user :character="member.character" :channel="channel" :showStatus="true"></user>
                 </div>
             </div>
         </div>

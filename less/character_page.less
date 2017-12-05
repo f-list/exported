@@ -1,97 +1,198 @@
-// Kinkes
-.subkinkList.closed {
-    display: none;
-}
-.subkink {
-    cursor: pointer;
-}
-
-.characterPageAvatar {
+.character-page-avatar {
     height: 100px;
     width: 100px;
 }
 
 // Inline images
-.imageBlock {
+.inline-image {
     max-width: 100%;
     height: auto;
 }
 
-// Quick Compare
-.stockKink.quickCompareActive {
-    border: 1px solid @quickCompareActiveColor;
-}
-.stockKink.quickCompareFave {
-    background-color: @quickCompareFaveColor;
-}
-.stockKink.quickCompareYes {
-    background-color: @quickCompareYesColor;
-}
-.stockKink.quickCompareMaybe {
-    background-color: @quickCompareMaybeColor;
-}
-.stockKink.quickCompareNo {
-    background-color: @quickCompareNoColor;
+.character-page {
+    .character-name {
+        font-size: @font-size-h3;
+        font-weight: bold;
+    }
+    .character-title {
+        font-size: @font-size-small;
+        font-style: italic;
+    }
+    .edit-link {
+        margin-left: 5px;
+        margin-top: @line-height-base;
+    }
+    .character-links-block {
+        a {
+            cursor: pointer;
+        }
+    }
+    .badges-block,.contact-block,.quick-info-block,.character-list-block {
+        margin-top: 15px;
+    }
 }
 
-// Kink Group Highlighting
-.highlightedKink {
-    font-weight: bolder;
+.badges-block {
+    .character-badge {
+        background-color: @character-badge-bg;
+        border: 1px solid @character-badge-border;
+        border-radius: @border-radius-base;
+        .box-shadow(inset 0 1px 1px rgba(0,0,0,.05));
+
+        &.character-badge-subscription-lifetime {
+            background-color: @character-badge-subscriber-bg;
+            border: 2px dashed @character-badge-subscriber-border;
+            font-weight: bold;
+        }
+    }
+}
+
+.infotags {
+    > .infotag-group {
+        .infotag-title {
+            font-size: @font-size-h4;
+        }
+    }
+}
+
+.infotag {
+    .infotag-label {
+        font-weight: bold;
+    }
+    .infotag-value {
+        .force-word-wrapping();
+    }
+}
+
+.contact-method {
+    .contact-value {
+        .force-word-wrapping();
+        margin-left: 5px;
+    }
+}
+
+.quick-info-block {
+    .quick-info-label {
+        font-weight: bold;
+    }
+}
+
+.character-kinks {
+    margin-top: 15px;
+    > .col-xs-3 {
+        // Fix up padding on columns so they look distinct without being miles apart.
+        padding: 0 5px 0 0;
+    }
+    .kinks-column {
+        padding: 15px;
+        border: 1px solid @well-border;
+        border-radius: @border-radius-base;
+
+        > .kinks-header {
+            font-size: @font-size-h4;
+        }
+    }
+}
+
+.character-kink {
+    .subkink-list {
+        .well();
+        margin-bottom: 0;
+        padding: 5px 15px;
+        cursor: default;
+    }
+
+    .subkink-list.closed {
+        display: none;
+    }
+
+    &.subkink {
+        cursor: pointer;
+    }
+
+    .comparison-active {
+        border: 1px solid @quick-compare-active-border;
+    }
+
+    &.comparison-favorite {
+        .comparison-active();
+        background-color: @quick-compare-favorite-bg;
+    }
+
+    &.comparison-yes {
+        .comparison-active();
+        background-color: @quick-compare-yes-bg;
+    }
+
+    &.comparison-maybe {
+        .comparison-active();
+        background-color: @quick-compare-maybe-bg;
+    }
+
+    &.comparison-no {
+        .comparison-active();
+        background-color: @quick-compare-no-bg;
+    }
+
+    &.highlighted {
+        font-weight: bolder;
+    }
+}
+
+#character-page-sidebar {
+    background-color: @well-bg;
+    height: 100%;
+    margin-top: -20px;
+}
+
+// Character Images
+.character-images {
+    .character-image {
+        .col-xs-2();
+        .img-thumbnail();
+        vertical-align: middle;
+        border: none;
+        display: inline-block;
+        background: transparent;
+        img {
+            .center-block();
+        }
+    }
 }
 
 // Guestbook
-.guestbookPager {
-    display: inline-block;
-    width: 50%;
-}
-
-.characterSubTitle {
-    font-size: @font-size-small;
-    font-style: italic;
-}
-
-.characterPageName {
-    font-size: @font-size-h3;
-    font-weight: bold;
-}
-
-.characterImages {
-    .container-fluid();
-}
-
-.characterPageImage {
-    .col-xs-2();
-    .img-thumbnail();
-    border: none;
-    display: inline-block;
-    img {
-        .center-block();
+.guestbook {
+    .guestbook-pager {
+        display: inline-block;
+        width: 50%;
     }
-}
 
-.guestbook-post {
-    .row();
-}
+    .guestbook-avatar {
+        float: left;
+    }
 
-.guestbook-avatar {
-    width: 50px;
-    float: left;
-}
-
-.guestbook-contents {
-    .well();
-}
-
-.guestbook-contents.deleted {
-    .alert-warning();
-}
-
-.guestbook-reply {
-    .guestbook-body {
-        :before {
-            content: "Reply: ";
+    .guestbook-contents {
+        .well();
+        &.deleted {
+            .alert-warning();
         }
     }
-    .well();
-    .alert-info();
+
+    .guestbook-reply {
+        &:before {
+            content: "Reply ";
+            font-weight: bold;
+        }
+        .reply-message {
+            .well();
+            .alert-info();
+        }
+    }
+}
+
+#character-friends {
+    .character-friend {
+        display: inline-block;
+        margin: 5px;
+    }
 }

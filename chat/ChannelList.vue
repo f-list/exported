@@ -1,5 +1,5 @@
 <template>
-    <modal :buttons="false" :action="l('chat.channels')">
+    <modal :buttons="false" :action="l('chat.channels')" @close="closed">
         <div style="display: flex; flex-direction: column;">
             <ul class="nav nav-tabs">
                 <li role="presentation" :class="{active: !privateTabShown}">
@@ -72,7 +72,7 @@
         applyFilter(list: {[key: string]: Channel.ListItem | undefined}): ReadonlyArray<Channel.ListItem> {
             const channels: Channel.ListItem[] = [];
             if(this.filter.length > 0) {
-                const search = new RegExp(this.filter.replace(/[^\w]/, '\\$&'), 'i');
+                const search = new RegExp(this.filter.replace(/[^\w]/gi, '\\$&'), 'i');
                 //tslint:disable-next-line:forin
                 for(const key in list) {
                     const item = list[key]!;
@@ -87,6 +87,10 @@
         create(): void {
             core.connection.send('CCR', {channel: this.createName});
             this.hide();
+        }
+
+        closed(): void {
+            this.createName = '';
         }
 
         setJoined(channel: ListItem): void {

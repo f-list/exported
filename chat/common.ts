@@ -39,6 +39,7 @@ export class Settings implements ISettings {
     alwaysNotify = false;
     logMessages = true;
     logAds = false;
+    fontSize = 14;
 }
 
 export class ConversationSettings implements Conversation.Settings {
@@ -64,7 +65,7 @@ export function messageToString(this: void | never, msg: Conversation.Message, t
 
 export function getKey(e: KeyboardEvent): string {
     /*tslint:disable-next-line:strict-boolean-expressions no-any*///because of old browsers.
-    return e.key || (<any>e).keyIdentifier;
+    return e.key || (<KeyboardEvent & {keyIdentifier: string}>e).keyIdentifier;
 }
 
 /*tslint:disable:no-any no-unsafe-any*///because errors can be any

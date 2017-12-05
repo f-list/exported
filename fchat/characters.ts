@@ -10,7 +10,7 @@ class Character implements Interfaces.Character {
     isChatOp = false;
     isIgnored = false;
 
-    constructor(readonly name: string) {
+    constructor(public name: string) {
     }
 }
 
@@ -111,6 +111,7 @@ export default function(this: void, connection: Connection): Interfaces.State {
     connection.onMessage('NLN', (data) => {
         const character = state.get(data.identity);
         if(data.identity === connection.character) state.ownCharacter = character;
+        character.name = data.identity;
         character.gender = data.gender;
         state.setStatus(character, data.status, '');
     });

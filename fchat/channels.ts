@@ -113,7 +113,7 @@ export default function(this: void, connection: Connection, characters: Characte
     let getChannelTimer: NodeJS.Timer | undefined;
     let rejoin: string[] | undefined;
     connection.onEvent('connecting', (isReconnect) => {
-        if(isReconnect) rejoin = Object.keys(state.joinedMap);
+        if(isReconnect && rejoin === undefined) rejoin = Object.keys(state.joinedMap);
         state.joinedChannels = [];
         state.joinedMap = {};
     });
@@ -162,14 +162,16 @@ export default function(this: void, connection: Connection, characters: Characte
             state.joinedChannels.push(channel);
             if(item !== undefined) item.isJoined = true;
         } else {
-            const channel = state.getChannel(data.channel)!;
+            const channel = state.getChannel(data.channel);
+            if(channel === undefined) return state.leave(data.channel);
             const member = channel.createMember(characters.get(data.character.identity));
             channel.addMember(member);
             if(item !== undefined) item.memberCount++;
         }
     });
     connection.onMessage('ICH', (data) => {
-        const channel = state.getChannel(data.channel)!;
+        const channel = state.getChannel(data.channel);
+        if(channel === undefined) return state.leave(data.channel);
         channel.mode = data.mode;
         const members: {[key: string]: Interfaces.Member} = {};
         const sorted: Interfaces.Member[] = [];
@@ -185,7 +187,11 @@ export default function(this: void, connection: Connection, characters: Characte
         if(item !== undefined) item.memberCount = data.users.length;
         for(const handler of state.handlers) handler('join', channel);
     });
-    connection.onMessage('CDS', (data) => state.getChannel(data.channel)!.description = decodeHTML(data.description));
+    connection.onMessage('CDS', (data) => {
+        const channel = state.getChannel(data.channel);
+        if(channel === undefined) return state.leave(data.channel);
+        channel.description = decodeHTML(data.description);
+    });
     connection.onMessage('LCH', (data) => {
         const channel = state.getChannel(data.channel);
         if(channel === undefined) return;
@@ -201,7 +207,8 @@ export default function(this: void, connection: Connection, characters: Characte
         }
     });
     connection.onMessage('COA', (data) => {
-        const channel = state.getChannel(data.channel)!;
+        const channel = state.getChannel(data.channel);
+        if(channel === undefined) return state.leave(data.channel);
         channel.opList.push(data.character);
         const member = channel.members[data.character];
         if(member === undefined || member.rank === Interfaces.Rank.Owner) return;
@@ -209,12 +216,14 @@ export default function(this: void, connection: Connection, characters: Characte
         channel.reSortMember(member);
     });
     connection.onMessage('COL', (data) => {
-        const channel = state.getChannel(data.channel)!;
+        const channel = state.getChannel(data.channel);
+        if(channel === undefined) return state.leave(data.channel);
         channel.owner = data.oplist[0];
         channel.opList = data.oplist.slice(1);
     });
     connection.onMessage('COR', (data) => {
-        const channel = state.getChannel(data.channel)!;
+        const channel = state.getChannel(data.channel);
+        if(channel === undefined) return state.leave(data.channel);
         channel.opList.splice(channel.opList.indexOf(data.character), 1);
         const member = channel.members[data.character];
         if(member === undefined || member.rank === Interfaces.Rank.Owner) return;
@@ -222,7 +231,8 @@ export default function(this: void, connection: Connection, characters: Characte
         channel.reSortMember(member);
     });
     connection.onMessage('CSO', (data) => {
-        const channel = state.getChannel(data.channel)!;
+        const channel = state.getChannel(data.channel);
+        if(channel === undefined) return state.leave(data.channel);
         const oldOwner = channel.members[channel.owner];
         if(oldOwner !== undefined) {
             oldOwner.rank = Interfaces.Rank.Member;
@@ -235,7 +245,11 @@ export default function(this: void, connection: Connection, characters: Characte
             channel.reSortMember(newOwner);
         }
     });
-    connection.onMessage('RMO', (data) => state.getChannel(data.channel)!.mode = data.mode);
+    connection.onMessage('RMO', (data) => {
+        const channel = state.getChannel(data.channel);
+        if(channel === undefined) return state.leave(data.channel);
+        channel.mode = data.mode;
+    });
     connection.onMessage('FLN', (data) => {
         for(const key in state.joinedMap)
             state.joinedMap[key]!.removeMember(data.character);

@@ -74,6 +74,7 @@
             core.connection.onError((e) => {
                 this.error = errorToString(e);
                 this.connecting = false;
+                this.connected = false;
             });
         }
 
@@ -85,7 +86,7 @@
         connect(): void {
             this.connecting = true;
             core.connection.connect(this.selectedCharacter).catch((e) => {
-                if(e.request !== undefined) this.error = l('login.connectError'); //catch axios network errors
+                if((<Error & {request?: object}>e).request !== undefined) this.error = l('login.connectError'); //catch axios network errors
                 else throw e;
             });
         }

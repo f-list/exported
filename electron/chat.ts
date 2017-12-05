@@ -29,8 +29,11 @@
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
+import 'bootstrap/js/collapse.js';
 import 'bootstrap/js/dropdown.js';
 import 'bootstrap/js/modal.js';
+import 'bootstrap/js/tab.js';
+import 'bootstrap/js/transition.js';
 import * as electron from 'electron';
 import * as Raven from 'raven-js';
 import Vue from 'vue';

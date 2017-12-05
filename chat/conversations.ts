@@ -148,7 +148,7 @@ class PrivateConversation extends Conversation implements Interfaces.PrivateConv
         this.safeAddMessage(message);
         if(message.type !== Interfaces.Message.Type.Event) {
             if(core.state.settings.logMessages) this.logPromise.then(() => core.logs.logMessage(this, message));
-            if(this.settings.notify !== Interfaces.Setting.False)
+            if(this.settings.notify !== Interfaces.Setting.False && message.sender !== core.characters.ownCharacter)
                 core.notifications.notify(this, message.sender.name, message.text, characterImage(message.sender.name), 'attention');
             if(this !== state.selectedConversation)
                 this.unread = Interfaces.UnreadState.Mention;
@@ -214,7 +214,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
         core.watch<Channel.Mode | undefined>(function(): Channel.Mode | undefined {
             const c = this.channels.getChannel(channel.id);
             return c !== undefined ? c.mode : undefined;
-        }, (value) => {
+        }, (value: Channel.Mode | undefined) => {
             if(value === undefined) return;
             this.mode = value;
             if(value !== 'both') this.isSendingAds = value === 'ads';
@@ -256,9 +256,11 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
     }
 
     addMessage(message: Interfaces.Message): void {
-        if((message.type === MessageType.Message || message.type === MessageType.Ad) && message.text.match(/^\/warn\b/) !== null
-            && (this.channel.members[message.sender.name]!.rank > Channel.Rank.Member || message.sender.isChatOp))
-            message = new Message(MessageType.Warn, message.sender, message.text.substr(6), message.time);
+        if((message.type === MessageType.Message || message.type === MessageType.Ad) && message.text.match(/^\/warn\b/) !== null) {
+            const member = this.channel.members[message.sender.name];
+            if(member !== undefined && member.rank > Channel.Rank.Member || message.sender.isChatOp)
+                message = new Message(MessageType.Warn, message.sender, message.text.substr(6), message.time);
+        }
 
         if(message.type === MessageType.Ad) {
             this.addModeMessage('ads', message);
@@ -365,19 +367,18 @@ class State implements Interfaces.State {
     }
 
     addRecent(conversation: Conversation): void {
-        /*tslint:disable-next-line:no-any*///TS isn't smart enough for this
-        const remove = (predicate: (item: any) => boolean) => {
+        const remove = <T extends Interfaces.RecentConversation>(predicate: (item: T) => boolean) => {
             for(let i = 0; i < this.recent.length; ++i)
-                if(predicate(this.recent[i])) {
+                if(predicate(<T>this.recent[i])) {
                     this.recent.splice(i, 1);
                     break;
                 }
         };
         if(Interfaces.isChannel(conversation)) {
-            remove((c) => c.channel === conversation.channel.id);
+            remove<Interfaces.RecentChannelConversation>((c) => c.channel === conversation.channel.id);
             this.recent.unshift({channel: conversation.channel.id, name: conversation.channel.name});
         } else {
-            remove((c) => c.character === conversation.name);
+            remove<Interfaces.RecentPrivateConversation>((c) => c.character === conversation.name);
             state.recent.unshift({character: conversation.name});
         }
         if(this.recent.length >= 50) this.recent.pop();
@@ -430,7 +431,11 @@ export default function(this: void): Interfaces.State {
     connection.onEvent('connecting', async(isReconnect) => {
         state.channelConversations = [];
         state.channelMap = {};
-        if(!isReconnect) state.consoleTab = new ConsoleConversation();
+        if(!isReconnect) {
+            state.consoleTab = new ConsoleConversation();
+            state.privateConversations = [];
+            state.privateMap = {};
+        } else state.consoleTab.unread = Interfaces.UnreadState.None;
         state.selectedConversation = state.consoleTab;
         await state.reloadSettings();
     });
@@ -440,11 +445,10 @@ export default function(this: void): Interfaces.State {
         queuedJoin(state.pinned.channels.slice());
     });
     core.channels.onEvent((type, channel, member) => {
-        const key = channel.id.toLowerCase();
         if(type === 'join')
             if(member === undefined) {
                 const conv = new ChannelConversation(channel);
-                state.channelMap[key] = conv;
+                state.channelMap[channel.id] = conv;
                 state.channelConversations.push(conv);
                 state.addRecent(conv);
             } else {
@@ -455,9 +459,9 @@ export default function(this: void): Interfaces.State {
                 conv.addMessage(new EventMessage(text));
             }
         else if(member === undefined) {
-            const conv = state.channelMap[key]!;
+            const conv = state.channelMap[channel.id]!;
             state.channelConversations.splice(state.channelConversations.indexOf(conv), 1);
-            delete state.channelMap[key];
+            delete state.channelMap[channel.id];
             state.savePinned();
             if(state.selectedConversation === conv) state.show(state.consoleTab);
         } else {
@@ -479,7 +483,8 @@ export default function(this: void): Interfaces.State {
     connection.onMessage('MSG', (data, time) => {
         const char = core.characters.get(data.character);
         if(char.isIgnored) return;
-        const conversation = state.channelMap[data.channel.toLowerCase()]!;
+        const conversation = state.channelMap[data.channel.toLowerCase()];
+        if(conversation === undefined) return core.channels.leave(data.channel);
         const message = createMessage(MessageType.Message, char, decodeHTML(data.message), time);
         conversation.addMessage(message);
 
@@ -501,7 +506,8 @@ export default function(this: void): Interfaces.State {
     connection.onMessage('LRP', (data, time) => {
         const char = core.characters.get(data.character);
         if(char.isIgnored) return;
-        const conv = state.channelMap[data.channel.toLowerCase()]!;
+        const conv = state.channelMap[data.channel.toLowerCase()];
+        if(conv === undefined) return core.channels.leave(data.channel);
         conv.addMessage(new Message(MessageType.Ad, char, decodeHTML(data.message), time));
     });
     connection.onMessage('RLL', (data, time) => {
@@ -516,7 +522,9 @@ export default function(this: void): Interfaces.State {
         }
         const message = new Message(MessageType.Roll, sender, text, time);
         if('channel' in data) {
-            const conversation = state.channelMap[(<{channel: string}>data).channel.toLowerCase()]!;
+            const channel = (<{channel: string}>data).channel.toLowerCase();
+            const conversation = state.channelMap[channel];
+            if(conversation === undefined) return core.channels.leave(channel);
             conversation.addMessage(message);
             if(data.type === 'bottle' && data.target === core.connection.character)
                 core.notifications.notify(conversation, conversation.name, messageToString(message),
@@ -549,17 +557,23 @@ export default function(this: void): Interfaces.State {
     });
     connection.onMessage('CBU', (data, time) => {
         const text = l('events.ban', data.channel, data.character, data.operator);
-        state.channelMap[data.channel.toLowerCase()]!.infoText = text;
+        const conv = state.channelMap[data.channel.toLowerCase()];
+        if(conv === undefined) return core.channels.leave(data.channel);
+        conv.infoText = text;
         addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('CKU', (data, time) => {
         const text = l('events.kick', data.channel, data.character, data.operator);
-        state.channelMap[data.channel.toLowerCase()]!.infoText = text;
+        const conv = state.channelMap[data.channel.toLowerCase()];
+        if(conv === undefined) return core.channels.leave(data.channel);
+        conv.infoText = text;
         addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('CTU', (data, time) => {
         const text = l('events.timeout', data.channel, data.character, data.operator, data.length.toString());
-        state.channelMap[data.channel.toLowerCase()]!.infoText = text;
+        const conv = state.channelMap[data.channel.toLowerCase()];
+        if(conv === undefined) return core.channels.leave(data.channel);
+        conv.infoText = text;
         addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('HLO', (data, time) => addEventMessage(new EventMessage(data.message, time)));

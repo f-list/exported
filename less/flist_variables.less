@@ -1,3 +1,4 @@
+// BBcode colors
 @red-color: #f00;
 @green-color: #0f0;
 @blue-color: #00f;
@@ -10,16 +11,28 @@
 @pink-color: #faa;
 @gray-color: #cccc;
 @orange-color: #f60;
+@collapse-header-bg: @well-bg;
 @collapse-border: darken(@well-border, 25%);
 
-@quickCompareActiveColor: @black-color;
-@quickCompareFaveColor: @brand-success;
-@quickCompareYesColor: @brand-info;
-@quickCompareMaybeColor: @brand-warning;
-@quickCompareNoColor: @brand-danger;
 
-@characterListSelectedColor: @brand-success;
+// Character page quick kink comparison
+@quick-compare-active-border: @black-color;
+@quick-compare-favorite-bg: @brand-success;
+@quick-compare-yes-bg: @brand-info;
+@quick-compare-maybe-bg: @brand-warning;
+@quick-compare-no-bg: @brand-danger;
 
+// character page badges
+@character-badge-bg: darken(@well-bg, 10%);
+@character-badge-border: darken(@well-border, 10%);
+@character-badge-subscriber-bg: @alert-info-bg;
+@character-badge-subscriber-border: @alert-info-border;
+
+// Character editor
+@character-list-selected-border: @brand-success;
+@character-image-selected-border: @brand-success;
+
+// Notes conversation view
 @note-conversation-you-bg: @alert-info-bg;
 @note-conversation-you-text: @alert-info-text;
 @note-conversation-you-border: @alert-info-border;
@@ -29,7 +42,6 @@
 
 @nav-link-hover-color: @link-color;
 
-@collapse-header-bg: @well-bg;
-
+// General color extensions missing from bootstrap
 @text-background-color: @body-bg;
 @text-background-color-disabled: @gray-lighter;

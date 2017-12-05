@@ -41,6 +41,9 @@
             </div>
         </div>
         <chat v-else :ownCharacters="characters" :defaultCharacter="defaultCharacter" ref="chat"></chat>
+        <modal action="Profile" :buttons="false" ref="profileViewer" dialogClass="profile-viewer">
+            <character-page :authenticated="false" :hideGroups="true" :name="profileName"></character-page>
+        </modal>
     </div>
 </template>
 
@@ -53,9 +56,11 @@
     import Chat from '../chat/Chat.vue';
     import core, {init as initCore} from '../chat/core';
     import l from '../chat/localize';
+    import {init as profileApiInit} from '../chat/profile_api';
     import Socket from '../chat/WebSocket';
     import Modal from '../components/Modal.vue';
     import Connection from '../fchat/connection';
+    import CharacterPage from '../site/character_page/character_page.vue';
     import {GeneralSettings, getGeneralSettings, Logs, setGeneralSettings, SettingsStore} from './filesystem';
     import Notifications from './notifications';
 
@@ -63,8 +68,10 @@
         if(confirm(l('chat.confirmLeave'))) (<Navigator & {app: {exitApp(): void}}>navigator).app.exitApp();
     }
 
+    profileApiInit();
+
     @Component({
-        components: {chat: Chat, modal: Modal}
+        components: {chat: Chat, modal: Modal, characterPage: CharacterPage}
     })
     export default class Index extends Vue {
         //tslint:disable:no-null-keyword
@@ -78,8 +85,19 @@
         l = l;
         settings: GeneralSettings | null = null;
         importProgress = 0;
+        profileName = '';
 
         async created(): Promise<void> {
+            const oldOpen = window.open.bind(window);
+            window.open = (url?: string, target?: string, features?: string, replace?: boolean) => {
+                const profileMatch = url !== undefined ? url.match(/^https?:\/\/(www\.)?f-list.net\/c\/(.+)/) : null;
+                if(profileMatch !== null) {
+                    const profileViewer = <Modal>this.$refs['profileViewer'];
+                    this.profileName = profileMatch[2];
+                    profileViewer.show();
+                    return null;
+                } else return oldOpen(url, target, features, replace);
+            };
             let settings = await getGeneralSettings();
             if(settings === undefined) settings = new GeneralSettings();
             if(settings.account.length > 0) this.saveLogin = true;

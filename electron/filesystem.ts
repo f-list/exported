@@ -1,7 +1,7 @@
+import {addMinutes} from 'date-fns';
 import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import {promisify} from 'util';
 import {Message as MessageImpl} from '../chat/common';
 import core from '../chat/core';
 import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
@@ -10,18 +10,13 @@ import {mkdir} from './common';
 const dayMs = 86400000;
 const baseDir = path.join(electron.remote.app.getPath('userData'), 'data');
 mkdir(baseDir);
-const readFile = promisify(fs.readFile);
-const writeFile = promisify(fs.writeFile);
-const readdir = promisify(fs.readdir);
-const open = promisify(fs.open);
-const fstat = promisify(fs.fstat);
-const read = promisify(fs.read);
 
 const noAssert = process.env.NODE_ENV === 'production';
 
 export class GeneralSettings {
     account = '';
     closeToTray = true;
+    profileViewer = true;
     host = 'wss://chat.f-list.net:9799';
     spellcheckLang: string | undefined = 'en-GB';
     theme = 'default';
@@ -127,7 +122,7 @@ export class Logs implements Logging.Persistent {
                     for(; offset < content.length; offset += 7) {
                         const key = content.readUInt16LE(offset);
                         item.index[key] = item.offsets.length;
-                        item.offsets.push(content.readUIntLE(offset + 2, 5));
+                        item.offsets.push(content.readUIntLE(offset + 2, 5, noAssert));
                     }
                     this.index[file.slice(0, -4).toLowerCase()] = item;
                 }
@@ -139,14 +134,14 @@ export class Logs implements Logging.Persistent {
         if(!fs.existsSync(file)) return [];
         let count = 20;
         let messages = new Array<Conversation.Message>(count);
-        const fd = await open(file, 'r');
-        let pos = (await fstat(fd)).size;
+        const fd = fs.openSync(file, 'r');
+        let pos = fs.fstatSync(fd).size;
         const buffer = Buffer.allocUnsafe(65536);
         while(pos > 0 && count > 0) {
-            await read(fd, buffer, 0, 2, pos - 2);
+            fs.readSync(fd, buffer, 0, 2, pos - 2);
             const length = buffer.readUInt16LE(0);
             pos = pos - length - 2;
-            await read(fd, buffer, 0, length, pos);
+            fs.readSync(fd, buffer, 0, length, pos);
             messages[--count] = deserializeMessage(buffer).message;
         }
         if(count !== 0) messages = messages.slice(count);
@@ -156,9 +151,11 @@ export class Logs implements Logging.Persistent {
     getLogDates(key: string): ReadonlyArray<Date> {
         const entry = this.index[key];
         if(entry === undefined) return [];
-        const dayOffset = new Date().getTimezoneOffset() * 60000;
         const dates = [];
-        for(const date in entry.index) dates.push(new Date(parseInt(date, 10) * dayMs + dayOffset));
+        for(const item in entry.index) { //tslint:disable:forin
+            const date = new Date(parseInt(item, 10) * dayMs);
+            dates.push(addMinutes(date, date.getTimezoneOffset()));
+        }
         return dates;
     }
 
@@ -170,11 +167,11 @@ export class Logs implements Logging.Persistent {
         const buffer = Buffer.allocUnsafe(50100);
         const messages: Conversation.Message[] = [];
         const file = getLogFile(key);
-        const fd = await open(file, 'r');
+        const fd = fs.openSync(file, 'r');
         let pos = index.offsets[dateOffset];
-        const size = dateOffset + 1 < index.offsets.length ? index.offsets[dateOffset + 1] : (await fstat(fd)).size;
+        const size = dateOffset + 1 < index.offsets.length ? index.offsets[dateOffset + 1] : (fs.fstatSync(fd)).size;
         while(pos < size) {
-            await read(fd, buffer, 0, 50100, pos);
+            fs.readSync(fd, buffer, 0, 50100, pos);
             const deserialized = deserializeMessage(buffer);
             messages.push(deserialized.message);
             pos += deserialized.end;
@@ -220,14 +217,14 @@ export class SettingsStore implements Settings.Store {
     async get<K extends keyof Settings.Keys>(key: K, character?: string): Promise<Settings.Keys[K] | undefined> {
         const file = path.join(getSettingsDir(character), key);
         if(!fs.existsSync(file)) return undefined;
-        return <Settings.Keys[K]>JSON.parse(await readFile(file, 'utf8'));
+        return <Settings.Keys[K]>JSON.parse(fs.readFileSync(file, 'utf8'));
     }
 
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
-        return (await readdir(baseDir)).filter((x) => fs.lstatSync(path.join(baseDir, x)).isDirectory());
+        return (fs.readdirSync(baseDir)).filter((x) => fs.lstatSync(path.join(baseDir, x)).isDirectory());
     }
 
     async set<K extends keyof Settings.Keys>(key: K, value: Settings.Keys[K]): Promise<void> {
-        await writeFile(path.join(getSettingsDir(), key), JSON.stringify(value));
+        fs.writeFileSync(path.join(getSettingsDir(), key), JSON.stringify(value));
     }
 }

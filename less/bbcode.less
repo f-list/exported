@@ -75,14 +75,18 @@ span.justifyText {
     text-align: justify;
 }
 
-span.indentText {
+div.indentText {
     padding-left: 3em;
 }
 
-.characterAvatarIcon {
+.character-avatar {
     display: inline;
-    height: 50px;
-    width: 50px;
+    height: 100px;
+    width: 100px;
+    &.icon {
+        height: 50px;
+        width: 50px;
+    }
 }
 
 .collapseHeaderText {
@@ -107,8 +111,8 @@ span.indentText {
 }
 
 .styledText, .bbcode {
+    .force-word-wrapping();
     max-width: 100%;
-    word-wrap: break-word;
     a {
         text-decoration: underline;
         &:hover {

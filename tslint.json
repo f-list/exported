@@ -54,6 +54,7 @@
       true,
       "array"
     ],
+    "await-promise": [true, "AxiosPromise"],
     "comment-format": false,
     "completed-docs": false,
     "curly": [
@@ -62,6 +63,7 @@
     ],
     "cyclomatic-complexity": false,
     "eofline": false,
+    "forin": false,
     "interface-name": false,
     "interface-over-type-literal": false,
     "linebreak-style": false,
@@ -74,12 +76,7 @@
       true,
       "no-public"
     ],
-    "member-ordering": [
-      true,
-      {
-        "order": "fields-first"
-      }
-    ],
+    "member-ordering": false,
     "newline-before-return": false,
     "no-angle-bracket-type-assertion": false,
     "no-bitwise": false,
@@ -89,6 +86,7 @@
     "no-console": false,
     "no-default-export": false,
     "no-floating-promises": [true, "AxiosPromise"],
+    "no-implicit-dependencies": false,
     "no-import-side-effect": [
       true,
       {
@@ -100,7 +98,6 @@
     "no-non-null-assertion": false,
     "no-parameter-properties": false,
     "no-parameter-reassignment": false,
-    //covered by --noImplicitAny
     "no-string-literal": false,
     "no-submodule-imports": [true, "vue", "bootstrap"],
     "no-unused-variable": false,
@@ -137,6 +134,7 @@
       true,
       "never"
     ],
+    "strict-boolean-expressions": [true, "allow-boolean-or-undefined"],
     "switch-default": false,
     "trailing-comma": [
       true,
@@ -168,8 +166,7 @@
       "check-type-operator",
       "check-rest-spread"
     ],
-    "vue-props": true,
-    "no-return-await": true
+    "vue-props": true
   },
   "rulesDirectory": ["./tslint"]
 }

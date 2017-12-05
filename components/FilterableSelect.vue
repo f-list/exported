@@ -85,7 +85,7 @@
         }
 
         get filterRegex(): RegExp {
-            return new RegExp(this.filter.replace(/[^\w]/, '\\$&'), 'i');
+            return new RegExp(this.filter.replace(/[^\w]/gi, '\\$&'), 'i');
         }
     }
 </script>

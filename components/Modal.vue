@@ -7,7 +7,7 @@
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
                     <h4 class="modal-title">{{action}}</h4>
                 </div>
-                <div class="modal-body form-horizontal" style="overflow: auto; display: flex; flex-direction: column">
+                <div class="modal-body" style="overflow: auto; display: flex; flex-direction: column">
                     <slot></slot>
                 </div>
                 <div class="modal-footer" v-if="buttons">

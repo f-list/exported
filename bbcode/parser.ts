@@ -18,10 +18,10 @@ export abstract class BBCodeTag {
     }
 
     //tslint:disable-next-line:no-empty
-    afterClose(_: BBCodeParser, __: HTMLElement, ___: HTMLElement, ____?: string): void {
+    afterClose(_: BBCodeParser, __: HTMLElement, ___: HTMLElement | undefined, ____?: string): void {
     }
 
-    abstract createElement(parser: BBCodeParser, parent: HTMLElement, param: string): HTMLElement;
+    abstract createElement(parser: BBCodeParser, parent: HTMLElement, param: string): HTMLElement  | undefined;
 }
 
 export class BBCodeSimpleTag extends BBCodeTag {
@@ -33,8 +33,8 @@ export class BBCodeSimpleTag extends BBCodeTag {
     createElement(parser: BBCodeParser, parent: HTMLElement, param: string): HTMLElement {
         if(param.length > 0)
             parser.warning('Unexpected parameter');
-        const el = parser.createElement(this.elementName);
-        if(this.classes !== undefined)
+        const el = <HTMLElement>parser.createElement(this.elementName);
+        if(this.classes !== undefined && this.classes.length > 0)
             el.className = this.classes.join(' ');
         parent.appendChild(el);
         /*tslint:disable-next-line:no-unsafe-any*/// false positive
@@ -42,7 +42,7 @@ export class BBCodeSimpleTag extends BBCodeTag {
     }
 }
 
-export type CustomElementCreator = (parser: BBCodeParser, parent: HTMLElement, param: string) => HTMLElement;
+export type CustomElementCreator = (parser: BBCodeParser, parent: HTMLElement, param: string) => HTMLElement | undefined;
 export type CustomCloser = (parser: BBCodeParser, current: HTMLElement, parent: HTMLElement, param: string) => void;
 
 export class BBCodeCustomTag extends BBCodeTag {
@@ -50,7 +50,7 @@ export class BBCodeCustomTag extends BBCodeTag {
         super(tag, tagList);
     }
 
-    createElement(parser: BBCodeParser, parent: HTMLElement, param: string): HTMLElement {
+    createElement(parser: BBCodeParser, parent: HTMLElement, param: string): HTMLElement | undefined {
         return this.customCreator(parser, parent, param);
     }
 
@@ -63,7 +63,7 @@ export class BBCodeCustomTag extends BBCodeTag {
 enum BufferType { Raw, Tag }
 
 class ParserTag {
-    constructor(public tag: string, public param: string, public element: HTMLElement, public parent: HTMLElement,
+    constructor(public tag: string, public param: string, public element: HTMLElement, public parent: HTMLElement | undefined,
                 public line: number, public column: number) {
     }
 
@@ -155,8 +155,7 @@ export class BBCodeParser {
 
         let curType: BufferType = BufferType.Raw;
         // Root tag collects output.
-        const root = this.createElement('span');
-        const rootTag = new ParserTag('<root>', '', root, root, 1, 1);
+        const rootTag = new ParserTag('<root>', '', this.createElement('span'), undefined, 1, 1);
         stack.push(rootTag);
         this._currentTag = rootTag;
         let paramStart = -1;
@@ -207,13 +206,18 @@ export class BBCodeParser {
                                 if(!allowed)
                                     break;
                             }
+                            const tag = this._tags[tagKey]!;
                             if(!allowed) {
                                 ignoreNextClosingTag(tagKey);
                                 quickReset(i);
                                 continue;
                             }
                             const parent = stackTop().element;
-                            const el = this._tags[tagKey]!.createElement(this, parent, param);
+                            const el: HTMLElement | undefined = tag.createElement(this, parent, param);
+                            if(el === undefined) {
+                                quickReset(i);
+                                continue;
+                            }
                             if(!this._tags[tagKey]!.noClosingTag)
                                 stack.push(new ParserTag(tagKey, param, el, parent, this._line, this._column));
                         } else if(ignoreClosing[tagKey] > 0) {

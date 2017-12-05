@@ -48,7 +48,7 @@ export let defaultButtons: ReadonlyArray<EditorButton> = [
         tag: 'color',
         startText: '[color=]',
         icon: 'fa-eyedropper',
-        key: 'q'
+        key: 'd'
     },
     {
         title: 'Superscript (Ctrl+↑)\n\nLifts text above the text baseline. Makes text slightly smaller. Cannot be nested.',

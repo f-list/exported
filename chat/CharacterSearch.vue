@@ -1,5 +1,5 @@
 <template>
-    <modal :action="l('characterSearch.action')" @submit.prevent="submit" :disabled="!data.kinks.length"
+    <modal :action="l('characterSearch.action')" @submit.prevent="submit"
         :buttonText="results ? l('characterSearch.again') : undefined" class="character-search">
         <div v-if="options && !results">
             <div v-show="error" class="alert alert-danger">{{error}}</div>
@@ -10,7 +10,6 @@
             <filterable-select v-for="item in ['genders', 'orientations', 'languages', 'furryprefs', 'roles', 'positions']" :multiple="true"
                 v-model="data[item]" :placeholder="l('filter')" :title="l('characterSearch.' + item)" :options="options[item]" :key="item">
             </filterable-select>
-            <div v-show="!data.kinks.length" class="alert alert-warning">{{l('characterSearch.kinkNotice')}}</div>
         </div>
         <div v-else-if="results" class="results">
             <h4>{{l('characterSearch.results')}}</h4>

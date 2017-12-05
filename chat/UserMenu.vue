@@ -146,19 +146,21 @@
 
         handleEvent(e: MouseEvent | TouchEvent): void {
             const touch = e instanceof TouchEvent ? e.changedTouches[0] : e;
-            let node = <Node & {character?: Character, channel?: Channel}>touch.target;
+            let node = <HTMLElement & {character?: Character, channel?: Channel}>touch.target;
             while(node !== document.body) {
-                if(e.type === 'touchstart' && node === this.$refs['menu']) return;
-                if(node.character !== undefined || node.parentNode === null) break;
-                node = node.parentNode;
+                if(e.type !== 'click' && node === this.$refs['menu']) return;
+                if(node.character !== undefined || node.dataset['character'] !== undefined || node.parentNode === null) break;
+                node = node.parentElement!;
             }
-            if(node.character === undefined) {
-                this.showContextMenu = false;
-                return;
-            }
+            if(node.character === undefined)
+                if(node.dataset['character'] !== undefined) node.character = core.characters.get(node.dataset['character']!);
+                else {
+                    this.showContextMenu = false;
+                    return;
+                }
             switch(e.type) {
                 case 'click':
-                    this.onClick(node.character);
+                    if(node.dataset['character'] === undefined) this.onClick(node.character);
                     break;
                 case 'touchstart':
                     this.touchTimer = window.setTimeout(() => {
@@ -170,7 +172,7 @@
                     if(this.touchTimer !== undefined) {
                         clearTimeout(this.touchTimer);
                         this.touchTimer = undefined;
-                        this.onClick(node.character);
+                        if(node.dataset['character'] === undefined) this.onClick(node.character);
                     }
                     break;
                 case 'contextmenu':

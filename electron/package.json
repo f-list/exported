@@ -1,4 +1,4 @@
-{
+    {
     "name": "fchat",
     "version": "3.0.0",
     "author": "The F-List Team",
@@ -34,6 +34,10 @@
             "node_modules/**/*.node"
         ],
         "asar": false,
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true
+        },
         "linux": {
             "category": "Network"
         },

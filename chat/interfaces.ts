@@ -41,7 +41,9 @@ export namespace Conversation {
         }
     }
 
-    export type RecentConversation = {readonly channel: string, readonly name: string} | {readonly character: string};
+    export type RecentChannelConversation = {readonly channel: string, readonly name: string};
+    export type RecentPrivateConversation = {readonly character: string};
+    export type RecentConversation = RecentChannelConversation | RecentPrivateConversation;
 
     export type TypingStatus = 'typing' | 'paused' | 'clear';
 
@@ -164,6 +166,7 @@ export namespace Settings {
         readonly alwaysNotify: boolean;
         readonly logMessages: boolean;
         readonly logAds: boolean;
+        readonly fontSize: number;
     }
 }
 

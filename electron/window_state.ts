@@ -1,5 +1,5 @@
 import {app, screen} from 'electron';
-import log from 'electron-log';
+import log from 'electron-log'; //tslint:disable-line:match-default-export-name
 import * as fs from 'fs';
 import * as path from 'path';
 

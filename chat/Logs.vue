@@ -70,7 +70,7 @@
 
         get filteredMessages(): ReadonlyArray<Conversation.Message> {
             if(this.filter.length === 0) return this.messages;
-            const filter = new RegExp(this.filter, 'i');
+            const filter = new RegExp(this.filter.replace(/[^\w]/gi, '\\$&'), 'i');
             return this.messages.filter(
                 (x) => filter.test(x.text) || x.type !== Conversation.Message.Type.Event && filter.test(x.sender.name));
         }

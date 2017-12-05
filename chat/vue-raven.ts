@@ -3,6 +3,7 @@ import Vue from 'vue';
 
 /*tslint:disable:no-unsafe-any no-any*///hack
 function formatComponentName(vm: any): string {
+    if(vm === undefined) return 'undefined';
     if(vm.$root === vm) return '<root instance>';
     const name = vm._isVue
         ? vm.$options.name || vm.$options._componentTag

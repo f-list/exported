@@ -21,7 +21,7 @@ export function getStatusIcon(status: Character.Status): string {
         case 'busy':
             return 'fa-cog';
         case 'idle':
-            return 'fa-hourglass';
+            return 'fa-clock-o';
         case 'crown':
             return 'fa-birthday-cake';
     }
@@ -40,7 +40,7 @@ const UserView = Vue.extend({
             const member = props.channel.members[character.name];
             if(member !== undefined)
                 rankIcon = member.rank === Channel.Rank.Owner ? 'fa-asterisk' :
-                    member.rank === Channel.Rank.Op ? (props.channel.id.substr(0, 4) === 'adh-' ? 'fa-at' : 'fa-play') : '';
+                    member.rank === Channel.Rank.Op ? (props.channel.id.substr(0, 4) === 'adh-' ? 'fa-at' : 'fa-star') : '';
             else rankIcon = '';
         } else rankIcon = '';
 

@@ -72,7 +72,7 @@ export default class BBCodeParser extends CoreBBCodeParser {
             const img = parser.createElement('img');
             img.src = characterImage(content);
             img.style.cursor = 'pointer';
-            img.className = 'characterAvatarIcon';
+            img.className = 'character-avatar icon';
             img.title = img.alt = content;
             (<HTMLImageElement & {character: Character}>img).character = core.characters.get(content);
             parent.replaceChild(img, element);
@@ -92,7 +92,7 @@ export default class BBCodeParser extends CoreBBCodeParser {
             const img = parser.createElement('img');
             img.src = `https://static.f-list.net/images/eicon/${content.toLowerCase()}.${extension}`;
             img.title = img.alt = content;
-            img.className = 'characterAvatarIcon';
+            img.className = 'character-avatar icon';
             parent.replaceChild(img, element);
         }, []));
         this.addTag('session', new BBCodeCustomTag('session', (parser, parent) => {

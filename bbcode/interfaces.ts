@@ -1,0 +1,1 @@
+export const enum InlineDisplayMode {DISPLAY_ALL, DISPLAY_SFW, DISPLAY_NONE}

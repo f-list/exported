@@ -31,7 +31,12 @@ export default class Connection implements Interfaces.Connection {
         this.cleanClose = false;
         const isReconnect = this.character === character;
         this.character = character;
-        this.ticket = await this.ticketProvider();
+        try {
+            this.ticket = await this.ticketProvider();
+        } catch(e) {
+            for(const handler of this.errorHandlers) handler(<Error>e);
+            return;
+        }
         await this.invokeHandlers('connecting', isReconnect);
         const socket = this.socket = new this.socketProvider();
         socket.onOpen(() => {
@@ -75,14 +80,14 @@ export default class Connection implements Interfaces.Connection {
         if(this.socket !== undefined) this.socket.close();
     }
 
-    async queryApi(endpoint: string, data?: {account?: string, ticket?: string}): Promise<object> {
+    async queryApi<T = object>(endpoint: string, data?: {account?: string, ticket?: string}): Promise<T> {
         if(data === undefined) data = {};
         data.account = this.account;
         data.ticket = this.ticket;
-        let res = <{error: string}>(await queryApi(endpoint, data)).data;
+        let res = <T & {error: string}>(await queryApi(endpoint, data)).data;
         if(res.error === 'Invalid ticket.' || res.error === 'Your login ticket has expired (five minutes) or no ticket requested.') {
             data.ticket = this.ticket = await this.ticketProvider();
-            res = <{error: string}>(await queryApi(endpoint, data)).data;
+            res = <T & {error: string}>(await queryApi(endpoint, data)).data;
         }
         if(res.error !== '') {
             const error = new Error(res.error);
@@ -109,13 +114,13 @@ export default class Connection implements Interfaces.Connection {
     }
 
     onMessage<K extends keyof Interfaces.ServerCommands>(type: K, handler: Interfaces.CommandHandler<K>): void {
-        let handlers: (Interfaces.CommandHandler<K>[] | undefined) = this.messageHandlers[type];
+        let handlers = <Interfaces.CommandHandler<K>[] | undefined>this.messageHandlers[type];
         if(handlers === undefined) handlers = this.messageHandlers[type] = [];
         handlers.push(handler);
     }
 
     offMessage<K extends keyof Interfaces.ServerCommands>(type: K, handler: Interfaces.CommandHandler<K>): void {
-        const handlers: (Interfaces.CommandHandler<K>[] | undefined) = this.messageHandlers[type];
+        const handlers = <Interfaces.CommandHandler<K>[] | undefined>this.messageHandlers[type];
         if(handlers === undefined) return;
         handlers.splice(handlers.indexOf(handler), 1);
     }
@@ -149,7 +154,7 @@ export default class Connection implements Interfaces.Connection {
                 }
         }
         const time = new Date();
-        const handlers: Interfaces.CommandHandler<T>[] | undefined = this.messageHandlers[type];
+        const handlers = <Interfaces.CommandHandler<T>[] | undefined>this.messageHandlers[type];
         if(handlers !== undefined)
             for(const handler of handlers) handler(data, time);
     }

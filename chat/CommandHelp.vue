@@ -43,7 +43,7 @@
 
         get filteredCommands(): ReadonlyArray<CommandItem> {
             if(this.filter.length === 0) return this.commands;
-            const filter = new RegExp(this.filter.replace(/[^\w]/, '\\$&'), 'i');
+            const filter = new RegExp(this.filter.replace(/[^\w]/gi, '\\$&'), 'i');
             return this.commands.filter((x) => filter.test(x.name));
         }
 
@@ -52,7 +52,8 @@
             //tslint:disable-next-line:forin
             for(const key in commands) {
                 const command = commands[key]!;
-                if(command.documented !== undefined || command.permission !== undefined && (command.permission & permissions) === 0) continue;
+                if(command.documented !== undefined ||
+                    command.permission !== undefined && command.permission > 0 && (command.permission & permissions) === 0) continue;
                 const params = [];
                 let syntax = `/${key} `;
                 if(command.params !== undefined)

@@ -25,7 +25,7 @@
                 <div class="form-group">
                     <label for="save"><input type="checkbox" id="save" v-model="saveLogin"/> {{l('login.save')}}</label>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin:0">
                     <button class="btn btn-primary" @click="login" :disabled="loggingIn">
                         {{l(loggingIn ? 'login.working' : 'login.submit')}}
                     </button>
@@ -39,6 +39,9 @@
             <div class="progress" style="margin-top:5px">
                 <div class="progress-bar" :style="{width: importProgress * 100 + '%'}"></div>
             </div>
+        </modal>
+        <modal action="Profile" :buttons="false" ref="profileViewer" dialogClass="profile-viewer">
+            <character-page :authenticated="false" :hideGroups="true" :name="profileName"></character-page>
         </modal>
     </div>
 </template>
@@ -57,9 +60,11 @@
     import {Settings} from '../chat/common';
     import core, {init as initCore} from '../chat/core';
     import l from '../chat/localize';
+    import {init as profileApiInit} from '../chat/profile_api';
     import Socket from '../chat/WebSocket';
     import Modal from '../components/Modal.vue';
     import Connection from '../fchat/connection';
+    import CharacterPage from '../site/character_page/character_page.vue';
     import {nativeRequire} from './common';
     import {GeneralSettings, getGeneralSettings, Logs, setGeneralSettings, SettingsStore} from './filesystem';
     import * as SlimcatImporter from './importer';
@@ -68,8 +73,8 @@
     import * as spellchecker from './spellchecker';
 
     const webContents = electron.remote.getCurrentWebContents();
-    webContents.on('context-menu', (_, props: Electron.ContextMenuParams & {editFlags: {[key: string]: boolean}}) => {
-        const menuTemplate = createContextMenu(props);
+    webContents.on('context-menu', (_, props) => {
+        const menuTemplate = createContextMenu(<Electron.ContextMenuParams & {editFlags: {[key: string]: boolean}}>props);
         if(props.misspelledWord !== '') {
             const corrections = spellchecker.getCorrections(props.misspelledWord);
             if(corrections.length > 0) {
@@ -99,7 +104,7 @@
     let trayMenu = electron.remote.Menu.buildFromTemplate(defaultTrayMenu);
 
     let isClosing = false;
-    let mainWindow: Electron.BrowserWindow | undefined = electron.remote.getCurrentWindow(); //TODO
+    let mainWindow: Electron.BrowserWindow | undefined = electron.remote.getCurrentWindow();
     //tslint:disable-next-line:no-require-imports
     const tray = new electron.remote.Tray(path.join(__dirname, <string>require('./build/tray.png')));
     tray.setToolTip(l('title'));
@@ -116,8 +121,10 @@
     for(const key in keyStore) keyStore[key] = promisify(<(...args: any[]) => any>keyStore[key].bind(keyStore, 'fchat'));
     //tslint:enable
 
+    profileApiInit();
+
     @Component({
-        components: {chat: Chat, modal: Modal}
+        components: {chat: Chat, modal: Modal, characterPage: CharacterPage}
     })
     export default class Index extends Vue {
         //tslint:disable:no-null-keyword
@@ -135,13 +142,18 @@
         currentSettings: GeneralSettings;
         isConnected = false;
         importProgress = 0;
+        profileName = '';
 
         constructor(options?: ComponentOptions<Index>) {
             super(options);
             let settings = getGeneralSettings();
             if(settings === undefined) {
-                if(SlimcatImporter.canImportGeneral() && confirm(l('importer.importGeneral')))
-                    settings = SlimcatImporter.importGeneral();
+                try {
+                    if(SlimcatImporter.canImportGeneral() && confirm(l('importer.importGeneral')))
+                        settings = SlimcatImporter.importGeneral();
+                } catch {
+                    alert(l('importer.error'));
+                }
                 settings = settings !== undefined ? settings : new GeneralSettings();
             }
             this.account = settings.account;
@@ -187,6 +199,12 @@
                         this.currentSettings.closeToTray = item.checked;
                         setGeneralSettings(this.currentSettings);
                     }
+                }, {
+                    label: l('settings.profileViewer'), type: 'checkbox', checked: this.currentSettings.profileViewer,
+                    click: (item: Electron.MenuItem) => {
+                        this.currentSettings.profileViewer = item.checked;
+                        setGeneralSettings(this.currentSettings);
+                    }
                 },
                 {label: l('settings.spellcheck'), submenu: spellcheckerMenu},
                 {
@@ -200,7 +218,8 @@
                 },
                 {type: 'separator'},
                 {role: 'minimize'},
-                process.platform === 'darwin' ? {role: 'quit'} : {
+                {
+                    accelerator: process.platform === 'darwin' ? 'Cmd+Q' : undefined,
                     label: l('action.quit'),
                     click(): void {
                         isClosing = true;
@@ -231,6 +250,13 @@
                     }])
                 }));
                 electron.remote.Menu.setApplicationMenu(menu);
+            });
+            electron.ipcRenderer.on('open-profile', (_: Event, name: string) => {
+                if(this.currentSettings.profileViewer) {
+                    const profileViewer = <Modal>this.$refs['profileViewer'];
+                    this.profileName = name;
+                    profileViewer.show();
+                } else electron.remote.shell.openExternal(`https://www.f-list.net/c/${name}`);
             });
         }
 
@@ -293,6 +319,7 @@
                     Raven.setUserContext({username: core.connection.character});
                     trayMenu.insert(0, new electron.remote.MenuItem({label: core.connection.character, enabled: false}));
                     trayMenu.insert(1, new electron.remote.MenuItem({type: 'separator'}));
+                    tray.setContextMenu(trayMenu);
                 });
                 connection.onEvent('closed', () => {
                     this.isConnected = false;
@@ -332,7 +359,7 @@
             try {
                 return `<style>${fs.readFileSync(path.join(__dirname, `themes/${this.currentSettings.theme}.css`))}</style>`;
             } catch(e) {
-                if(e.code === 'ENOENT' && this.currentSettings.theme !== 'default') {
+                if((<Error & {code: string}>e).code === 'ENOENT' && this.currentSettings.theme !== 'default') {
                     this.currentSettings.theme = 'default';
                     return this.styling;
                 }

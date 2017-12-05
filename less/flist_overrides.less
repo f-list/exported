@@ -13,7 +13,13 @@ hr {
 
 // Fix weird style where this is overwritten and cannot be styled inside a well.
 .well {
+    // The default of 19 doesn't match any existing elements, which use either 15 or @padding-vertical/horizontal-base
+    padding: 15px;
     blockquote {
         border-color: @blockquote-border-color;
     }
+}
+
+.well-lg {
+    padding: 20px;
 }

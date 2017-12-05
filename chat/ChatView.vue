@@ -1,5 +1,5 @@
 <template>
-    <div style="height:100%; display: flex; position: relative;" @click="$refs['userMenu'].handleEvent($event)"
+    <div style="height:100%; display: flex; position: relative;" id="chatView" @click="$refs['userMenu'].handleEvent($event)"
         @contextmenu="$refs['userMenu'].handleEvent($event)" @touchstart="$refs['userMenu'].handleEvent($event)"
         @touchend="$refs['userMenu'].handleEvent($event)">
         <div class="sidebar sidebar-left" id="sidebar">
@@ -38,17 +38,18 @@
                     {{l('chat.pms')}}
                     <div class="list-group conversation-nav" ref="privateConversations">
                         <a v-for="conversation in conversations.privateConversations" href="#" @click.prevent="conversation.show()"
-                            :class="getClasses(conversation)"
+                            :class="getClasses(conversation)" :data-character="conversation.character.name"
                             class="list-group-item list-group-item-action item-private" :key="conversation.key">
                             <img :src="characterImage(conversation.character.name)" v-if="showAvatars"/>
                             <div class="name">
                                 <span>{{conversation.character.name}}</span>
                                 <div style="text-align:right;line-height:0">
-                                <span class="fa"
-                                    :class="{'fa-commenting': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
-                                ></span><span class="pin fa fa-thumb-tack" :class="{'active': conversation.isPinned}"
-                                    @click.stop.prevent="conversation.isPinned = !conversation.isPinned" @mousedown.stop.prevent
-                                ></span><span class="fa fa-times leave" @click.stop="conversation.close()"></span>
+                                    <span class="fa"
+                                        :class="{'fa-commenting': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
+                                    ></span><span class="pin fa fa-thumb-tack" :class="{'active': conversation.isPinned}" @mousedown.prevent
+                                    @click.stop="conversation.isPinned = !conversation.isPinned" :aria-label="l('chat.pinTab')"></span>
+                                    <span class="fa fa-times leave" @click.stop="conversation.close()"
+                                        :aria-label="l('chat.closeTab')"></span>
                                 </div>
                             </div>
                         </a>
@@ -61,8 +62,9 @@
                         <a v-for="conversation in conversations.channelConversations" href="#" @click.prevent="conversation.show()"
                             :class="getClasses(conversation)" class="list-group-item list-group-item-action item-channel"
                             :key="conversation.key"><span class="name">{{conversation.name}}</span><span><span class="pin fa fa-thumb-tack"
-                            :class="{'active': conversation.isPinned}" @click.stop.prevent="conversation.isPinned = !conversation.isPinned"
-                            @mousedown.stop.prevent></span><span class="fa fa-times leave" @click.stop="conversation.close()"></span></span>
+                            :class="{'active': conversation.isPinned}" @click.stop="conversation.isPinned = !conversation.isPinned"
+                            :aria-label="l('chat.pinTab')" @mousedown.prevent></span><span class="fa fa-times leave"
+                            @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span></span>
                         </a>
                     </div>
                 </div>
@@ -102,7 +104,7 @@
     import Component from 'vue-class-component';
     import ChannelList from './ChannelList.vue';
     import CharacterSearch from './CharacterSearch.vue';
-    import {characterImage} from './common';
+    import {characterImage, getKey} from './common';
     import ConversationView from './ConversationView.vue';
     import core from './core';
     import {Character, Connection, Conversation} from './interfaces';
@@ -134,8 +136,12 @@
         characterImage = characterImage;
         conversations = core.conversations;
         getStatusIcon = getStatusIcon;
+        keydownListener: (e: KeyboardEvent) => void;
 
         mounted(): void {
+            this.keydownListener = (e: KeyboardEvent) => this.onKeyDown(e);
+            document.addEventListener('keydown', this.keydownListener);
+            this.setFontSize(core.state.settings.fontSize);
             Sortable.create(this.$refs['privateConversations'], {
                 animation: 50,
                 onEnd: (e: {oldIndex: number, newIndex: number}) => core.conversations.privateConversations[e.oldIndex].sort(e.newIndex)
@@ -175,6 +181,67 @@
                     idleTimer = undefined;
                 }
             });
+            core.watch<number>(function(): number {
+                return this.state.settings.fontSize;
+            }, (value) => {
+                this.setFontSize(value);
+            });
+        }
+
+        destroyed(): void {
+            document.removeEventListener('keydown', this.keydownListener);
+        }
+
+        onKeyDown(e: KeyboardEvent): void {
+            const selected = this.conversations.selectedConversation;
+            const pms = this.conversations.privateConversations;
+            const channels = this.conversations.channelConversations;
+            const console = this.conversations.consoleTab;
+            if(getKey(e) === 'ArrowUp' && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+                if(selected === console) return;
+                if(Conversation.isPrivate(selected)) {
+                    const index = pms.indexOf(selected);
+                    if(index === 0) console.show();
+                    else pms[index - 1].show();
+                } else {
+                    const index = channels.indexOf(<Conversation.ChannelConversation>selected);
+                    if(index === 0)
+                        if(pms.length > 0) pms[pms.length - 1].show();
+                        else console.show();
+                    else channels[index - 1].show();
+                }
+            } else if(getKey(e) === 'ArrowDown' && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey)
+                if(selected === console) { //tslint:disable-line:curly - false positive
+                    if(pms.length > 0) pms[0].show();
+                    else if(channels.length > 0) channels[0].show();
+                } else if(Conversation.isPrivate(selected)) {
+                    const index = pms.indexOf(selected);
+                    if(index === pms.length - 1) {
+                        if(channels.length > 0) channels[0].show();
+                    } else pms[index + 1].show();
+                } else {
+                    const index = channels.indexOf(<Conversation.ChannelConversation>selected);
+                    if(index !== channels.length - 1) channels[index + 1].show();
+                }
+        }
+
+        setFontSize(fontSize: number): void {
+            let overrideEl = <HTMLStyleElement | null>document.getElementById('overrideFontSize');
+            if(overrideEl !== null)
+                document.body.removeChild(overrideEl);
+            overrideEl = document.createElement('style');
+            overrideEl.id = 'overrideFontSize';
+            document.body.appendChild(overrideEl);
+            const sheet = <CSSStyleSheet>overrideEl.sheet;
+            const selectorList = ['#chatView', '.btn', '.form-control'];
+            for(const selector of selectorList)
+                sheet.insertRule(`${selector} { font-size: ${fontSize}px; }`, sheet.cssRules.length);
+
+            const lineHeightBase = 1.428571429;
+            const lineHeight = Math.floor(fontSize * 1.428571429);
+            const formHeight = (lineHeight + (6 * 2) + 2);
+            sheet.insertRule(`.form-control { line-height: ${lineHeightBase}; height: ${formHeight}px; }`, sheet.cssRules.length);
+            sheet.insertRule(`select.form-control { line-height: ${lineHeightBase}; height: ${formHeight}px; }`, sheet.cssRules.length);
         }
 
         logOut(): void {

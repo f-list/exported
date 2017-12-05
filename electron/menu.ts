@@ -42,7 +42,7 @@ export function createContextMenu(props: Electron.ContextMenuParams & {editFlags
 
 export function createAppMenu(): Electron.MenuItemConstructorOptions[] {
     const viewItem = {
-        label: l('action.view'),
+        label: `&${l('action.view')}`,
         submenu: [
             {role: 'resetzoom'},
             {role: 'zoomin'},
@@ -53,9 +53,9 @@ export function createAppMenu(): Electron.MenuItemConstructorOptions[] {
     };
     const menu: Electron.MenuItemConstructorOptions[] = [
         {
-            label: l('title')
+            label: `&${l('title')}`
         }, {
-            label: l('action.edit'),
+            label: `&${l('action.edit')}`,
             submenu: [
                 {role: 'undo'},
                 {role: 'redo'},
@@ -66,11 +66,15 @@ export function createAppMenu(): Electron.MenuItemConstructorOptions[] {
                 {role: 'selectall'}
             ]
         }, viewItem, {
-            role: 'help',
+            label: `&${l('help')}`,
             submenu: [
                 {
                     label: l('help.fchat'),
                     click: () => electron.shell.openExternal('https://wiki.f-list.net/F-Chat_3.0')
+                },
+                {
+                    label: l('help.feedback'),
+                    click: () => electron.shell.openExternal('https://goo.gl/forms/WnLt3Qm3TPt64jQt2')
                 },
                 {
                     label: l('help.rules'),

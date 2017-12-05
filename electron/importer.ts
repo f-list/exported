@@ -125,7 +125,9 @@ function createMessage(line: string, ownCharacter: string, name: string, isChann
 async function importSettings(dir: string): Promise<void> {
     const settings = new Settings();
     const settingsStore = new SettingsStore();
-    const buffer = fs.readFileSync(path.join(dir, 'Global', '!settings.xml'));
+    const settingsFile = path.join(dir, 'Global', '!settings.xml');
+    if(!fs.existsSync(settingsFile)) return;
+    const buffer = fs.readFileSync(settingsFile);
     const content = buffer.toString('utf8', (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) ? 3 : 0);
     const config = new DOMParser().parseFromString(content, 'application/xml').firstElementChild;
     if(config === null) return;

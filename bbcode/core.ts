@@ -44,7 +44,7 @@ export class CoreBBCodeParser extends BBCodeParser {
             parent.appendChild(el);
             return el;
         }, (parser, element, _, param) => {
-            const content = element.innerText.trim();
+            const content = element.textContent!.trim();
             while(element.firstChild !== null) element.removeChild(element.firstChild);
 
             let url: string, display: string = content;
@@ -54,23 +54,26 @@ export class CoreBBCodeParser extends BBCodeParser {
             } else if(content.length > 0) url = content;
             else {
                 parser.warning('url tag contains no url.');
-                element.innerText = ''; //Dafuq!?
+                element.textContent = ''; //Dafuq!?
                 return;
             }
 
             // This fixes problems where content based urls are marked as invalid if they contain spaces.
             url = fixURL(url);
             if(!urlRegex.test(url)) {
-                element.innerText = `[BAD URL] ${url}`;
+                element.textContent = `[BAD URL] ${url}`;
                 return;
             }
+            const fa = parser.createElement('i');
+            fa.className = 'fa fa-link';
+            element.appendChild(fa);
             const a = parser.createElement('a');
             a.href = url;
             a.rel = 'nofollow noreferrer noopener';
             a.target = '_blank';
-            a.className = 'link-graphic';
+            a.className = 'user-link';
             a.title = url;
-            a.innerText = display;
+            a.textContent = display;
             element.appendChild(a);
             const span = document.createElement('span');
             span.className = 'link-domain';

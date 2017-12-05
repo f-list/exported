@@ -1,6 +1,6 @@
 <template>
     <modal :action="l('settings.action')" @submit="submit" @close="init()" id="settings">
-        <ul class="nav nav-tabs">
+        <ul class="nav nav-tabs" style="flex-shrink:0;margin-bottom:10px">
             <li role="presentation" v-for="tab in tabs" :class="{active: tab == selectedTab}">
                 <a href="#" @click.prevent="selectedTab = tab">{{l('settings.tabs.' + tab)}}</a>
             </li>
@@ -49,6 +49,10 @@
                     <input type="checkbox" id="logAds" v-model="logAds"/>
                     {{l('settings.logAds')}}
                 </label>
+            </div>
+            <div class="form-group">
+                <label class="control-label" for="fontSize">{{l('settings.fontSize')}}</label>
+                <input id="fontSize" type="number" min="10" max="24" number class="form-control" v-model="fontSize"/>
             </div>
         </div>
         <div v-show="selectedTab == 'notifications'">
@@ -135,6 +139,7 @@
         alwaysNotify: boolean;
         logMessages: boolean;
         logAds: boolean;
+        fontSize: number;
 
         constructor() {
             super();
@@ -163,6 +168,7 @@
             this.alwaysNotify = settings.alwaysNotify;
             this.logMessages = settings.logMessages;
             this.logAds = settings.logAds;
+            this.fontSize = settings.fontSize;
         };
 
         async doImport(): Promise<void> {
@@ -199,7 +205,8 @@
                 joinMessages: this.joinMessages,
                 alwaysNotify: this.alwaysNotify,
                 logMessages: this.logMessages,
-                logAds: this.logAds
+                logAds: this.logAds,
+                fontSize: this.fontSize
             };
             if(this.notifications) await requestNotificationsPermission();
         }

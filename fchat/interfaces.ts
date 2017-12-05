@@ -143,7 +143,7 @@ export namespace Connection {
         onError(handler: (error: Error) => void): void
         send(type: 'CHA' | 'FRL' | 'ORS' | 'PCR' | 'PIN' | 'UPT'): void
         send<K extends keyof ClientCommands>(type: K, data: ClientCommands[K]): void
-        queryApi(endpoint: string, data?: object): Promise<object>
+        queryApi<T = object>(endpoint: string, data?: object): Promise<T>
     }
 }
 export type Connection = Connection.Connection;

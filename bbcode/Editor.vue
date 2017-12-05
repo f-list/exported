@@ -34,6 +34,7 @@
     import {getKey} from '../chat/common';
     import {CoreBBCodeParser, urlRegex} from './core';
     import {defaultButtons, EditorButton, EditorSelection} from './editor';
+    import {BBCodeParser} from './parser';
 
     @Component
     export default class Editor extends Vue {
@@ -56,9 +57,13 @@
         element: HTMLTextAreaElement;
         maxHeight: number;
         minHeight: number;
-        protected parser = new CoreBBCodeParser();
+        protected parser: BBCodeParser;
         protected defaultButtons = defaultButtons;
         private isShiftPressed = false;
+
+        created(): void {
+            this.parser = new CoreBBCodeParser();
+        }
 
         mounted(): void {
             this.element = <HTMLTextAreaElement>this.$refs['input'];
