@@ -74,6 +74,8 @@ const strings: {[key: string]: string | undefined} = {
     'user.unbookmark': 'Unbookmark',
     'user.ignore': 'Ignore',
     'user.unignore': 'Unignore',
+    'user.hide': 'Hide ads',
+    'user.unhide': 'Unhide ads',
     'user.memo': 'View memo',
     'user.memo.action': 'Update memo',
     'user.report': 'Report user',

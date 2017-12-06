@@ -115,8 +115,10 @@ function createWindow(): void {
     if(process.env.NODE_ENV === 'production') runUpdater();
 }
 
-app.on('ready', createWindow);
-app.makeSingleInstance(() => {
+const running = app.makeSingleInstance(() => {
     if(windows.length < 3) createWindow();
+    return true;
 });
+if(running) app.quit();
+else app.on('ready', createWindow);
 app.on('window-all-closed', () => app.quit());

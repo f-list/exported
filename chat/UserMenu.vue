@@ -27,6 +27,9 @@
                     <li><a tabindex="-1" href="#" @click.prevent="setIgnored">
                         <span class="fa fa-fw fa-minus-circle"></span>{{l('user.' + (character.isIgnored ? 'unignore' : 'ignore'))}}
                     </a></li>
+                    <li><a tabindex="-1" href="#" @click.prevent="setHidden">
+                        <span class="fa fa-fw fa-eye-slash"></span>{{l('user.' + (isHidden ? 'unhide' : 'hide'))}}
+                    </a></li>
                     <li><a tabindex="-1" href="#" @click.prevent="report">
                         <span class="fa fa-fw fa-exclamation-triangle"></span>{{l('user.report')}}</a></li>
                     <li v-show="isChannelMod"><a tabindex="-1" href="#" @click.prevent="channelKick">
@@ -89,6 +92,12 @@
                 .catch((e: object) => alert(errorToString(e)));
         }
 
+        setHidden(): void {
+            const index = core.state.hiddenUsers.indexOf(this.character!.name);
+            if(index !== -1) core.state.hiddenUsers.splice(index, 1);
+            else core.state.hiddenUsers.push(this.character!.name);
+        }
+
         report(): void {
             this.reportDialog.report(this.character!);
         }
@@ -126,6 +135,10 @@
             if(core.characters.ownCharacter.isChatOp) return true;
             const member = this.channel.members[core.connection.character];
             return member !== undefined && member.rank > Channel.Rank.Member;
+        }
+
+        get isHidden(): boolean {
+            return core.state.hiddenUsers.indexOf(this.character!.name) !== -1;
         }
 
         get isChatOp(): boolean {

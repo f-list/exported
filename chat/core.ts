@@ -12,6 +12,7 @@ function createBBCodeParser(): BBCodeParser {
 
 class State implements StateInterface {
     _settings: Settings | undefined = undefined;
+    hiddenUsers: string[] = [];
 
     get settings(): Settings {
         if(this._settings === undefined) throw new Error('Settings load failed.');
@@ -41,6 +42,12 @@ const vue = <Vue & VueState>new Vue({
         characters: undefined,
         conversations: undefined,
         state
+    },
+    watch: {
+        'state.hiddenUsers': (newValue: string[]) => {
+            //tslint:disable-next-line:no-floating-promises
+            if(data.settingsStore !== undefined) data.settingsStore.set('hiddenUsers', newValue);
+        }
     }
 });
 
@@ -68,6 +75,8 @@ const data = {
         if(loadedSettings !== undefined)
             for(const key in loadedSettings) settings[<keyof Settings>key] = loadedSettings[<keyof Settings>key];
         state._settings = settings;
+        const hiddenUsers = await core.settingsStore.get('hiddenUsers');
+        state.hiddenUsers = hiddenUsers !== undefined ? hiddenUsers : [];
     }
 };
 

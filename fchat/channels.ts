@@ -1,6 +1,11 @@
 import {decodeHTML} from './common';
 import {Channel as Interfaces, Character, Connection} from './interfaces';
 
+interface SortableMember extends Interfaces.Member {
+    rank: Interfaces.Rank,
+    key: string
+}
+
 export function queuedJoin(this: void, channels: string[]): void {
     const timer: NodeJS.Timer = setInterval(() => {
         const channel = channels.shift();
@@ -9,8 +14,7 @@ export function queuedJoin(this: void, channels: string[]): void {
     }, 100);
 }
 
-function sortMember(this: void | never, array: Interfaces.Member[], member: Interfaces.Member): void {
-    const name = member.character.name;
+function sortMember(this: void | never, array: SortableMember[], member: SortableMember): void {
     let i = 0;
     for(; i < array.length; ++i) {
         const other = array[i];
@@ -22,7 +26,7 @@ function sortMember(this: void | never, array: Interfaces.Member[], member: Inte
         if(member.character.isFriend && !other.character.isFriend) break;
         if(other.character.isBookmarked && !member.character.isBookmarked) continue;
         if(member.character.isBookmarked && !other.character.isBookmarked) break;
-        if(name < other.character.name) break;
+        if(member.key < other.key) break;
     }
     array.splice(i, 0, member);
 }
@@ -32,13 +36,13 @@ class Channel implements Interfaces.Channel {
     opList: string[];
     owner = '';
     mode: Interfaces.Mode = 'both';
-    members: {[key: string]: {character: Character, rank: Interfaces.Rank} | undefined} = {};
-    sortedMembers: Interfaces.Member[] = [];
+    members: {[key: string]: SortableMember | undefined} = {};
+    sortedMembers: SortableMember[] = [];
 
     constructor(readonly id: string, readonly name: string) {
     }
 
-    addMember(member: Interfaces.Member): void {
+    addMember(member: SortableMember): void {
         this.members[member.character.name] = member;
         sortMember(this.sortedMembers, member);
         for(const handler of state.handlers) handler('join', this, member);
@@ -53,16 +57,17 @@ class Channel implements Interfaces.Channel {
         }
     }
 
-    reSortMember(member: Interfaces.Member): void {
+    reSortMember(member: SortableMember): void {
         this.sortedMembers.splice(this.sortedMembers.indexOf(member), 1);
         sortMember(this.sortedMembers, member);
     }
 
-    createMember(character: Character): {character: Character, rank: Interfaces.Rank} {
+    createMember(character: Character): SortableMember {
         return {
             character,
             rank: this.owner === character.name ? Interfaces.Rank.Owner :
-                this.opList.indexOf(character.name) !== -1 ? Interfaces.Rank.Op : Interfaces.Rank.Member
+                this.opList.indexOf(character.name) !== -1 ? Interfaces.Rank.Op : Interfaces.Rank.Member,
+            key: character.name.toLowerCase()
         };
     }
 }
@@ -173,8 +178,8 @@ export default function(this: void, connection: Connection, characters: Characte
         const channel = state.getChannel(data.channel);
         if(channel === undefined) return state.leave(data.channel);
         channel.mode = data.mode;
-        const members: {[key: string]: Interfaces.Member} = {};
-        const sorted: Interfaces.Member[] = [];
+        const members: {[key: string]: SortableMember} = {};
+        const sorted: SortableMember[] = [];
         for(const user of data.users) {
             const name = user.identity;
             const member = channel.createMember(characters.get(name));

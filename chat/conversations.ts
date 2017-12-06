@@ -505,7 +505,7 @@ export default function(this: void): Interfaces.State {
     });
     connection.onMessage('LRP', (data, time) => {
         const char = core.characters.get(data.character);
-        if(char.isIgnored) return;
+        if(char.isIgnored || core.state.hiddenUsers.indexOf(char.name) !== -1) return;
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
         conv.addMessage(new Message(MessageType.Ad, char, decodeHTML(data.message), time));

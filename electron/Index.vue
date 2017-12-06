@@ -40,8 +40,9 @@
                 <div class="progress-bar" :style="{width: importProgress * 100 + '%'}"></div>
             </div>
         </modal>
-        <modal action="Profile" :buttons="false" ref="profileViewer" dialogClass="profile-viewer">
-            <character-page :authenticated="false" :hideGroups="true" :name="profileName"></character-page>
+        <modal :buttons="false" ref="profileViewer" dialogClass="profile-viewer">
+            <character-page :authenticated="false" :hideGroups="true" :name="profileName" :image-preview="true"></character-page>
+            <template slot="title">{{profileName}} <a class="btn fa fa-external-link" @click="openProfileInBrowser"></a></template>
         </modal>
     </div>
 </template>
@@ -353,6 +354,10 @@
             }
             preview.textContent = '';
             preview.style.display = 'none';
+        }
+
+        openProfileInBrowser(): void {
+            electron.remote.shell.openExternal(`https://www.f-list.net/c/${this.profileName}`);
         }
 
         get styling(): string {

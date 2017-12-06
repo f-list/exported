@@ -142,6 +142,7 @@ export namespace Settings {
         pinned: {channels: string[], private: string[]},
         conversationSettings: {[key: string]: Conversation.Settings}
         recent: Conversation.RecentConversation[]
+        hiddenUsers: string[]
     };
 
     export interface Store {
@@ -180,4 +181,5 @@ export interface Notifications {
 
 export interface State {
     settings: Settings
+    hiddenUsers: string[]
 }

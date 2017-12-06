@@ -242,7 +242,8 @@
                 }
             } else {
                 if(this.tabOptions !== undefined) this.tabOptions = undefined;
-                if(getKey(e) === 'ArrowUp' && this.conversation.enteredText.length === 0)
+                if(getKey(e) === 'ArrowUp' && this.conversation.enteredText.length === 0
+                    && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey)
                     this.conversation.loadLastSent();
                 else if(getKey(e) === 'Enter') {
                     if(e.shiftKey) return;

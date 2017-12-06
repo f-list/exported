@@ -24,7 +24,8 @@
                         <li role="presentation" class="active"><a href="#overview" aria-controls="overview" role="tab" data-toggle="tab">Overview</a>
                         </li>
                         <li role="presentation"><a href="#infotags" aria-controls="infotags" role="tab" data-toggle="tab">Info</a></li>
-                        <li role="presentation" v-if="!hideGroups"><a href="#groups" aria-controls="groups" role="tab" data-toggle="tab">Groups</a></li>
+                        <li role="presentation" v-if="!hideGroups"><a href="#groups" aria-controls="groups" role="tab" data-toggle="tab">Groups</a>
+                        </li>
                         <li role="presentation"><a href="#images" aria-controls="images" role="tab"
                             data-toggle="tab">Images ({{ character.character.image_count }})</a></li>
                         <li v-if="character.settings.guestbook" role="presentation"><a href="#guestbook" aria-controls="guestbook"
@@ -45,7 +46,7 @@
                             <character-groups :character="character" ref="groups"></character-groups>
                         </div>
                         <div role="tabpanel" class="tab-pane" id="images" aria-labeledby="images-tab">
-                            <character-images :character="character" ref="images"></character-images>
+                            <character-images :character="character" ref="images" :use-preview="imagePreview"></character-images>
                         </div>
                         <div v-if="character.settings.guestbook" role="tabpanel" class="tab-pane" id="guestbook"
                             aria-labeledby="guestbook-tab">
@@ -106,6 +107,8 @@
         private readonly authenticated: boolean;
         @Prop()
         readonly hideGroups?: true;
+        @Prop()
+        readonly imagePreview?: true;
         private shared: SharedStore = Store;
         private character: Character | null = null;
         loading = true;

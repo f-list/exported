@@ -1,7 +1,7 @@
 import {BBCodeCustomTag, BBCodeParser, BBCodeSimpleTag} from './parser';
 
 const urlFormat = '((?:(?:https?|ftps?|irc):)?\\/\\/[^\\s\\/$.?#"\']+\\.[^\\s"]*)';
-export const findUrlRegex = new RegExp(`((?!\\[url(?:\\]|=))(?:.{4}[^\\s])\\s+|^.{0,4}\\s|^)${urlFormat}`, 'g');
+export const findUrlRegex = new RegExp(`(\\[url[=\\]]\\s*)?${urlFormat}`, 'gi');
 export const urlRegex = new RegExp(`^${urlFormat}$`);
 
 function domain(url: string): string | undefined {
@@ -83,7 +83,8 @@ export class CoreBBCodeParser extends BBCodeParser {
     }
 
     parseEverything(input: string): HTMLElement {
-        if(this.makeLinksClickable && input.length > 0) input = input.replace(findUrlRegex, '$1[url]$2[/url]');
+        if(this.makeLinksClickable && input.length > 0)
+            input = input.replace(findUrlRegex, (match, tag) => tag === undefined ? `[url]${match}[/url]` : match);
         return super.parseEverything(input);
     }
 }

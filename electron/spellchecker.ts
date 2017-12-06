@@ -1,12 +1,13 @@
 import Axios from 'axios';
+import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import {promisify} from 'util';
 import {mkdir, nativeRequire} from './common';
 
 process.env.SPELLCHECKER_PREFER_HUNSPELL = '1';
-const downloadUrl = 'https://github.com/wooorm/dictionaries/raw/master/dictionaries/';
-const dir = `${__dirname}/spellchecker`;
+const downloadUrl = 'https://client.f-list.net/dictionaries/';
+const dir = path.join(electron.remote.app.getPath('userData'), 'spellchecker');
 mkdir(dir);
 //tslint:disable-next-line
 const sc = nativeRequire<{
@@ -18,30 +19,35 @@ const sc = nativeRequire<{
         }
     }
 }>('spellchecker/build/Release/spellchecker.node');
-let availableDictionaries: string[] | undefined;
+type DictionaryIndex = {[key: string]: {file: string, time: number} | undefined};
+let availableDictionaries: DictionaryIndex | undefined;
 const writeFile = promisify(fs.writeFile);
 const requestConfig = {responseType: 'arraybuffer'};
 const spellchecker = new sc.Spellchecker();
 
 export async function getAvailableDictionaries(): Promise<ReadonlyArray<string>> {
-    if(availableDictionaries !== undefined) return availableDictionaries;
-    const dicts = (<{name: string}[]>(await Axios.get('https://api.github.com/repos/wooorm/dictionaries/contents/dictionaries')).data)
-        .map((x: {name: string}) => x.name);
-    availableDictionaries = dicts;
-    return dicts;
+    if(availableDictionaries === undefined) {
+        const indexPath = path.join(dir, 'index.json');
+        if(!fs.existsSync(indexPath) || fs.statSync(indexPath).mtimeMs + 86400000 * 7 < Date.now()) {
+            availableDictionaries = (await Axios.get<DictionaryIndex>(`${downloadUrl}index.json`)).data;
+            await writeFile(indexPath, JSON.stringify(availableDictionaries));
+        } else availableDictionaries = <DictionaryIndex>JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+    }
+    return Object.keys(availableDictionaries).sort();
 }
 
 export async function setDictionary(lang: string | undefined): Promise<void> {
-    const dictName = lang !== undefined ? lang.replace('-', '_') : undefined;
-    if(dictName !== undefined) {
-        const dicPath = path.join(dir, `${dictName}.dic`);
-        if(!fs.existsSync(dicPath)) {
-            await writeFile(dicPath, new Buffer(<string>(await Axios.get(`${downloadUrl}${lang}/index.dic`, requestConfig)).data));
-            await writeFile(path.join(dir, `${dictName}.aff`),
-                new Buffer(<string>(await Axios.get(`${downloadUrl}${lang}/index.aff`, requestConfig)).data));
+    const dict = availableDictionaries![lang!];
+    if(dict !== undefined) {
+        const dicPath = path.join(dir, `${lang}.dic`);
+        if(!fs.existsSync(dicPath) || fs.statSync(dicPath).mtimeMs / 1000 < dict.time) {
+            await writeFile(dicPath, new Buffer((await Axios.get<string>(`${downloadUrl}${dict.file}.dic`, requestConfig)).data));
+            await writeFile(path.join(dir, `${lang}.aff`),
+                new Buffer((await Axios.get<string>(`${downloadUrl}${dict.file}.aff`, requestConfig)).data));
+            fs.utimesSync(dicPath, dict.time, dict.time);
         }
     }
-    spellchecker.setDictionary(dictName, dir);
+    spellchecker.setDictionary(lang, dir);
 }
 
 export function getCorrections(word: string): ReadonlyArray<string> {

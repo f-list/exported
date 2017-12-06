@@ -1,11 +1,13 @@
 <template>
     <div tabindex="-1" class="modal flex-modal" :style="isShown ? 'display:flex' : ''"
-         style="align-items: flex-start; padding: 30px; justify-content: center;">
+        style="align-items: flex-start; padding: 30px; justify-content: center;">
         <div class="modal-dialog" :class="dialogClass" style="display: flex; flex-direction: column; max-height: 100%; margin: 0;">
             <div class="modal-content" style="display:flex; flex-direction: column;">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
-                    <h4 class="modal-title">{{action}}</h4>
+                    <h4 class="modal-title">
+                        <slot name="title">{{action}}</slot>
+                    </h4>
                 </div>
                 <div class="modal-body" style="overflow: auto; display: flex; flex-direction: column">
                     <slot></slot>
@@ -28,7 +30,7 @@
 
     @Component
     export default class Modal extends Vue {
-        @Prop({required: true})
+        @Prop({default: ''})
         readonly action: string;
         @Prop()
         readonly dialogClass?: {string: boolean};

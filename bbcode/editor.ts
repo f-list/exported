@@ -44,7 +44,7 @@ export let defaultButtons: ReadonlyArray<EditorButton> = [
         key: 's'
     },
     {
-        title: 'Color (Ctrl+Q)\n\nStyles text with a color. Valid colors are: red, orange, yellow, green, cyan, blue, purple, pink, black, white, gray, primary, secondary, accent, and contrast.',
+        title: 'Color (Ctrl+D)\n\nStyles text with a color. Valid colors are: red, orange, yellow, green, cyan, blue, purple, pink, black, white, gray, primary, secondary, accent, and contrast.',
         tag: 'color',
         startText: '[color=]',
         icon: 'fa-eyedropper',
