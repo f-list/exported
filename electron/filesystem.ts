@@ -5,21 +5,20 @@ import * as path from 'path';
 import {Message as MessageImpl} from '../chat/common';
 import core from '../chat/core';
 import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
+import l from '../chat/localize';
 import {mkdir} from './common';
 
 const dayMs = 86400000;
-const baseDir = path.join(electron.remote.app.getPath('userData'), 'data');
-mkdir(baseDir);
 
 const noAssert = process.env.NODE_ENV === 'production';
 
-export class GeneralSettings {
-    account = '';
-    closeToTray = true;
-    profileViewer = true;
-    host = 'wss://chat.f-list.net:9799';
-    spellcheckLang: string | undefined = 'en-GB';
-    theme = 'default';
+function writeFile(p: fs.PathLike | number, data: string | object | number,
+                   options?: {encoding?: string | null; mode?: number | string; flag?: string} | string | null): void {
+    try {
+        fs.writeFileSync(p, data, options);
+    } catch(e) {
+        electron.remote.dialog.showErrorBox(l('fs.error'), (<Error>e).message);
+    }
 }
 
 export type Message = Conversation.EventMessage | {
@@ -40,7 +39,7 @@ interface Index {
 }
 
 export function getLogDir(this: void, character: string = core.connection.character): string {
-    const dir = path.join(baseDir, character, 'logs');
+    const dir = path.join(core.state.generalSettings!.logDirectory, character, 'logs');
     mkdir(dir);
     return dir;
 }
@@ -152,7 +151,7 @@ export class Logs implements Logging.Persistent {
         const entry = this.index[key];
         if(entry === undefined) return [];
         const dates = [];
-        for(const item in entry.index) { //tslint:disable:forin
+        for(const item in entry.index) {
             const date = new Date(parseInt(item, 10) * dayMs);
             dates.push(addMinutes(date, date.getTimezoneOffset()));
         }
@@ -185,8 +184,8 @@ export class Logs implements Logging.Persistent {
         const hasIndex = this.index[conversation.key] !== undefined;
         const indexBuffer = checkIndex(this.index, message, conversation.key, conversation.name,
             () => fs.existsSync(file) ? fs.statSync(file).size : 0);
-        if(indexBuffer !== undefined) fs.writeFileSync(`${file}.idx`, indexBuffer, {flag: hasIndex ? 'a' : 'wx'});
-        fs.writeFileSync(file, buffer, {flag: 'a'});
+        if(indexBuffer !== undefined) writeFile(`${file}.idx`, indexBuffer, {flag: hasIndex ? 'a' : 'wx'});
+        writeFile(file, buffer, {flag: 'a'});
     }
 
     get conversations(): ReadonlyArray<{id: string, name: string}> {
@@ -197,18 +196,8 @@ export class Logs implements Logging.Persistent {
     }
 }
 
-export function getGeneralSettings(): GeneralSettings | undefined {
-    const file = path.join(baseDir, 'settings');
-    if(!fs.existsSync(file)) return undefined;
-    return <GeneralSettings>JSON.parse(fs.readFileSync(file, 'utf8'));
-}
-
-export function setGeneralSettings(value: GeneralSettings): void {
-    fs.writeFileSync(path.join(baseDir, 'settings'), JSON.stringify(value));
-}
-
 function getSettingsDir(character: string = core.connection.character): string {
-    const dir = path.join(baseDir, character, 'settings');
+    const dir = path.join(core.state.generalSettings!.logDirectory, character, 'settings');
     mkdir(dir);
     return dir;
 }
@@ -221,10 +210,11 @@ export class SettingsStore implements Settings.Store {
     }
 
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
+        const baseDir = core.state.generalSettings!.logDirectory;
         return (fs.readdirSync(baseDir)).filter((x) => fs.lstatSync(path.join(baseDir, x)).isDirectory());
     }
 
     async set<K extends keyof Settings.Keys>(key: K, value: Settings.Keys[K]): Promise<void> {
-        fs.writeFileSync(path.join(getSettingsDir(), key), JSON.stringify(value));
+        writeFile(path.join(getSettingsDir(), key), JSON.stringify(value));
     }
 }

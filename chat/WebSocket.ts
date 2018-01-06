@@ -1,9 +1,11 @@
-import {WebSocketConnection} from '../fchat/interfaces';
+import {WebSocketConnection} from '../fchat';
 import l from './localize';
 
 export default class Socket implements WebSocketConnection {
     static host = 'wss://chat.f-list.net:9799';
-    socket: WebSocket;
+    private socket: WebSocket;
+    private errorHandler: (error: Error) => void;
+    private lastHandler: Promise<void> = Promise.resolve();
 
     constructor() {
         this.socket = new WebSocket(Socket.host);
@@ -14,7 +16,9 @@ export default class Socket implements WebSocketConnection {
     }
 
     onMessage(handler: (message: string) => void): void {
-        this.socket.addEventListener('message', (e) => handler(<string>e.data));
+        this.socket.addEventListener('message', (e) => {
+            this.lastHandler = this.lastHandler.then(() => handler(<string>e.data), this.errorHandler);
+        });
     }
 
     onOpen(handler: () => void): void {
@@ -26,6 +30,7 @@ export default class Socket implements WebSocketConnection {
     }
 
     onError(handler: (error: Error) => void): void {
+        this.errorHandler = handler;
         this.socket.addEventListener('error', () => handler(new Error(l('login.connectError'))));
     }
 

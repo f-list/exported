@@ -1,5 +1,17 @@
+import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+
+export class GeneralSettings {
+    account = '';
+    closeToTray = true;
+    profileViewer = true;
+    host = 'wss://chat.f-list.net:9799';
+    logDirectory = path.join(electron.app.getPath('userData'), 'data');
+    spellcheckLang: string | undefined = 'en-GB';
+    theme = 'default';
+    version = electron.app.getVersion();
+}
 
 export function mkdir(dir: string): void {
     try {
@@ -27,7 +39,9 @@ export function mkdir(dir: string): void {
 
 //tslint:disable
 const Module = require('module');
+
 export function nativeRequire<T>(module: string): T {
     return Module.prototype.require.call({paths: Module._nodeModulePaths(__dirname)}, module);
 }
+
 //tslint:enable

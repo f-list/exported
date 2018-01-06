@@ -1,13 +1,13 @@
 <template>
     <div class="guestbook-post" :id="'guestbook-post-' + post.id">
         <div class="guestbook-contents" :class="{deleted: post.deleted}">
-            <div class="row">
-                <div class="col-xs-1 guestbook-avatar">
+            <div style="display:flex;align-items:center">
+                <div class="guestbook-avatar">
                     <character-link :character="post.character">
                         <img :src="avatarUrl" class="character-avatar icon"/>
                     </character-link>
                 </div>
-                <div class="col-xs-10">
+                <div style="flex:1;margin-left:10px">
                     <span v-show="post.private" class="post-private">*</span>
                     <span v-show="!post.approved" class="post-unapproved"> (unapproved)</span>
 
@@ -15,15 +15,13 @@
                         <character-link :character="post.character"></character-link>, posted <date-display
                         :time="post.postedAt"></date-display>
                     </span>
-                    <button class="btn btn-default" v-show="canEdit" @click="approve" :disabled="approving">
+                    <button class="btn btn-default" v-show="canEdit" @click="approve" :disabled="approving" style="margin-left:10px">
                         {{ (post.approved) ? 'Unapprove' : 'Approve' }}
                     </button>
                 </div>
-                <div class="col-xs-1 text-right">
-                    <button class="btn btn-danger" v-show="!post.deleted && (canEdit || post.canEdit)"
-                        @click="deletePost" :disabled="deleting">Delete
-                    </button>
-                </div>
+                <button class="btn btn-danger" v-show="!post.deleted && (canEdit || post.canEdit)"
+                    @click="deletePost" :disabled="deleting">Delete
+                </button>
             </div>
             <div class="row">
                 <div class="col-xs-12">

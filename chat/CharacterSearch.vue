@@ -112,8 +112,10 @@
                         this.error = l('characterSearch.error.tooManyResults');
                 }
             });
-            core.connection.onMessage('FKS', (data) => this.results = data.characters.filter((x) =>
-                core.state.hiddenUsers.indexOf(x) === -1).map((x) => core.characters.get(x)).sort(sort));
+            core.connection.onMessage('FKS', (data) => {
+                this.results = data.characters.filter((x) => core.state.hiddenUsers.indexOf(x) === -1)
+                    .map((x) => core.characters.get(x)).sort(sort);
+            });
             (<Modal>this.$children[0]).fixDropdowns();
         }
 

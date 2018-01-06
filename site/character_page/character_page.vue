@@ -1,12 +1,12 @@
 <template>
     <div class="row character-page" id="pageBody">
-        <div class="alert alert-info" v-show="loading">Loading character information.</div>
-        <div class="alert alert-danger" v-show="error">{{error}}</div>
-        <div class="col-xs-2" v-if="!loading">
-            <sidebar :character="character" @memo="memo" @bookmarked="bookmarked"></sidebar>
+        <div class="alert alert-info" v-show="loading" style="margin:0 15px">Loading character information.</div>
+        <div class="alert alert-danger" v-show="error" style="margin:0 15px">{{error}}</div>
+        <div class="col-sm-3 col-md-2" v-if="!loading">
+            <sidebar :character="character" @memo="memo" @bookmarked="bookmarked" :oldApi="oldApi"></sidebar>
         </div>
-        <div class="col-xs-10" v-if="!loading">
-            <div id="characterView" class="row">
+        <div class="col-sm-9 col-md-10 profile-body" v-if="!loading">
+            <div id="characterView">
                 <div>
                     <div v-if="character.ban_reason" id="headerBanReason" class="alert alert-warning">
                         This character has been banned and is not visible to the public. Reason:
@@ -20,11 +20,11 @@
                         <br/> {{ character.block_reason }}
                     </div>
                     <div v-if="character.memo" id="headerCharacterMemo" class="alert alert-info">Memo: {{ character.memo.memo }}</div>
-                    <ul class="nav nav-tabs" role="tablist" style="margin-bottom:5px">
+                    <ul class="nav nav-tabs" role="tablist">
                         <li role="presentation" class="active"><a href="#overview" aria-controls="overview" role="tab" data-toggle="tab">Overview</a>
                         </li>
                         <li role="presentation"><a href="#infotags" aria-controls="infotags" role="tab" data-toggle="tab">Info</a></li>
-                        <li role="presentation" v-if="!hideGroups"><a href="#groups" aria-controls="groups" role="tab" data-toggle="tab">Groups</a>
+                        <li role="presentation" v-if="!oldApi"><a href="#groups" aria-controls="groups" role="tab" data-toggle="tab">Groups</a>
                         </li>
                         <li role="presentation"><a href="#images" aria-controls="images" role="tab"
                             data-toggle="tab">Images ({{ character.character.image_count }})</a></li>
@@ -36,13 +36,14 @@
 
                     <div class="tab-content">
                         <div role="tabpanel" class="tab-pane active" id="overview" aria-labeledby="overview-tab">
-                            <div v-bbcode="character.character.description" class="well"></div>
-                            <character-kinks :character="character"></character-kinks>
+                            <div v-bbcode="character.character.description" class="well"
+                                style="border-top:0;border-top-left-radius:0;border-top-right-radius:0;"></div>
+                            <character-kinks :character="character" :oldApi="oldApi"></character-kinks>
                         </div>
                         <div role="tabpanel" class="tab-pane" id="infotags" aria-labeledby="infotags-tab">
                             <character-infotags :character="character"></character-infotags>
                         </div>
-                        <div role="tabpanel" class="tab-pane" id="groups" aria-labeledby="groups-tab" v-if="!hideGroups">
+                        <div role="tabpanel" class="tab-pane" id="groups" aria-labeledby="groups-tab" v-if="!oldApi">
                             <character-groups :character="character" ref="groups"></character-groups>
                         </div>
                         <div role="tabpanel" class="tab-pane" id="images" aria-labeledby="images-tab">
@@ -106,7 +107,7 @@
         @Prop({required: true})
         private readonly authenticated: boolean;
         @Prop()
-        readonly hideGroups?: true;
+        readonly oldApi?: true;
         @Prop()
         readonly imagePreview?: true;
         private shared: SharedStore = Store;
@@ -118,8 +119,8 @@
             this.shared.authenticated = this.authenticated;
         }
 
-        mounted(): void {
-            if(this.character === null) this._getCharacter().then(); //tslint:disable-line:no-floating-promises
+        async mounted(): Promise<void> {
+            if(this.character === null) await this._getCharacter();
         }
 
         beforeDestroy(): void {
@@ -134,8 +135,8 @@
         }
 
         @Watch('name')
-        onCharacterSet(): void {
-            this._getCharacter().then(); //tslint:disable-line:no-floating-promises
+        async onCharacterSet(): Promise<void> {
+            return this._getCharacter();
         }
 
         memo(memo: {id: number, memo: string}): void {

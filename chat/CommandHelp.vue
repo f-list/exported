@@ -49,7 +49,6 @@
 
         mounted(): void {
             const permissions = core.connection.vars.permissions;
-            //tslint:disable-next-line:forin
             for(const key in commands) {
                 const command = commands[key]!;
                 if(command.documented !== undefined ||

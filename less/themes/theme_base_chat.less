@@ -24,7 +24,7 @@
 @import "~bootstrap/less/button-groups.less";
 //@import "input-groups.less";
 @import "~bootstrap/less/navs.less";
-@import "~bootstrap/less/navbar.less";
+//@import "~bootstrap/less/navbar.less";
 //@import "breadcrumbs.less";
 //@import "~bootstrap/less/pagination.less";
 //@import "~bootstrap/less/pager.less";
@@ -36,14 +36,14 @@
 @import "~bootstrap/less/progress-bars.less";
 //@import "media.less";
 @import "~bootstrap/less/list-group.less";
-@import "~bootstrap/less/panels.less";
+//@import "~bootstrap/less/panels.less";
 //@import "responsive-embed.less";
 @import "~bootstrap/less/wells.less";
 @import "~bootstrap/less/close.less";
 // Components w/ JavaScript
 @import "~bootstrap/less/modals.less";
 //@import "tooltip.less";
-//@import "popovers.less";
+@import "~bootstrap/less/popovers.less";
 //@import "carousel.less";
 // Utility classes
 @import "~bootstrap/less/utilities.less";
@@ -55,3 +55,7 @@
 @import "../bbcode.less";
 @import "../flist_overrides.less";
 @import "../chat.less";
+
+html {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}

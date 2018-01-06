@@ -24,6 +24,7 @@
     }
     .character-links-block {
         a {
+            padding: 0 4px;
             cursor: pointer;
         }
     }
@@ -78,10 +79,12 @@
 }
 
 .character-kinks {
+    display: flex;
+    flex-wrap: wrap;
     margin-top: 15px;
-    > .col-xs-3 {
+    > div {
         // Fix up padding on columns so they look distinct without being miles apart.
-        padding: 0 5px 0 0;
+        padding: 0 5px 5px 0;
     }
     .kinks-column {
         padding: 15px;
@@ -95,6 +98,7 @@
 }
 
 .character-kink {
+    position: relative;
     .subkink-list {
         .well();
         margin-bottom: 0;
@@ -143,6 +147,19 @@
     background-color: @well-bg;
     height: 100%;
     margin-top: -20px;
+    .character-image-container {
+        @media (max-width: @screen-xs-max) {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+        }
+    }
+}
+
+@media (min-width: @screen-sm-min) {
+    .profile-body {
+        padding-left: 0;
+    }
 }
 
 // Character Images
@@ -150,6 +167,7 @@
     .character-image {
         .col-xs-2();
         .img-thumbnail();
+        max-width: 100%;
         vertical-align: middle;
         border: none;
         display: inline-block;
@@ -212,5 +230,14 @@
         z-index: 1100;
         max-height: 100%;
         max-width: 100%;
+    }
+}
+
+.friend-item {
+    display: flex;
+    align-items: center;
+    .date {
+        margin-left: 10px;
+        flex:1;
     }
 }

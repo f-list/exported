@@ -1,7 +1,7 @@
 <template>
     <modal :buttons="false" :action="l('chat.channels')" @close="closed">
         <div style="display: flex; flex-direction: column;">
-            <ul class="nav nav-tabs">
+            <ul class="nav nav-tabs" style="flex-shrink:0">
                 <li role="presentation" :class="{active: !privateTabShown}">
                     <a href="#" @click.prevent="privateTabShown = false">{{l('channelList.public')}}</a>
                 </li>
@@ -73,7 +73,6 @@
             const channels: Channel.ListItem[] = [];
             if(this.filter.length > 0) {
                 const search = new RegExp(this.filter.replace(/[^\w]/gi, '\\$&'), 'i');
-                //tslint:disable-next-line:forin
                 for(const key in list) {
                     const item = list[key]!;
                     if(search.test(item.name)) channels.push(item);

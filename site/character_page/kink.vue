@@ -1,14 +1,20 @@
 <template>
-    <div class="character-kink" :class="kinkClasses" :id="kinkId" :title="kink.description" @click="toggleSubkinks" :data-custom="customId">
+    <div class="character-kink" :class="kinkClasses" :id="kinkId" @click="toggleSubkinks" :data-custom="customId"
+        @mouseover.stop="showTooltip = true" @mouseout.stop="showTooltip = false">
         <i v-show="kink.hasSubkinks" class="fa" :class="{'fa-minus': !listClosed, 'fa-plus': listClosed}"></i>
         <i v-show="!kink.hasSubkinks && kink.isCustom" class="fa fa-dot-circle-o custom-kink-icon"></i>
         <span class="kink-name">{{ kink.name }}</span>
         <template v-if="kink.hasSubkinks">
             <div class="subkink-list" :class="{closed: this.listClosed}">
-                <kink v-for="subkink in kink.subkinks" :kink="subkink" :key="kink.id" :comparisons="comparisons"
+                <kink v-for="subkink in kink.subkinks" :kink="subkink" :key="subkink.id" :comparisons="comparisons"
                     :highlights="highlights"></kink>
             </div>
         </template>
+        <div class="popover top" v-if="showTooltip" style="display:block;bottom:100%;top:initial;margin-bottom:5px">
+            <div class="arrow" style="left:10%"></div>
+            <h3 class="popover-title">{{kink.name}}</h3>
+            <div class="popover-content"><p>{{kink.description}}</p></div>
+        </div>
     </div>
 </template>
 
@@ -29,6 +35,7 @@
         @Prop({required: true})
         readonly comparisons: {[key: number]: string | undefined};
         listClosed = true;
+        showTooltip = false;
 
         toggleSubkinks(): void {
             if(!this.kink.hasSubkinks)

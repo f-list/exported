@@ -54,13 +54,13 @@ export let defaultButtons: ReadonlyArray<EditorButton> = [
         title: 'Superscript (Ctrl+↑)\n\nLifts text above the text baseline. Makes text slightly smaller. Cannot be nested.',
         tag: 'sup',
         icon: 'fa-superscript',
-        key: 'ArrowUp'
+        key: 'arrowup'
     },
     {
         title: 'Subscript (Ctrl+↓)\n\nPushes text below the text baseline. Makes text slightly smaller. Cannot be nested.',
         tag: 'sub',
         icon: 'fa-subscript',
-        key: 'ArrowDown'
+        key: 'arrowdown'
     },
     {
         title: 'URL (Ctrl+L)\n\nCreates a clickable link to another page of your choosing.',

@@ -1,7 +1,10 @@
 <template>
     <div class="bbcodeEditorContainer">
         <slot></slot>
-        <div class="btn-group" role="toolbar">
+        <a tabindex="0" class="btn bbcodeEditorButton bbcode-btn" role="button" @click="showToolbar = true" @blur="showToolbar = false">
+            <span class="fa fa-code"></span></a>
+        <div class="bbcode-toolbar" role="toolbar" :style="showToolbar ? 'display:block' : ''" @mousedown.stop.prevent>
+            <button type="button" class="close" aria-label="Close" style="margin-left:10px" @click="showToolbar = false">&times;</button>
             <div class="bbcodeEditorButton btn" v-for="button in buttons" :title="button.title" @click.prevent.stop="apply(button)">
                 <span :class="'fa ' + button.icon"></span>
             </div>
@@ -11,7 +14,7 @@
             </div>
         </div>
         <div class="bbcodeEditorTextarea">
-            <textarea ref="input" :value="text" @input="$emit('input', $event.target.value)" v-show="!preview" :maxlength="maxlength"
+            <textarea ref="input" v-model="text" @input="onInput" v-show="!preview" :maxlength="maxlength"
                 :class="'bbcodeTextAreaTextArea ' + classes" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste"
                 :placeholder="placeholder" @keypress="$emit('keypress', $event)" @keydown="onKeyDown"></textarea>
             <div class="bbcodePreviewArea" v-show="preview">
@@ -57,9 +60,13 @@
         element: HTMLTextAreaElement;
         maxHeight: number;
         minHeight: number;
+        showToolbar = false;
         protected parser: BBCodeParser;
         protected defaultButtons = defaultButtons;
         private isShiftPressed = false;
+        private undoStack: string[] = [];
+        private undoIndex = 0;
+        private lastInput = 0;
 
         created(): void {
             this.parser = new CoreBBCodeParser();
@@ -71,6 +78,12 @@
             this.maxHeight = parseInt($element.css('max-height'), 10);
             //tslint:disable-next-line:strict-boolean-expressions
             this.minHeight = parseInt($element.css('min-height'), 10) || $element.outerHeight() || 50;
+            setInterval(() => {
+                if(Date.now() - this.lastInput >= 500 && this.text !== this.undoStack[0] && this.undoIndex === 0) {
+                    if(this.undoStack.length >= 30) this.undoStack.pop();
+                    this.undoStack.unshift(this.text);
+                }
+            }, 500);
         }
 
         get buttons(): EditorButton[] {
@@ -83,8 +96,12 @@
 
         @Watch('value')
         watchValue(newValue: string): void {
-            this.text = newValue;
             this.$nextTick(() => this.resize());
+            if(this.text === newValue) return;
+            this.text = newValue;
+            this.lastInput = 0;
+            this.undoIndex = 0;
+            this.undoStack = [];
         }
 
         getSelection(): EditorSelection {
@@ -138,11 +155,35 @@
             if(button.endText === undefined)
                 button.endText = `[/${button.tag}]`;
             this.applyText(button.startText, button.endText);
+            this.lastInput = Date.now();
+        }
+
+        onInput(): void {
+            if(this.undoIndex > 0) {
+                this.undoStack = this.undoStack.slice(this.undoIndex);
+                this.undoIndex = 0;
+            }
+            this.$emit('input', this.text);
+            this.lastInput = Date.now();
         }
 
         onKeyDown(e: KeyboardEvent): void {
             const key = getKey(e);
-            if((e.metaKey || e.ctrlKey) && !e.shiftKey && key !== 'Control' && key !== 'Meta') { //tslint:disable-line:curly
+            if((e.metaKey || e.ctrlKey) && !e.shiftKey && key !== 'control' && key !== 'meta') {
+                if(key === 'z') {
+                    e.preventDefault();
+                    if(this.undoIndex === 0 && this.undoStack[0] !== this.text) this.undoStack.unshift(this.text);
+                    if(this.undoStack.length > this.undoIndex + 1) {
+                        this.text = this.undoStack[++this.undoIndex];
+                        this.lastInput = Date.now();
+                    }
+                } else if(key === 'y') {
+                    e.preventDefault();
+                    if(this.undoIndex > 0) {
+                        this.text = this.undoStack[--this.undoIndex];
+                        this.lastInput = Date.now();
+                    }
+                }
                 for(const button of this.buttons)
                     if(button.key === key) {
                         e.stopPropagation();
@@ -150,12 +191,12 @@
                         this.apply(button);
                         break;
                     }
-            } else if(key === 'Shift') this.isShiftPressed = true;
+            } else if(key === 'shift') this.isShiftPressed = true;
             this.$emit('keydown', e);
         }
 
         onKeyUp(e: KeyboardEvent): void {
-            if(getKey(e) === 'Shift') this.isShiftPressed = false;
+            if(getKey(e) === 'shift') this.isShiftPressed = false;
             this.$emit('keyup', e);
         }
 

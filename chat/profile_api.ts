@@ -2,10 +2,14 @@ import Axios from 'axios';
 import Vue from 'vue';
 import {InlineDisplayMode} from '../bbcode/interfaces';
 import {initParser, standardParser} from '../bbcode/standard';
+import CharacterLink from '../components/character_link.vue';
+import CharacterSelect from '../components/character_select.vue';
+import {setCharacters} from '../components/character_select/character_list';
+import DateDisplay from '../components/date_display.vue';
 import {registerMethod, Store} from '../site/character_page/data_store';
 import {
-    Character, CharacterCustom, CharacterFriend, CharacterImage, CharacterImageOld, CharacterInfo, CharacterInfotag, CharacterSettings,
-    GuestbookState, KinkChoiceFull, SharedKinks
+    Character, CharacterCustom, CharacterFriend, CharacterImage, CharacterImageOld, CharacterInfo, CharacterInfotag, CharacterKink,
+    CharacterSettings, Friend, FriendRequest, FriendsByCharacter, GuestbookState, KinkChoice, KinkChoiceFull, SharedKinks
 } from '../site/character_page/interfaces';
 import '../site/directives/vue-select'; //tslint:disable-line:no-import-side-effect
 import * as Utils from '../site/utils';
@@ -15,9 +19,12 @@ async function characterData(name: string | undefined): Promise<Character> {
     const data = await core.connection.queryApi('character-data.php', {name}) as CharacterInfo & {
         badges: string[]
         customs_first: boolean
+        character_list: {id: number, name: string}[]
         custom_kinks: {[key: number]: {choice: 'fave' | 'yes' | 'maybe' | 'no', name: string, description: string, children: number[]}}
         custom_title: string
+        kinks: {[key: string]: string}
         infotags: {[key: string]: string}
+        memo: {id: number, memo: string}
         settings: CharacterSettings
     };
     const newKinks: {[key: string]: KinkChoiceFull} = {};
@@ -33,8 +40,7 @@ async function characterData(name: string | undefined): Promise<Character> {
             description: custom.description
         });
         for(const childId of custom.children)
-            if(data.kinks[childId] !== undefined)
-                newKinks[childId] = parseInt(key, 10);
+            newKinks[childId] = parseInt(key, 10);
     }
     const newInfotags: {[key: string]: CharacterInfotag} = {};
     for(const key in data.infotags) {
@@ -61,9 +67,11 @@ async function characterData(name: string | undefined): Promise<Character> {
             infotags: newInfotags,
             online_chat: false
         },
+        memo: data.memo,
+        character_list: data.character_list,
         badges: data.badges,
         settings: data.settings,
-        bookmarked: false,
+        bookmarked: core.characters.get(data.name).isBookmarked,
         self_staff: false
     };
 }
@@ -147,7 +155,15 @@ async function guestbookGet(id: number, page: number): Promise<GuestbookState> {
     return core.connection.queryApi<GuestbookState>('character-guestbook.php', {id, page: page - 1});
 }
 
-export function init(): void {
+async function kinksGet(id: number): Promise<CharacterKink[]> {
+    const data = await core.connection.queryApi<{kinks: {[key: string]: string}}>('character-data.php', {id});
+    return Object.keys(data.kinks).map((key) => {
+        const choice = data.kinks[key];
+        return {id: parseInt(key, 10), choice: <KinkChoice>(choice === 'fave' ? 'favorite' : choice)};
+    });
+}
+
+export function init(characters: {[key: string]: number}): void {
     Utils.setDomains('https://www.f-list.net/', 'https://static.f-list.net/');
     initParser({
         siteDomain: Utils.siteDomain,
@@ -156,6 +172,13 @@ export function init(): void {
         inlineDisplayMode: InlineDisplayMode.DISPLAY_ALL
     });
 
+    Vue.component('character-select', CharacterSelect);
+    Vue.component('character-link', CharacterLink);
+    Vue.component('date-display', DateDisplay);
+    setCharacters(Object.keys(characters).map((name) => ({name, id: characters[name]})));
+    core.connection.onEvent('connecting', () => {
+        Utils.Settings.defaultCharacter = characters[core.connection.character];
+    });
     Vue.directive('bbcode', (el, binding) => {
         while(el.firstChild !== null)
             el.removeChild(el.firstChild);
@@ -163,10 +186,34 @@ export function init(): void {
     });
     registerMethod('characterData', characterData);
     registerMethod('contactMethodIconUrl', contactMethodIconUrl);
+    registerMethod('sendNoteUrl', (character: CharacterInfo) => `${Utils.siteDomain}read_notes.php?send=${character.name}`);
     registerMethod('fieldsGet', fieldsGet);
     registerMethod('friendsGet', friendsGet);
+    registerMethod('kinksGet', kinksGet);
     registerMethod('imagesGet', imagesGet);
     registerMethod('guestbookPageGet', guestbookGet);
     registerMethod('imageUrl', (image: CharacterImageOld) => image.url);
+    registerMethod('memoUpdate', async(id: number, memo: string) => {
+        await core.connection.queryApi('character-memo-save.php', {target: id, note: memo});
+        return {id, memo, updated_at: Date.now() / 1000};
+    });
     registerMethod('imageThumbUrl', (image: CharacterImage) => `${Utils.staticDomain}images/charthumb/${image.id}.${image.extension}`);
+    registerMethod('bookmarkUpdate', async(id: number, state: boolean) => {
+        await core.connection.queryApi(`bookmark-${state ? 'add' : 'remove'}.php`, {id});
+        return state;
+    });
+    registerMethod('characterFriends', async(id: number) =>
+        core.connection.queryApi<FriendsByCharacter>('character-friend-list.php', {id}));
+    registerMethod('friendRequest', async(target_id: number, source_id: number) =>
+        (await core.connection.queryApi<{request: FriendRequest}>('request-send2.php', {source_id, target_id})).request);
+    registerMethod('friendDissolve', async(friend: Friend) =>
+        core.connection.queryApi<void>('friend-remove.php', {source_id: friend.source.id, dest_id: friend.target.id}));
+    registerMethod('friendRequestAccept', async(req: FriendRequest) => {
+        await core.connection.queryApi('request-accept.php', {request_id: req.id});
+        return { id: undefined!, source: req.target, target: req.source, createdAt: Date.now() / 1000 };
+    });
+    registerMethod('friendRequestCancel', async(req: FriendRequest) =>
+        core.connection.queryApi<void>('request-cancel.php', {request_id: req.id}));
+    registerMethod('friendRequestIgnore', async(req: FriendRequest) =>
+        core.connection.queryApi<void>('request-deny.php', {request_id: req.id}));
 }

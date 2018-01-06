@@ -62,7 +62,6 @@ export default function(this: void, connection: Connection): Interfaces.State {
         state.bookmarkList = (<{characters: string[]}>await connection.queryApi('bookmark-list.php')).characters;
         state.friendList = ((<{friends: {source: string, dest: string, last_online: number}[]}>await connection.queryApi('friend-list.php'))
             .friends).map((x) => x.dest);
-        //tslint:disable-next-line:forin
         for(const key in state.characters) {
             const character = state.characters[key]!;
             character.isFriend = state.friendList.indexOf(character.name) !== -1;
@@ -76,7 +75,6 @@ export default function(this: void, connection: Connection): Interfaces.State {
     connection.onEvent('connected', async(isReconnect) => {
         if(!isReconnect) return;
         connection.send('STA', reconnectStatus);
-        //tslint:disable-next-line:forin
         for(const key in state.characters) {
             const char = state.characters[key]!;
             char.isIgnored = state.ignoreList.indexOf(key) !== -1;
@@ -97,7 +95,9 @@ export default function(this: void, connection: Connection): Interfaces.State {
                 state.get(data.character).isIgnored = false;
         }
     });
-    connection.onMessage('ADL', (data) => state.opList = data.ops.slice());
+    connection.onMessage('ADL', (data) => {
+        state.opList = data.ops.slice();
+    });
     connection.onMessage('LIS', (data) => {
         for(const char of data.characters) {
             const character = state.get(char[0]);
@@ -143,6 +143,7 @@ export default function(this: void, connection: Connection): Interfaces.State {
                 if(character.status !== 'offline') state.bookmarks.splice(state.bookmarks.indexOf(character), 1);
                 break;
             case 'friendadd':
+                if(character.isFriend) return;
                 state.friendList.push(data.name);
                 character.isFriend = true;
                 if(character.status !== 'offline') state.friends.push(character);

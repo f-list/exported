@@ -1,4 +1,5 @@
 import {Component, CreateElement, RenderContext, VNode, VNodeChildren} from 'vue';
+import {Channel} from '../fchat';
 import {BBCodeView} from './bbcode';
 import {formatTime} from './common';
 import core from './core';
@@ -20,9 +21,9 @@ const userPostfix: {[key: number]: string | undefined} = {
 //tslint:disable-next-line:variable-name
 const MessageView: Component = {
     functional: true,
-    render(createElement: CreateElement, context: RenderContext): VNode {
-        /*tslint:disable:no-unsafe-any*///context.props is any
-        const message: Conversation.Message = context.props.message;
+    render(createElement: CreateElement,
+           context: RenderContext<{message: Conversation.Message, classes?: string, channel?: Channel}>): VNode {
+        const message = context.props.message;
         const children: (VNode | string | VNodeChildren)[] = [`[${formatTime(message.time)}] `];
         /*tslint:disable-next-line:prefer-template*///unreasonable here
         let classes = `message message-${Conversation.Message.Type[message.type].toLowerCase()}` +
@@ -39,7 +40,6 @@ const MessageView: Component = {
         const node = createElement('div', {attrs: {class: classes}}, children);
         node.key = context.data.key;
         return node;
-        //tslint:enable
     }
 };
 

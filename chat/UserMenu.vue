@@ -115,10 +115,10 @@
             this.memo = '';
             (<Modal>this.$refs['memo']).show();
             try {
-                const memo = <{note: string, id: number}>await core.connection.queryApi('character-memo-get.php',
+                const memo = <{note: string | null, id: number}>await core.connection.queryApi('character-memo-get2.php',
                     {target: this.character!.name});
                 this.memoId = memo.id;
-                this.memo = memo.note;
+                this.memo = memo.note !== null ? memo.note : '';
                 this.memoLoading = false;
             } catch(e) {
                 alert(errorToString(e));
@@ -165,6 +165,7 @@
                 if(node.character !== undefined || node.dataset['character'] !== undefined || node.parentNode === null) break;
                 node = node.parentElement!;
             }
+            if(node.dataset['touch'] === 'false' && e.type !== 'contextmenu') return;
             if(node.character === undefined)
                 if(node.dataset['character'] !== undefined) node.character = core.characters.get(node.dataset['character']!);
                 else {
@@ -174,6 +175,7 @@
             switch(e.type) {
                 case 'click':
                     if(node.dataset['character'] === undefined) this.onClick(node.character);
+                    e.preventDefault();
                     break;
                 case 'touchstart':
                     this.touchTimer = window.setTimeout(() => {
@@ -190,8 +192,8 @@
                     break;
                 case 'contextmenu':
                     this.openMenu(touch, node.character, node.channel);
+                    e.preventDefault();
             }
-            e.preventDefault();
         }
 
         private onClick(character: Character): void {

@@ -1,10 +1,12 @@
 <template>
     <div id="character-page-sidebar">
-        <span class="character-name">{{ character.character.name }}</span>
-        <div v-if="character.character.title" class="character-title">{{ character.character.title }}</div>
-        <character-action-menu :character="character"></character-action-menu>
-        <div>
-            <img :src="avatarUrl(character.character.name)" class="character-avatar">
+        <div class="character-image-container">
+            <div>
+                <span class="character-name">{{ character.character.name }}</span>
+                <div v-if="character.character.title" class="character-title">{{ character.character.title }}</div>
+                <character-action-menu :character="character"></character-action-menu>
+            </div>
+            <img :src="avatarUrl(character.character.name)" class="character-avatar" style="margin-right:10px">
         </div>
         <div v-if="authenticated" class="character-links-block">
             <template v-if="character.is_self">
@@ -13,16 +15,15 @@
                 <a @click="showDuplicate" class="duplicate-link"><i class="fa fa-copy"></i>Duplicate</a>
             </template>
             <template v-else>
-            <span v-if="character.self_staff || character.settings.prevent_bookmarks !== true">
-                <a @click="toggleBookmark" :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}">
-                    {{ character.bookmarked ? '-' : '+' }}Bookmark
-                </a>
-                <span v-if="character.settings.prevent_bookmarks" class="prevents-bookmarks">!</span>
-            </span>
-                <a @click="showFriends" class="friend-link"><i class="fa fa-user"></i>Friend</a>
-                <a @click="showReport" class="report-link"><i class="fa fa-exclamation-triangle"></i>Report</a>
+                <span v-if="character.self_staff || character.settings.prevent_bookmarks !== true">
+                    <a @click="toggleBookmark" class="btn" :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}">
+                        {{ character.bookmarked ? '-' : '+' }} Bookmark</a>
+                    <span v-if="character.settings.prevent_bookmarks" class="prevents-bookmarks">!</span>
+                </span>
+                <a @click="showFriends" class="friend-link btn"><i class="fa fa-fw fa-user"></i>Friend</a>
+                <a v-if="!oldApi" @click="showReport" class="report-link btn"><i class="fa fa-exclamation-triangle"></i>Report</a>
             </template>
-            <a @click="showMemo" class="memo-link"><i class="fa fa-sticky-note-o"></i>Memo</a>
+            <a @click="showMemo" class="memo-link btn"><i class="fa fa-sticky-note-o fa-fw"></i>Memo</a>
         </div>
         <div v-if="character.badges && character.badges.length > 0" class="badges-block">
             <div v-for="badge in character.badges" class="character-badge" :class="badgeClass(badge)">
@@ -30,7 +31,8 @@
             </div>
         </div>
 
-        <a v-if="authenticated && !character.is_self" :href="noteUrl" class="character-page-note-link">Send Note</a>
+        <a v-if="authenticated && !character.is_self" :href="noteUrl" class="character-page-note-link btn" style="padding:0 4px">
+            <span class="fa fa-envelope-o fa-fw"></span>Send Note</a>
         <div v-if="character.character.online_chat" @click="showInChat" class="character-page-online-chat">Online In Chat</div>
 
         <div class="contact-block">
@@ -65,7 +67,7 @@
 
         <div class="character-list-block">
             <div v-for="listCharacter in character.character_list">
-                <img :src="avatarUrl(listCharacter.name)" class="character-avatar icon">
+                <img :src="avatarUrl(listCharacter.name)" class="character-avatar icon" style="margin-right:5px">
                 <character-link :character="listCharacter.name"></character-link>
             </div>
         </div>
@@ -74,7 +76,7 @@
             <delete-dialog :character="character" ref="delete-dialog"></delete-dialog>
             <rename-dialog :character="character" ref="rename-dialog"></rename-dialog>
             <duplicate-dialog :character="character" ref="duplicate-dialog"></duplicate-dialog>
-            <report-dialog v-if="authenticated && !character.is_self" :character="character" ref="report-dialog"></report-dialog>
+            <report-dialog v-if="!oldApi && authenticated && !character.is_self" :character="character" ref="report-dialog"></report-dialog>
             <friend-dialog :character="character" ref="friend-dialog"></friend-dialog>
             <block-dialog :character="character" ref="block-dialog"></block-dialog>
         </template>
@@ -135,6 +137,8 @@
     export default class Sidebar extends Vue {
         @Prop({required: true})
         readonly character: Character;
+        @Prop()
+        readonly oldApi?: true;
         readonly shared: SharedStore = Store;
         readonly quickInfoIds: ReadonlyArray<number> = [1, 3, 2, 49, 9, 29, 15, 41, 25]; // Do not sort these.
         readonly avatarUrl = Utils.avatarURL;
@@ -208,7 +212,7 @@
         }
 
         get noteUrl(): string {
-            return `${Utils.siteDomain}notes/folder/1/0?target=${this.character.character.name}`;
+            return methods.sendNoteUrl(this.character.character);
         }
 
         get contactMethods(): object[] {

@@ -44,9 +44,8 @@ const vue = <Vue & VueState>new Vue({
         state
     },
     watch: {
-        'state.hiddenUsers': (newValue: string[]) => {
-            //tslint:disable-next-line:no-floating-promises
-            if(data.settingsStore !== undefined) data.settingsStore.set('hiddenUsers', newValue);
+        'state.hiddenUsers': async(newValue: string[]) => {
+            if(data.settingsStore !== undefined) await data.settingsStore.set('hiddenUsers', newValue);
         }
     }
 });
@@ -92,7 +91,7 @@ export function init(this: void, connection: Connection, logsClass: new() => Log
     });
 }
 
-const core = <{
+export interface Core {
     readonly connection: Connection
     readonly logs: Logs.Basic
     readonly state: StateInterface
@@ -107,6 +106,8 @@ const core = <{
     register(module: 'characters', state: Character.State): void
     reloadSettings(): void
     watch<T>(getter: (this: VueState) => T, callback: WatchHandler<T>): void
-}><any>data; /*tslint:disable-line:no-any*///hack
+}
+
+const core = <Core><any>data; /*tslint:disable-line:no-any*///hack
 
 export default core;

@@ -1,15 +1,16 @@
+@import "~bootstrap/less/variables.less";
 // BBcode colors
 @red-color: #f00;
 @green-color: #0f0;
 @blue-color: #00f;
 @yellow-color: #ff0;
 @cyan-color: #0ff;
-@purple-color: #f0f;
+@purple-color: #c0f;
 @white-color: #fff;
 @black-color: #000;
 @brown-color: #8a6d3b;
 @pink-color: #faa;
-@gray-color: #cccc;
+@gray-color: #ccc;
 @orange-color: #f60;
 @collapse-header-bg: @well-bg;
 @collapse-border: darken(@well-border, 25%);
@@ -17,10 +18,10 @@
 
 // Character page quick kink comparison
 @quick-compare-active-border: @black-color;
-@quick-compare-favorite-bg: @brand-success;
-@quick-compare-yes-bg: @brand-info;
-@quick-compare-maybe-bg: @brand-warning;
-@quick-compare-no-bg: @brand-danger;
+@quick-compare-favorite-bg: @state-info-bg;
+@quick-compare-yes-bg: @state-success-bg;
+@quick-compare-maybe-bg: @state-warning-bg;
+@quick-compare-no-bg: @state-danger-bg;
 
 // character page badges
 @character-badge-bg: darken(@well-bg, 10%);
@@ -45,3 +46,8 @@
 // General color extensions missing from bootstrap
 @text-background-color: @body-bg;
 @text-background-color-disabled: @gray-lighter;
+
+@screen-sm-min: 700px;
+@screen-md-min: 900px;
+@container-sm: 680px;
+@container-md: 880px;

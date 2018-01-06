@@ -1,5 +1,5 @@
 <template>
-    <div @mouseover="onMouseOver" id="page" style="position: relative; padding: 10px;">
+    <div @mouseover="onMouseOver" id="page" style="position:relative;padding:5px 10px 10px">
         <div v-html="styling"></div>
         <div v-if="!characters" style="display:flex; align-items:center; justify-content:center; height: 100%;">
             <div class="well well-lg" style="width: 400px;">
@@ -9,7 +9,7 @@
                 </div>
                 <div class="form-group">
                     <label class="control-label" for="account">{{l('login.account')}}</label>
-                    <input class="form-control" id="account" v-model="account" @keypress.enter="login"/>
+                    <input class="form-control" id="account" v-model="settings.account" @keypress.enter="login"/>
                 </div>
                 <div class="form-group">
                     <label class="control-label" for="password">{{l('login.password')}}</label>
@@ -17,7 +17,7 @@
                 </div>
                 <div class="form-group" v-show="showAdvanced">
                     <label class="control-label" for="host">{{l('login.host')}}</label>
-                    <input class="form-control" id="host" v-model="host" @keypress.enter="login"/>
+                    <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login"/>
                 </div>
                 <div class="form-group">
                     <label for="advanced"><input type="checkbox" id="advanced" v-model="showAdvanced"/> {{l('login.advanced')}}</label>
@@ -25,7 +25,7 @@
                 <div class="form-group">
                     <label for="save"><input type="checkbox" id="save" v-model="saveLogin"/> {{l('login.save')}}</label>
                 </div>
-                <div class="form-group" style="margin:0">
+                <div class="form-group text-right" style="margin:0">
                     <button class="btn btn-primary" @click="login" :disabled="loggingIn">
                         {{l(loggingIn ? 'login.working' : 'login.submit')}}
                     </button>
@@ -41,7 +41,7 @@
             </div>
         </modal>
         <modal :buttons="false" ref="profileViewer" dialogClass="profile-viewer">
-            <character-page :authenticated="false" :hideGroups="true" :name="profileName" :image-preview="true"></character-page>
+            <character-page :authenticated="true" :oldApi="true" :name="profileName" :image-preview="true"></character-page>
             <template slot="title">{{profileName}} <a class="btn fa fa-external-link" @click="openProfileInBrowser"></a></template>
         </modal>
     </div>
@@ -55,7 +55,7 @@
     import * as qs from 'querystring';
     import * as Raven from 'raven-js';
     import {promisify} from 'util';
-    import Vue, {ComponentOptions} from 'vue';
+    import Vue from 'vue';
     import Component from 'vue-class-component';
     import Chat from '../chat/Chat.vue';
     import {Settings} from '../chat/common';
@@ -66,51 +66,19 @@
     import Modal from '../components/Modal.vue';
     import Connection from '../fchat/connection';
     import CharacterPage from '../site/character_page/character_page.vue';
-    import {nativeRequire} from './common';
-    import {GeneralSettings, getGeneralSettings, Logs, setGeneralSettings, SettingsStore} from './filesystem';
+    import {GeneralSettings, nativeRequire} from './common';
+    import {Logs, SettingsStore} from './filesystem';
     import * as SlimcatImporter from './importer';
-    import {createAppMenu, createContextMenu} from './menu';
     import Notifications from './notifications';
-    import * as spellchecker from './spellchecker';
+
+    declare module '../chat/interfaces' {
+        interface State {
+            generalSettings?: GeneralSettings
+        }
+    }
 
     const webContents = electron.remote.getCurrentWebContents();
-    webContents.on('context-menu', (_, props) => {
-        const menuTemplate = createContextMenu(<Electron.ContextMenuParams & {editFlags: {[key: string]: boolean}}>props);
-        if(props.misspelledWord !== '') {
-            const corrections = spellchecker.getCorrections(props.misspelledWord);
-            if(corrections.length > 0) {
-                menuTemplate.unshift({type: 'separator'});
-                menuTemplate.unshift(...corrections.map((correction: string) => ({
-                    label: correction,
-                    click: () => webContents.replaceMisspelling(correction)
-                })));
-            }
-        }
-
-        if(menuTemplate.length > 0) electron.remote.Menu.buildFromTemplate(menuTemplate).popup();
-    });
-
-    const defaultTrayMenu = [
-        {label: l('action.open'), click: () => mainWindow!.show()},
-        {
-            label: l('action.quit'),
-            click: () => {
-                isClosing = true;
-                mainWindow!.close();
-                mainWindow = undefined;
-                electron.remote.app.quit();
-            }
-        }
-    ];
-    let trayMenu = electron.remote.Menu.buildFromTemplate(defaultTrayMenu);
-
-    let isClosing = false;
-    let mainWindow: Electron.BrowserWindow | undefined = electron.remote.getCurrentWindow();
-    //tslint:disable-next-line:no-require-imports
-    const tray = new electron.remote.Tray(path.join(__dirname, <string>require('./build/tray.png')));
-    tray.setToolTip(l('title'));
-    tray.on('click', (_) => mainWindow!.show());
-    tray.setContextMenu(trayMenu);
+    const parent = electron.remote.getCurrentWindow().webContents;
 
     /*tslint:disable:no-any*///because this is hacky
     const keyStore = nativeRequire<{
@@ -122,8 +90,6 @@
     for(const key in keyStore) keyStore[key] = promisify(<(...args: any[]) => any>keyStore[key].bind(keyStore, 'fchat'));
     //tslint:enable
 
-    profileApiInit();
-
     @Component({
         components: {chat: Chat, modal: Modal, characterPage: CharacterPage}
     })
@@ -132,205 +98,83 @@
         showAdvanced = false;
         saveLogin = false;
         loggingIn = false;
-        account: string;
         password = '';
-        host: string;
+        character: string | undefined;
         characters: string[] | null = null;
         error = '';
         defaultCharacter: string | null = null;
-        settings = new SettingsStore();
         l = l;
-        currentSettings: GeneralSettings;
-        isConnected = false;
+        settings: GeneralSettings;
         importProgress = 0;
         profileName = '';
 
-        constructor(options?: ComponentOptions<Index>) {
-            super(options);
-            let settings = getGeneralSettings();
-            if(settings === undefined) {
-                try {
-                    if(SlimcatImporter.canImportGeneral() && confirm(l('importer.importGeneral')))
-                        settings = SlimcatImporter.importGeneral();
-                } catch {
-                    alert(l('importer.error'));
-                }
-                settings = settings !== undefined ? settings : new GeneralSettings();
-            }
-            this.account = settings.account;
-            this.host = settings.host;
-            this.currentSettings = settings;
-        }
+        async created(): Promise<void> {
+            if(this.settings.account.length > 0) this.saveLogin = true;
+            keyStore.getPassword(this.settings.account)
+                .then((value: string) => this.password = value, (err: Error) => this.error = err.message);
 
-        created(): void {
-            if(this.currentSettings.account.length > 0) {
-                keyStore.getPassword(this.currentSettings.account)
-                    .then((value: string) => this.password = value, (err: Error) => this.error = err.message);
-                this.saveLogin = true;
-            }
-            window.onbeforeunload = () => {
-                if(process.env.NODE_ENV !== 'production' || isClosing || !this.isConnected) {
-                    tray.destroy();
-                    return;
-                }
-                if(!this.currentSettings.closeToTray)
-                    return setImmediate(() => {
-                        if(confirm(l('chat.confirmLeave'))) {
-                            isClosing = true;
-                            mainWindow!.close();
-                        }
-                    });
-                mainWindow!.hide();
-                return false;
-            };
+            Vue.set(core.state, 'generalSettings', this.settings);
 
-            const appMenu = createAppMenu();
-            const themes = fs.readdirSync(path.join(__dirname, 'themes')).filter((x) => x.substr(-4) === '.css').map((x) => x.slice(0, -4));
-            const setTheme = (theme: string) => {
-                this.currentSettings.theme = theme;
-                setGeneralSettings(this.currentSettings);
-            };
-            const spellcheckerMenu = new electron.remote.Menu();
-            //tslint:disable-next-line:no-floating-promises
-            this.addSpellcheckerItems(spellcheckerMenu);
-            appMenu[0].submenu = [
-                {
-                    label: l('settings.closeToTray'), type: 'checkbox', checked: this.currentSettings.closeToTray,
-                    click: (item: Electron.MenuItem) => {
-                        this.currentSettings.closeToTray = item.checked;
-                        setGeneralSettings(this.currentSettings);
-                    }
-                }, {
-                    label: l('settings.profileViewer'), type: 'checkbox', checked: this.currentSettings.profileViewer,
-                    click: (item: Electron.MenuItem) => {
-                        this.currentSettings.profileViewer = item.checked;
-                        setGeneralSettings(this.currentSettings);
-                    }
-                },
-                {label: l('settings.spellcheck'), submenu: spellcheckerMenu},
-                {
-                    label: l('settings.theme'),
-                    submenu: themes.map((x) => ({
-                        checked: this.currentSettings.theme === x,
-                        click: () => setTheme(x),
-                        label: x,
-                        type: <'radio'>'radio'
-                    }))
-                },
-                {type: 'separator'},
-                {role: 'minimize'},
-                {
-                    accelerator: process.platform === 'darwin' ? 'Cmd+Q' : undefined,
-                    label: l('action.quit'),
-                    click(): void {
-                        isClosing = true;
-                        mainWindow!.close();
-                    }
-                }
-            ];
-            electron.remote.Menu.setApplicationMenu(electron.remote.Menu.buildFromTemplate(appMenu));
-
-            let hasUpdate = false;
-            electron.ipcRenderer.on('updater-status', (_: Event, status: string) => {
-                if(status !== 'update-downloaded' || hasUpdate) return;
-                hasUpdate = true;
-                const menu = electron.remote.Menu.getApplicationMenu();
-                menu.append(new electron.remote.MenuItem({
-                    label: l('action.updateAvailable'),
-                    submenu: electron.remote.Menu.buildFromTemplate([{
-                        label: l('action.update'),
-                        click: () => {
-                            if(!this.isConnected || confirm(l('chat.confirmLeave'))) {
-                                isClosing = true;
-                                electron.ipcRenderer.send('install-update');
-                            }
-                        }
-                    }, {
-                        label: l('help.changelog'),
-                        click: () => electron.shell.openExternal('https://wiki.f-list.net/F-Chat_3.0#Changelog')
-                    }])
-                }));
-                electron.remote.Menu.setApplicationMenu(menu);
-            });
+            electron.ipcRenderer.on('settings', (_: Event, settings: GeneralSettings) => core.state.generalSettings = this.settings = settings);
             electron.ipcRenderer.on('open-profile', (_: Event, name: string) => {
-                if(this.currentSettings.profileViewer) {
-                    const profileViewer = <Modal>this.$refs['profileViewer'];
-                    this.profileName = name;
-                    profileViewer.show();
-                } else electron.remote.shell.openExternal(`https://www.f-list.net/c/${name}`);
+                const profileViewer = <Modal>this.$refs['profileViewer'];
+                this.profileName = name;
+                profileViewer.show();
             });
-        }
 
-        async addSpellcheckerItems(menu: Electron.Menu): Promise<void> {
-            const dictionaries = await spellchecker.getAvailableDictionaries();
-            const selected = this.currentSettings.spellcheckLang;
-            menu.append(new electron.remote.MenuItem({
-                type: 'radio',
-                label: l('settings.spellcheck.disabled'),
-                click: this.setSpellcheck.bind(this, undefined)
-            }));
-            for(const lang of dictionaries)
-                menu.append(new electron.remote.MenuItem({
-                    type: 'radio',
-                    label: lang,
-                    checked: lang === selected,
-                    click: this.setSpellcheck.bind(this, lang)
-                }));
-            electron.webFrame.setSpellCheckProvider('', false, {spellCheck: spellchecker.check});
-            await spellchecker.setDictionary(selected);
-        }
-
-        async setSpellcheck(lang: string | undefined): Promise<void> {
-            this.currentSettings.spellcheckLang = lang;
-            setGeneralSettings(this.currentSettings);
-            await spellchecker.setDictionary(lang);
+            window.addEventListener('beforeunload', () => {
+                if(this.character !== undefined) electron.ipcRenderer.send('disconnect', this.character);
+            });
         }
 
         async login(): Promise<void> {
             if(this.loggingIn) return;
             this.loggingIn = true;
             try {
-                if(!this.saveLogin) await keyStore.deletePassword(this.account);
-                const data = <{ticket?: string, error: string, characters: string[], default_character: string}>
-                    (await Axios.post('https://www.f-list.net/json/getApiTicket.php',
-                        qs.stringify({account: this.account, password: this.password, no_friends: true, no_bookmarks: true}))).data;
+                if(!this.saveLogin) await keyStore.deletePassword(this.settings.account);
+                const data = <{ticket?: string, error: string, characters: {[key: string]: number}, default_character: number}>
+                    (await Axios.post('https://www.f-list.net/json/getApiTicket.php', qs.stringify({
+                        account: this.settings.account, password: this.password, no_friends: true, no_bookmarks: true,
+                        new_character_list: true
+                    }))).data;
                 if(data.error !== '') {
                     this.error = data.error;
                     return;
                 }
-                if(this.saveLogin) {
-                    this.currentSettings.account = this.account;
-                    await keyStore.setPassword(this.account, this.password);
-                    this.currentSettings.host = this.host;
-                    setGeneralSettings(this.currentSettings);
-                }
-                Socket.host = this.host;
-                const connection = new Connection(Socket, this.account, this.password);
+                if(this.saveLogin) electron.ipcRenderer.send('save-login', this.settings.account, this.settings.host);
+                Socket.host = this.settings.host;
+                const connection = new Connection(`F-Chat 3.0 (${process.platform})`, electron.remote.app.getVersion(), Socket,
+                    this.settings.account, this.password);
                 connection.onEvent('connecting', async() => {
-                    if((await this.settings.get('settings')) === undefined && SlimcatImporter.canImportCharacter(core.connection.character)) {
-                        if(!confirm(l('importer.importGeneral'))) return this.settings.set('settings', new Settings());
+                    if(!electron.ipcRenderer.sendSync('connect', core.connection.character) && process.env.NODE_ENV === 'production') {
+                        alert(l('login.alreadyLoggedIn'));
+                        return core.connection.close();
+                    }
+                    this.character = core.connection.character;
+                    if((await core.settingsStore.get('settings')) === undefined &&
+                        SlimcatImporter.canImportCharacter(core.connection.character)) {
+                        if(!confirm(l('importer.importGeneral'))) return core.settingsStore.set('settings', new Settings());
                         (<Modal>this.$refs['importModal']).show(true);
                         await SlimcatImporter.importCharacter(core.connection.character, (progress) => this.importProgress = progress);
                         (<Modal>this.$refs['importModal']).hide();
                     }
                 });
                 connection.onEvent('connected', () => {
-                    this.isConnected = true;
-                    tray.setToolTip(document.title = `FChat 3.0 - ${core.connection.character}`);
+                    core.watch(() => core.conversations.hasNew, (newValue) => parent.send('has-new', webContents.id, newValue));
+                    parent.send('connect', webContents.id, core.connection.character);
                     Raven.setUserContext({username: core.connection.character});
-                    trayMenu.insert(0, new electron.remote.MenuItem({label: core.connection.character, enabled: false}));
-                    trayMenu.insert(1, new electron.remote.MenuItem({type: 'separator'}));
-                    tray.setContextMenu(trayMenu);
                 });
                 connection.onEvent('closed', () => {
-                    this.isConnected = false;
-                    tray.setToolTip(document.title = 'FChat 3.0');
+                    this.character = undefined;
+                    electron.ipcRenderer.send('disconnect', connection.character);
+                    parent.send('disconnect', webContents.id);
                     Raven.setUserContext();
-                    tray.setContextMenu(trayMenu = electron.remote.Menu.buildFromTemplate(defaultTrayMenu));
                 });
                 initCore(connection, Logs, SettingsStore, Notifications);
-                this.characters = data.characters.sort();
-                this.defaultCharacter = data.default_character;
+                const charNames = Object.keys(data.characters);
+                this.characters = charNames.sort();
+                this.defaultCharacter = charNames.find((x) => data.characters[x] === data.default_character)!;
+                profileApiInit(data.characters);
             } catch(e) {
                 this.error = l('login.error');
                 if(process.env.NODE_ENV !== 'production') throw e;
@@ -362,10 +206,10 @@
 
         get styling(): string {
             try {
-                return `<style>${fs.readFileSync(path.join(__dirname, `themes/${this.currentSettings.theme}.css`))}</style>`;
+                return `<style>${fs.readFileSync(path.join(__dirname, `themes/${this.settings.theme}.css`))}</style>`;
             } catch(e) {
-                if((<Error & {code: string}>e).code === 'ENOENT' && this.currentSettings.theme !== 'default') {
-                    this.currentSettings.theme = 'default';
+                if((<Error & {code: string}>e).code === 'ENOENT' && this.settings.theme !== 'default') {
+                    this.settings.theme = 'default';
                     return this.styling;
                 }
                 throw e;

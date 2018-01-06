@@ -7,10 +7,10 @@
                     <user :character="conversation.character"></user>
                     <logs :conversation="conversation"></logs>
                     <a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn">
-                        <span class="fa fa-cog"></span> {{l('conversationSettings.title')}}
+                        <span class="fa fa-cog"></span> <span class="btn-text">{{l('conversationSettings.title')}}</span>
                     </a>
-                    <a href="#" @click.prevent="reportDialog.report();" class="btn"><span class="fa fa-exclamation"></span>
-                        {{l('chat.report')}}</a>
+                    <a href="#" @click.prevent="reportDialog.report();" class="btn"><span class="fa fa-exclamation-triangle"></span>
+                        <span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
                 <div style="overflow: auto">
                     {{l('status.' + conversation.character.status)}}
@@ -26,15 +26,15 @@
                     <h4 style="margin: 0; display:inline; vertical-align: middle;">{{conversation.name}}</h4>
                     <a @click="descriptionExpanded = !descriptionExpanded" class="btn">
                         <span class="fa" :class="{'fa-chevron-down': !descriptionExpanded, 'fa-chevron-up': descriptionExpanded}"></span>
-                        {{l('channel.description')}}
+                        <span class="btn-text">{{l('channel.description')}}</span>
                     </a>
                     <manage-channel :channel="conversation.channel" v-if="isChannelMod"></manage-channel>
                     <logs :conversation="conversation"></logs>
                     <a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn">
-                        <span class="fa fa-cog"></span> {{l('conversationSettings.title')}}
+                        <span class="fa fa-cog"></span> <span class="btn-text">{{l('conversationSettings.title')}}</span>
                     </a>
                     <a href="#" @click.prevent="reportDialog.report();" class="btn"><span class="fa fa-exclamation-triangle"></span>
-                        {{l('chat.report')}}</a>
+                        <span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
                 <ul class="nav nav-pills mode-switcher">
                     <li v-for="mode in modes" :class="{active: conversation.mode == mode, disabled: conversation.channel.mode != 'both'}">
@@ -72,18 +72,18 @@
                 {{l('chat.typing.' + conversation.typingStatus, conversation.name)}}
             </span>
             <div v-show="conversation.infoText" style="display:flex;align-items:center">
-                <span class="fa fa-times" style="cursor:pointer" @click.stop="conversation.infoText = '';"></span>
+                <span class="fa fa-times" style="cursor:pointer" @click.stop="conversation.infoText = ''"></span>
                 <span style="flex:1;margin-left:5px">{{conversation.infoText}}</span>
             </div>
             <div v-show="conversation.errorText" style="display:flex;align-items:center">
-                <span class="fa fa-times" style="cursor:pointer" @click.stop="conversation.errorText = '';"></span>
+                <span class="fa fa-times" style="cursor:pointer" @click.stop="conversation.errorText = ''"></span>
                 <span class="redText" style="flex:1;margin-left:5px">{{conversation.errorText}}</span>
             </div>
             <div style="position:relative; margin-top:5px;">
                 <div class="overlay-disable" v-show="adCountdown">{{adCountdown}}</div>
                 <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="onInput"
-                    classes="form-control chat-text-box" :disabled="adCountdown" ref="textBox" style="position:relative;"
-                    :maxlength="conversation.maxMessageLength">
+                    :classes="'form-control chat-text-box' + (conversation.isSendingAds ? ' ads-text-box' : '')" :disabled="adCountdown"
+                    ref="textBox" style="position:relative" :maxlength="conversation.maxMessageLength">
                     <div style="float:right;text-align:right;display:flex;align-items:center">
                         <div v-show="conversation.maxMessageLength" style="margin-right: 5px;">
                             {{getByteLength(conversation.enteredText)}} / {{conversation.maxMessageLength}}
@@ -206,9 +206,9 @@
                 });
         }
 
-        onKeyDown(e: KeyboardEvent): void {
+        async onKeyDown(e: KeyboardEvent): Promise<void> {
             const editor = <Editor>this.$refs['textBox'];
-            if(getKey(e) === 'Tab') {
+            if(getKey(e) === 'tab') {
                 e.preventDefault();
                 if(this.conversation.enteredText.length === 0 || this.isConsoleTab) return;
                 if(this.tabOptions === undefined) {
@@ -242,13 +242,13 @@
                 }
             } else {
                 if(this.tabOptions !== undefined) this.tabOptions = undefined;
-                if(getKey(e) === 'ArrowUp' && this.conversation.enteredText.length === 0
+                if(getKey(e) === 'arrowup' && this.conversation.enteredText.length === 0
                     && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey)
                     this.conversation.loadLastSent();
-                else if(getKey(e) === 'Enter') {
+                else if(getKey(e) === 'enter') {
                     if(e.shiftKey) return;
                     e.preventDefault();
-                    this.conversation.send();
+                    await this.conversation.send();
                 }
             }
         }
@@ -302,8 +302,7 @@
 </script>
 
 <style lang="less">
-    @import '~bootstrap/less/variables.less';
-
+    @import "../less/flist_variables.less";
     #conversation {
         .header {
             @media (min-width: @screen-sm-min) {

@@ -1,4 +1,3 @@
-//tslint:disable:no-floating-promises
 import {queuedJoin} from '../fchat/channels';
 import {decodeHTML} from '../fchat/common';
 import {characterImage, ConversationSettings, EventMessage, Message, messageToString} from './common';
@@ -46,7 +45,7 @@ abstract class Conversation implements Interfaces.Conversation {
 
     set settings(value: Interfaces.Settings) {
         this._settings = value;
-        state.setSettings(this.key, value);
+        state.setSettings(this.key, value); //tslint:disable-line:no-floating-promises
     }
 
     get isPinned(): boolean {
@@ -56,14 +55,14 @@ abstract class Conversation implements Interfaces.Conversation {
     set isPinned(value: boolean) {
         if(value === this._isPinned) return;
         this._isPinned = value;
-        state.savePinned();
+        state.savePinned(); //tslint:disable-line:no-floating-promises
     }
 
     get reportMessages(): ReadonlyArray<Interfaces.Message> {
         return this.allMessages;
     }
 
-    send(): void {
+    async send(): Promise<void> {
         if(this.enteredText.length === 0) return;
         if(isCommand(this.enteredText)) {
             const parsed = parseCommand(this.enteredText, this.context);
@@ -75,11 +74,11 @@ abstract class Conversation implements Interfaces.Conversation {
             }
         } else {
             this.lastSent = this.enteredText;
-            this.doSend();
+            await this.doSend();
         }
     }
 
-    abstract addMessage(message: Interfaces.Message): void;
+    abstract async addMessage(message: Interfaces.Message): Promise<void>;
 
     loadLastSent(): void {
         this.enteredText = this.lastSent;
@@ -109,7 +108,7 @@ abstract class Conversation implements Interfaces.Conversation {
         safeAddMessage(this.messages, message, this.maxMessages);
     }
 
-    protected abstract doSend(): void;
+    protected abstract doSend(): Promise<void> | void;
 }
 
 class PrivateConversation extends Conversation implements Interfaces.PrivateConversation {
@@ -144,32 +143,34 @@ class PrivateConversation extends Conversation implements Interfaces.PrivateConv
         } else if(this.ownTypingStatus !== 'clear') this.setOwnTyping('clear');
     }
 
-    addMessage(message: Interfaces.Message): void {
+    async addMessage(message: Interfaces.Message): Promise<void> {
+        await this.logPromise;
         this.safeAddMessage(message);
         if(message.type !== Interfaces.Message.Type.Event) {
-            if(core.state.settings.logMessages) this.logPromise.then(() => core.logs.logMessage(this, message));
+            if(core.state.settings.logMessages) await core.logs.logMessage(this, message);
             if(this.settings.notify !== Interfaces.Setting.False && message.sender !== core.characters.ownCharacter)
                 core.notifications.notify(this, message.sender.name, message.text, characterImage(message.sender.name), 'attention');
-            if(this !== state.selectedConversation)
+            if(this !== state.selectedConversation || !state.windowFocused)
                 this.unread = Interfaces.UnreadState.Mention;
             this.typingStatus = 'clear';
         }
     }
 
-    close(): void {
+    async close(): Promise<void> {
         state.privateConversations.splice(state.privateConversations.indexOf(this), 1);
         delete state.privateMap[this.character.name.toLowerCase()];
-        state.savePinned();
+        await state.savePinned();
         if(state.selectedConversation === this) state.show(state.consoleTab);
     }
 
-    sort(newIndex: number): void {
+    async sort(newIndex: number): Promise<void> {
         state.privateConversations.splice(state.privateConversations.indexOf(this), 1);
         state.privateConversations.splice(newIndex, 0, this);
-        state.savePinned();
+        return state.savePinned();
     }
 
-    protected doSend(): void {
+    protected async doSend(): Promise<void> {
+        await this.logPromise;
         if(this.character.status === 'offline') {
             this.errorText = l('chat.errorOffline', this.character.name);
             return;
@@ -180,7 +181,7 @@ class PrivateConversation extends Conversation implements Interfaces.PrivateConv
         core.connection.send('PRI', {recipient: this.name, message: this.enteredText});
         const message = createMessage(MessageType.Message, core.characters.ownCharacter, this.enteredText);
         this.safeAddMessage(message);
-        if(core.state.settings.logMessages) this.logPromise.then(() => core.logs.logMessage(this, message));
+        if(core.state.settings.logMessages) await core.logs.logMessage(this, message);
         this.enteredText = '';
     }
 
@@ -255,7 +256,8 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
         else safeAddMessage(this[mode], message, 500);
     }
 
-    addMessage(message: Interfaces.Message): void {
+    async addMessage(message: Interfaces.Message): Promise<void> {
+        await this.logPromise;
         if((message.type === MessageType.Message || message.type === MessageType.Ad) && message.text.match(/^\/warn\b/) !== null) {
             const member = this.channel.members[message.sender.name];
             if(member !== undefined && member.rank > Channel.Rank.Member || message.sender.isChatOp)
@@ -264,13 +266,13 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
 
         if(message.type === MessageType.Ad) {
             this.addModeMessage('ads', message);
-            if(core.state.settings.logAds) this.logPromise.then(() => core.logs.logMessage(this, message));
+            if(core.state.settings.logAds) await core.logs.logMessage(this, message);
         } else {
             this.addModeMessage('chat', message);
             if(message.type !== Interfaces.Message.Type.Event) {
                 if(message.type === Interfaces.Message.Type.Warn) this.addModeMessage('ads', message);
-                if(core.state.settings.logMessages) this.logPromise.then(() => core.logs.logMessage(this, message));
-                if(this !== state.selectedConversation && this.unread === Interfaces.UnreadState.None)
+                if(core.state.settings.logMessages) await core.logs.logMessage(this, message);
+                if(this !== state.selectedConversation && this.unread === Interfaces.UnreadState.None || !state.windowFocused)
                     this.unread = Interfaces.UnreadState.Unread;
             } else this.addModeMessage('ads', message);
         }
@@ -281,16 +283,16 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
         core.connection.send('LCH', {channel: this.channel.id});
     }
 
-    sort(newIndex: number): void {
+    async sort(newIndex: number): Promise<void> {
         state.channelConversations.splice(state.channelConversations.indexOf(this), 1);
         state.channelConversations.splice(newIndex, 0, this);
-        state.savePinned();
+        return state.savePinned();
     }
 
-    protected doSend(): void {
+    protected async doSend(): Promise<void> {
         const isAd = this.isSendingAds;
         core.connection.send(isAd ? 'LRP' : 'MSG', {channel: this.channel.id, message: this.enteredText});
-        this.addMessage(
+        await this.addMessage(
             createMessage(isAd ? MessageType.Ad : MessageType.Message, core.characters.ownCharacter, this.enteredText, new Date()));
         if(isAd) {
             this.adCountdown = core.connection.vars.lfrp_flood;
@@ -317,10 +319,10 @@ class ConsoleConversation extends Conversation {
     close(): void {
     }
 
-    addMessage(message: Interfaces.Message): void {
+    async addMessage(message: Interfaces.Message): Promise<void> {
         this.safeAddMessage(message);
-        if(core.state.settings.logMessages) core.logs.logMessage(this, message);
-        if(this !== state.selectedConversation) this.unread = Interfaces.UnreadState.Unread;
+        if(core.state.settings.logMessages) await core.logs.logMessage(this, message);
+        if(this !== state.selectedConversation || !state.windowFocused) this.unread = Interfaces.UnreadState.Unread;
     }
 
     protected doSend(): void {
@@ -338,6 +340,12 @@ class State implements Interfaces.State {
     recent: Interfaces.RecentConversation[] = [];
     pinned: {channels: string[], private: string[]};
     settings: {[key: string]: Interfaces.Settings};
+    windowFocused: boolean;
+
+    get hasNew(): boolean {
+        return this.privateConversations.some((x) => x.unread === Interfaces.UnreadState.Mention) ||
+            this.channelConversations.some((x) => x.unread === Interfaces.UnreadState.Mention);
+    }
 
     getPrivate(character: Character): PrivateConversation {
         const key = character.name.toLowerCase();
@@ -346,7 +354,7 @@ class State implements Interfaces.State {
         conv = new PrivateConversation(character);
         this.privateConversations.push(conv);
         this.privateMap[key] = conv;
-        state.addRecent(conv);
+        state.addRecent(conv); //tslint:disable-line:no-floating-promises
         return conv;
     }
 
@@ -355,18 +363,18 @@ class State implements Interfaces.State {
         return (key[0] === '#' ? this.channelMap : this.privateMap)[key];
     }
 
-    savePinned(): void {
+    async savePinned(): Promise<void> {
         this.pinned.channels = this.channelConversations.filter((x) => x.isPinned).map((x) => x.channel.id);
         this.pinned.private = this.privateConversations.filter((x) => x.isPinned).map((x) => x.name);
-        core.settingsStore.set('pinned', this.pinned);
+        await core.settingsStore.set('pinned', this.pinned);
     }
 
-    setSettings(key: string, value: Interfaces.Settings): void {
+    async setSettings(key: string, value: Interfaces.Settings): Promise<void> {
         this.settings[key] = value;
-        core.settingsStore.set('conversationSettings', this.settings);
+        await core.settingsStore.set('conversationSettings', this.settings);
     }
 
-    addRecent(conversation: Conversation): void {
+    async addRecent(conversation: Conversation): Promise<void> {
         const remove = <T extends Interfaces.RecentConversation>(predicate: (item: T) => boolean) => {
             for(let i = 0; i < this.recent.length; ++i)
                 if(predicate(<T>this.recent[i])) {
@@ -382,7 +390,7 @@ class State implements Interfaces.State {
             state.recent.unshift({character: conversation.name});
         }
         if(this.recent.length >= 50) this.recent.pop();
-        core.settingsStore.set('recent', this.recent);
+        await core.settingsStore.set('recent', this.recent);
     }
 
     show(conversation: Conversation): void {
@@ -400,7 +408,6 @@ class State implements Interfaces.State {
             conversation._isPinned = this.pinned.private.indexOf(conversation.name) !== -1;
         this.recent = await core.settingsStore.get('recent') || [];
         const settings = <{[key: string]: ConversationSettings}> await core.settingsStore.get('conversationSettings') || {};
-        //tslint:disable-next-line:forin
         for(const key in settings) {
             const settingsItem = new ConversationSettings();
             for(const itemKey in settings[key])
@@ -416,9 +423,10 @@ class State implements Interfaces.State {
 
 let state: State;
 
-function addEventMessage(this: void, message: Interfaces.Message): void {
-    state.consoleTab.addMessage(message);
-    if(core.state.settings.eventMessages && state.selectedConversation !== state.consoleTab) state.selectedConversation.addMessage(message);
+async function addEventMessage(this: void, message: Interfaces.Message): Promise<void> {
+    await state.consoleTab.addMessage(message);
+    if(core.state.settings.eventMessages && state.selectedConversation !== state.consoleTab)
+        await state.selectedConversation.addMessage(message);
 }
 
 function isOfInterest(this: void, character: Character): boolean {
@@ -427,6 +435,11 @@ function isOfInterest(this: void, character: Character): boolean {
 
 export default function(this: void): Interfaces.State {
     state = new State();
+    window.addEventListener('focus', () => {
+        state.windowFocused = true;
+        if(state.selectedConversation !== undefined!) state.selectedConversation.unread = Interfaces.UnreadState.None;
+    });
+    window.addEventListener('blur', () => state.windowFocused = false);
     const connection = core.connection;
     connection.onEvent('connecting', async(isReconnect) => {
         state.channelConversations = [];
@@ -444,49 +457,49 @@ export default function(this: void): Interfaces.State {
         for(const item of state.pinned.private) state.getPrivate(core.characters.get(item));
         queuedJoin(state.pinned.channels.slice());
     });
-    core.channels.onEvent((type, channel, member) => {
+    core.channels.onEvent(async(type, channel, member) => {
         if(type === 'join')
             if(member === undefined) {
                 const conv = new ChannelConversation(channel);
                 state.channelMap[channel.id] = conv;
                 state.channelConversations.push(conv);
-                state.addRecent(conv);
+                await state.addRecent(conv);
             } else {
                 const conv = state.channelMap[channel.id]!;
                 if(conv.settings.joinMessages === Interfaces.Setting.False || conv.settings.joinMessages === Interfaces.Setting.Default &&
                     !core.state.settings.joinMessages) return;
                 const text = l('events.channelJoin', `[user]${member.character.name}[/user]`);
-                conv.addMessage(new EventMessage(text));
+                await conv.addMessage(new EventMessage(text));
             }
         else if(member === undefined) {
             const conv = state.channelMap[channel.id]!;
             state.channelConversations.splice(state.channelConversations.indexOf(conv), 1);
             delete state.channelMap[channel.id];
-            state.savePinned();
+            await state.savePinned();
             if(state.selectedConversation === conv) state.show(state.consoleTab);
         } else {
             const conv = state.channelMap[channel.id]!;
             if(conv.settings.joinMessages === Interfaces.Setting.False || conv.settings.joinMessages === Interfaces.Setting.Default &&
                 !core.state.settings.joinMessages) return;
             const text = l('events.channelLeave', `[user]${member.character.name}[/user]`);
-            conv.addMessage(new EventMessage(text));
+            await conv.addMessage(new EventMessage(text));
         }
     });
 
-    connection.onMessage('PRI', (data, time) => {
+    connection.onMessage('PRI', async(data, time) => {
         const char = core.characters.get(data.character);
         if(char.isIgnored) return connection.send('IGN', {action: 'notify', character: data.character});
         const message = createMessage(MessageType.Message, char, decodeHTML(data.message), time);
         const conv = state.getPrivate(char);
-        conv.addMessage(message);
+        await conv.addMessage(message);
     });
-    connection.onMessage('MSG', (data, time) => {
+    connection.onMessage('MSG', async(data, time) => {
         const char = core.characters.get(data.character);
         if(char.isIgnored) return;
         const conversation = state.channelMap[data.channel.toLowerCase()];
         if(conversation === undefined) return core.channels.leave(data.channel);
         const message = createMessage(MessageType.Message, char, decodeHTML(data.message), time);
-        conversation.addMessage(message);
+        await conversation.addMessage(message);
 
         const words = conversation.settings.highlightWords.slice();
         if(conversation.settings.defaultHighlights) words.push(...core.state.settings.highlightWords);
@@ -497,20 +510,20 @@ export default function(this: void): Interfaces.State {
         if(results !== null) {
             core.notifications.notify(conversation, data.character, l('chat.highlight', results[0], conversation.name, message.text),
                 characterImage(data.character), 'attention');
-            if(conversation !== state.selectedConversation) conversation.unread = Interfaces.UnreadState.Mention;
+            if(conversation !== state.selectedConversation || !state.windowFocused) conversation.unread = Interfaces.UnreadState.Mention;
             message.isHighlight = true;
         } else if(conversation.settings.notify === Interfaces.Setting.True)
             core.notifications.notify(conversation, conversation.name, messageToString(message),
                 characterImage(data.character), 'attention');
     });
-    connection.onMessage('LRP', (data, time) => {
+    connection.onMessage('LRP', async(data, time) => {
         const char = core.characters.get(data.character);
         if(char.isIgnored || core.state.hiddenUsers.indexOf(char.name) !== -1) return;
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
-        conv.addMessage(new Message(MessageType.Ad, char, decodeHTML(data.message), time));
+        await conv.addMessage(new Message(MessageType.Ad, char, decodeHTML(data.message), time));
     });
-    connection.onMessage('RLL', (data, time) => {
+    connection.onMessage('RLL', async(data, time) => {
         const sender = core.characters.get(data.character);
         if(sender.isIgnored) return;
         let text: string;
@@ -525,7 +538,7 @@ export default function(this: void): Interfaces.State {
             const channel = (<{channel: string}>data).channel.toLowerCase();
             const conversation = state.channelMap[channel];
             if(conversation === undefined) return core.channels.leave(channel);
-            conversation.addMessage(message);
+            await conversation.addMessage(message);
             if(data.type === 'bottle' && data.target === core.connection.character)
                 core.notifications.notify(conversation, conversation.name, messageToString(message),
                     characterImage(data.character), 'attention');
@@ -534,63 +547,69 @@ export default function(this: void): Interfaces.State {
                 data.character === connection.character ? (<{recipient: string}>data).recipient : data.character);
             if(char.isIgnored) return connection.send('IGN', {action: 'notify', character: data.character});
             const conversation = state.getPrivate(char);
-            conversation.addMessage(message);
+            await conversation.addMessage(message);
         }
     });
-    connection.onMessage('NLN', (data, time) => {
+    connection.onMessage('NLN', async(data, time) => {
         const message = new EventMessage(l('events.login', `[user]${data.identity}[/user]`), time);
-        if(isOfInterest(core.characters.get(data.identity))) addEventMessage(message);
+        if(isOfInterest(core.characters.get(data.identity))) await addEventMessage(message);
         const conv = state.privateMap[data.identity.toLowerCase()];
-        if(conv !== undefined && (!core.state.settings.eventMessages || conv !== state.selectedConversation)) conv.addMessage(message);
+        if(conv !== undefined && (!core.state.settings.eventMessages || conv !== state.selectedConversation))
+            await conv.addMessage(message);
     });
-    connection.onMessage('FLN', (data, time) => {
+    connection.onMessage('FLN', async(data, time) => {
         const message = new EventMessage(l('events.logout', `[user]${data.character}[/user]`), time);
-        if(isOfInterest(core.characters.get(data.character))) addEventMessage(message);
+        if(isOfInterest(core.characters.get(data.character))) await addEventMessage(message);
         const conv = state.privateMap[data.character.toLowerCase()];
         if(conv === undefined) return;
         conv.typingStatus = 'clear';
-        if(!core.state.settings.eventMessages || conv !== state.selectedConversation) conv.addMessage(message);
+        if(!core.state.settings.eventMessages || conv !== state.selectedConversation) await conv.addMessage(message);
     });
     connection.onMessage('TPN', (data) => {
         const conv = state.privateMap[data.character.toLowerCase()];
         if(conv !== undefined) conv.typingStatus = data.status;
     });
-    connection.onMessage('CBU', (data, time) => {
+    connection.onMessage('CBU', async(data, time) => {
         const text = l('events.ban', data.channel, data.character, data.operator);
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
         conv.infoText = text;
-        addEventMessage(new EventMessage(text, time));
+        return addEventMessage(new EventMessage(text, time));
     });
-    connection.onMessage('CKU', (data, time) => {
+    connection.onMessage('CKU', async(data, time) => {
         const text = l('events.kick', data.channel, data.character, data.operator);
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
         conv.infoText = text;
-        addEventMessage(new EventMessage(text, time));
+        return addEventMessage(new EventMessage(text, time));
     });
-    connection.onMessage('CTU', (data, time) => {
+    connection.onMessage('CTU', async(data, time) => {
         const text = l('events.timeout', data.channel, data.character, data.operator, data.length.toString());
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
         conv.infoText = text;
-        addEventMessage(new EventMessage(text, time));
+        return addEventMessage(new EventMessage(text, time));
     });
-    connection.onMessage('HLO', (data, time) => addEventMessage(new EventMessage(data.message, time)));
-    connection.onMessage('BRO', (data, time) => {
+    connection.onMessage('HLO', async(data, time) => addEventMessage(new EventMessage(data.message, time)));
+    connection.onMessage('BRO', async(data, time) => {
         const text = data.character === undefined ? decodeHTML(data.message) :
             l('events.broadcast', `[user]${data.character}[/user]`, decodeHTML(data.message.substr(data.character.length + 23)));
-        addEventMessage(new EventMessage(text, time));
+        return addEventMessage(new EventMessage(text, time));
     });
-    connection.onMessage('CIU', (data, time) => {
+    connection.onMessage('CIU', async(data, time) => {
         const text = l('events.invite', `[user]${data.sender}[/user]`, `[session=${data.title}]${data.name}[/session]`);
-        addEventMessage(new EventMessage(text, time));
+        return addEventMessage(new EventMessage(text, time));
     });
-    connection.onMessage('ERR', (data, time) => {
+    connection.onMessage('ERR', async(data, time) => {
         state.selectedConversation.errorText = data.message;
-        addEventMessage(new EventMessage(`[color=red]${l('events.error', data.message)}[/color]`, time));
+        return addEventMessage(new EventMessage(`[color=red]${l('events.error', data.message)}[/color]`, time));
     });
-    connection.onMessage('RTB', (data, time) => {
+
+    connection.onMessage('IGN', async(data, time) => {
+        if(data.action !== 'add' && data.action !== 'delete') return;
+        return addEventMessage(new EventMessage(l(`events.ignore_${data.action}`, data.character), time));
+    });
+    connection.onMessage('RTB', async(data, time) => {
         let url = 'https://www.f-list.net/';
         let text: string, character: string;
         if(data.type === 'comment') { //tslint:disable-line:prefer-switch
@@ -640,13 +659,13 @@ export default function(this: void): Interfaces.State {
                 data.title !== undefined ? `[url=${url}]${data.title}[/url]` : url);
             character = data.name;
         }
-        addEventMessage(new EventMessage(text, time));
+        await addEventMessage(new EventMessage(text, time));
         if(data.type === 'note')
             core.notifications.notify(state.consoleTab, character, text, characterImage(character), 'newnote');
     });
     type SFCMessage = (Interfaces.Message & {sfc: Connection.ServerCommands['SFC'] & {confirmed?: true}});
     const sfcList: SFCMessage[] = [];
-    connection.onMessage('SFC', (data, time) => {
+    connection.onMessage('SFC', async(data, time) => {
         let text: string, message: Interfaces.Message;
         if(data.action === 'report') {
             text = l('events.report', `[user]${data.character}[/user]`, decodeHTML(data.tab), decodeHTML(data.report));
@@ -663,11 +682,11 @@ export default function(this: void): Interfaces.State {
                 }
             message = new EventMessage(text, time);
         }
-        addEventMessage(message);
+        return addEventMessage(message);
     });
-    connection.onMessage('STA', (data, time) => {
+    connection.onMessage('STA', async(data, time) => {
         if(data.character === core.connection.character) {
-            addEventMessage(new EventMessage(l(data.statusmsg.length > 0 ? 'events.status.ownMessage' : 'events.status.own',
+            await addEventMessage(new EventMessage(l(data.statusmsg.length > 0 ? 'events.status.ownMessage' : 'events.status.own',
                 l(`status.${data.status}`), decodeHTML(data.statusmsg)), time));
             return;
         }
@@ -676,17 +695,17 @@ export default function(this: void): Interfaces.State {
         const status = l(`status.${data.status}`);
         const key = data.statusmsg.length > 0 ? 'events.status.message' : 'events.status';
         const message = new EventMessage(l(key, `[user]${data.character}[/user]`, status, decodeHTML(data.statusmsg)), time);
-        addEventMessage(message);
+        await addEventMessage(message);
         const conv = state.privateMap[data.character.toLowerCase()];
-        if(conv !== undefined && core.state.settings.eventMessages && conv !== state.selectedConversation) conv.addMessage(message);
+        if(conv !== undefined && core.state.settings.eventMessages && conv !== state.selectedConversation) await conv.addMessage(message);
     });
-    connection.onMessage('SYS', (data, time) => {
+    connection.onMessage('SYS', async(data, time) => {
         state.selectedConversation.infoText = data.message;
-        addEventMessage(new EventMessage(data.message, time));
+        return addEventMessage(new EventMessage(data.message, time));
     });
-    connection.onMessage('ZZZ', (data, time) => {
+    connection.onMessage('ZZZ', async(data, time) => {
         state.selectedConversation.infoText = data.message;
-        addEventMessage(new EventMessage(data.message, time));
+        return addEventMessage(new EventMessage(data.message, time));
     });
     //TODO connection.onMessage('UPT', data =>
     return state;

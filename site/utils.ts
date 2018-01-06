@@ -1,6 +1,21 @@
 import Axios, {AxiosError, AxiosResponse} from 'axios';
-//import {addFlashMessage, flashMessageType} from './flash_display';
 import {InlineDisplayMode} from '../bbcode/interfaces';
+
+interface Dictionary<T> {
+    [key: string]: T | undefined;
+}
+
+type flashMessageType = 'info' | 'success' | 'warning' | 'danger';
+type flashMessageImpl = (type: flashMessageType, message: string) => void;
+
+
+let flashImpl: flashMessageImpl = (type: flashMessageType, message: string) => {
+    console.log(`${type}: ${message}`);
+};
+
+export function setFlashMessageImplementation(impl: flashMessageImpl): void {
+    flashImpl = impl;
+}
 
 export function avatarURL(name: string): string {
     const uregex = /^[a-zA-Z0-9_\-\s]+$/;
@@ -12,10 +27,6 @@ export function characterURL(name: string): string {
     const uregex = /^[a-zA-Z0-9_\-\s]+$/;
     if(!uregex.test(name)) return '#';
     return `${siteDomain}c/${name}`;
-}
-
-interface Dictionary<T> {
-    [key: string]: T | undefined;
 }
 
 export function groupObjectBy<K extends string, T extends {[k in K]: string | number}>(obj: Dictionary<T>, key: K): Dictionary<T[]> {
@@ -77,8 +88,8 @@ export function flashSuccess(message: string): void {
     flashMessage('success', message);
 }
 
-export function flashMessage(type: string, message: string): void {
-    console.log(`${type}: ${message}`); //TODO addFlashMessage(type, message);
+export function flashMessage(type: flashMessageType, message: string): void {
+    flashImpl(type, message);
 }
 
 export let siteDomain = '';

@@ -17,9 +17,19 @@ hr {
     padding: 15px;
     blockquote {
         border-color: @blockquote-border-color;
+        font-size: inherit;
     }
 }
 
 .well-lg {
     padding: 20px;
+}
+
+@select-indicator: replace("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 2'%3E%3Cpath fill='@{input-color}' d='M2 2L0 0h4z'/%3E%3C/svg%3E", "#", "%23");
+
+select.form-control {
+    -webkit-appearance: none;
+    background: @input-bg url(@select-indicator) no-repeat right 1rem center;
+    background-size: 8px 10px;
+    padding-right: 25px;
 }

@@ -27,6 +27,7 @@ export function parse(this: void | never, input: string, context: CommandContext
 
     if(command.params !== undefined)
         for(let i = 0; i < command.params.length; ++i) {
+            while(args[index] === ' ') ++index;
             const param = command.params[i];
             if(index === -1)
                 if(param.optional !== undefined) continue;
@@ -48,7 +49,6 @@ export function parse(this: void | never, input: string, context: CommandContext
                         return l('commands.invalidParam', l(`commands.${name}.param${i}`));
                     break;
                 case ParamType.Number:
-                    console.log(value);
                     const num = parseInt(value, 10);
                     if(isNaN(num))
                         return l('commands.invalidParam', l(`commands.${name}.param${i}`));

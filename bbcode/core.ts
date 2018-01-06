@@ -1,6 +1,6 @@
 import {BBCodeCustomTag, BBCodeParser, BBCodeSimpleTag} from './parser';
 
-const urlFormat = '((?:(?:https?|ftps?|irc):)?\\/\\/[^\\s\\/$.?#"\']+\\.[^\\s"]*)';
+const urlFormat = '((?:https?|ftps?|irc)://[^\\s/$.?#"\']+\\.[^\\s"]+)';
 export const findUrlRegex = new RegExp(`(\\[url[=\\]]\\s*)?${urlFormat}`, 'gi');
 export const urlRegex = new RegExp(`^${urlFormat}$`);
 

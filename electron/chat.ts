@@ -31,16 +31,36 @@
  */
 import 'bootstrap/js/collapse.js';
 import 'bootstrap/js/dropdown.js';
-import 'bootstrap/js/modal.js';
 import 'bootstrap/js/tab.js';
 import 'bootstrap/js/transition.js';
 import * as electron from 'electron';
+import * as path from 'path';
+import * as qs from 'querystring';
 import * as Raven from 'raven-js';
 import Vue from 'vue';
 import {getKey} from '../chat/common';
 import l from '../chat/localize';
 import VueRaven from '../chat/vue-raven';
+import {GeneralSettings, nativeRequire} from './common';
+import * as SlimcatImporter from './importer';
 import Index from './Index.vue';
+
+document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if(e.ctrlKey && e.shiftKey && getKey(e) === 'i')
+        electron.remote.getCurrentWebContents().toggleDevTools();
+});
+
+process.env.SPELLCHECKER_PREFER_HUNSPELL = '1';
+const sc = nativeRequire<{
+    Spellchecker: {
+        new(): {
+            isMisspelled(x: string): boolean,
+            setDictionary(name: string | undefined, dir: string): void,
+            getCorrectionsForMisspelling(word: string): ReadonlyArray<string>
+        }
+    }
+}>('spellchecker/build/Release/spellchecker.node');
+const spellchecker = new sc.Spellchecker();
 
 if(process.env.NODE_ENV === 'production') {
     Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
@@ -58,19 +78,81 @@ if(process.env.NODE_ENV === 'production') {
         Raven.captureException(<Error>e.reason);
     };
 
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
-        if(e.ctrlKey && e.shiftKey && getKey(e) === 'I')
-            electron.remote.getCurrentWebContents().toggleDevTools();
-    });
     electron.remote.getCurrentWebContents().on('devtools-opened', () => {
         console.log(`%c${l('consoleWarning.head')}`, 'background: red; color: yellow; font-size: 30pt');
         console.log(`%c${l('consoleWarning.body')}`, 'font-size: 16pt; color:red');
     });
 }
 
-//tslint:disable-next-line:no-unused-expression
-new Index({
-    el: '#app'
+const webContents = electron.remote.getCurrentWebContents();
+webContents.on('context-menu', (_, props) => {
+    const hasText = props.selectionText.trim().length > 0;
+    const can = (type: string) => (<Electron.EditFlags & {[key: string]: boolean}>props.editFlags)[`can${type}`] && hasText;
+
+    const menuTemplate: Electron.MenuItemConstructorOptions[] = [];
+    if(hasText || props.isEditable)
+        menuTemplate.push({
+            id: 'copy',
+            label: l('action.copy'),
+            role: can('Copy') ? 'copy' : '',
+            enabled: can('Copy')
+        });
+    if(props.isEditable)
+        menuTemplate.push({
+            id: 'cut',
+            label: l('action.cut'),
+            role: can('Cut') ? 'cut' : '',
+            enabled: can('Cut')
+        }, {
+            id: 'paste',
+            label: l('action.paste'),
+            role: props.editFlags.canPaste ? 'paste' : '',
+            enabled: props.editFlags.canPaste
+        });
+    else if(props.linkURL.length > 0 && props.mediaType === 'none' && props.linkURL.substr(0, props.pageURL.length) !== props.pageURL)
+        menuTemplate.push({
+            id: 'copyLink',
+            label: l('action.copyLink'),
+            click(): void {
+                if(process.platform === 'darwin')
+                    electron.clipboard.writeBookmark(props.linkText, props.linkURL);
+                else
+                    electron.clipboard.writeText(props.linkURL);
+            }
+        });
+    if(props.misspelledWord !== '') {
+        const corrections = spellchecker.getCorrectionsForMisspelling(props.misspelledWord);
+        if(corrections.length > 0) {
+            menuTemplate.unshift({type: 'separator'});
+            menuTemplate.unshift(...corrections.map((correction: string) => ({
+                label: correction,
+                click: () => webContents.replaceMisspelling(correction)
+            })));
+        }
+    }
+
+    if(menuTemplate.length > 0) electron.remote.Menu.buildFromTemplate(menuTemplate).popup();
 });
 
-electron.ipcRenderer.on('focus', (_: Event, message: boolean) => message ? window.focus() : window.blur());
+const dictDir = path.join(electron.remote.app.getPath('userData'), 'spellchecker');
+electron.webFrame.setSpellCheckProvider('', false, {spellCheck: (text) => !spellchecker.isMisspelled(text)});
+electron.ipcRenderer.on('settings', async(_: Event, s: GeneralSettings) => spellchecker.setDictionary(s.spellcheckLang, dictDir));
+
+const params = <{[key: string]: string | undefined}>qs.parse(window.location.search.substr(1));
+const settings = <GeneralSettings>JSON.parse(params['settings']!);
+if(params['import'] !== undefined)
+    try {
+        if(SlimcatImporter.canImportGeneral() && confirm(l('importer.importGeneral'))) {
+            SlimcatImporter.importGeneral(settings);
+            electron.ipcRenderer.send('save-login', settings.account, settings.host);
+        }
+    } catch {
+        alert(l('importer.error'));
+    }
+spellchecker.setDictionary(settings.spellcheckLang, dictDir);
+
+//tslint:disable-next-line:no-unused-expression
+new Index({
+    el: '#app',
+    data: {settings}
+});

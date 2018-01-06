@@ -1,7 +1,7 @@
 <template>
     <span>
         <a href="#" @click.prevent="openDialog" class="btn">
-            <span class="fa fa-edit"></span> {{l('manageChannel.open')}}
+            <span class="fa fa-edit"></span> <span class="btn-text">{{l('manageChannel.open')}}</span>
         </a>
         <modal ref="dialog" :action="l('manageChannel.action', channel.name)" :buttonText="l('manageChannel.submit')" @submit="submit">
             <div class="form-group" v-show="channel.id.substr(0, 4) === 'adh-'">

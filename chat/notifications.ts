@@ -27,7 +27,6 @@ export default class Notifications implements Interface {
         if(audio === null) {
             audio = document.createElement('audio');
             audio.id = id;
-            //tslint:disable-next-line:forin
             for(const name in codecs) {
                 const src = document.createElement('source');
                 src.type = `audio/${name}`;
@@ -38,5 +37,9 @@ export default class Notifications implements Interface {
         }
         //tslint:disable-next-line:no-floating-promises
         audio.play();
+    }
+
+    async requestPermission(): Promise<void> {
+        await Notification.requestPermission();
     }
 }

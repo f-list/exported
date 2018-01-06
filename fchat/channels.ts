@@ -42,18 +42,18 @@ class Channel implements Interfaces.Channel {
     constructor(readonly id: string, readonly name: string) {
     }
 
-    addMember(member: SortableMember): void {
+    async addMember(member: SortableMember): Promise<void> {
         this.members[member.character.name] = member;
         sortMember(this.sortedMembers, member);
-        for(const handler of state.handlers) handler('join', this, member);
+        for(const handler of state.handlers) await handler('join', this, member);
     }
 
-    removeMember(name: string): void {
+    async removeMember(name: string): Promise<void> {
         const member = this.members[name];
         if(member !== undefined) {
             delete this.members[name];
             this.sortedMembers.splice(this.sortedMembers.indexOf(member), 1);
-            for(const handler of state.handlers) handler('leave', this, member);
+            for(const handler of state.handlers) await handler('leave', this, member);
         }
     }
 
@@ -159,7 +159,7 @@ export default function(this: void, connection: Connection, characters: Characte
         }
         state.openRooms = channels;
     });
-    connection.onMessage('JCH', (data) => {
+    connection.onMessage('JCH', async(data) => {
         const item = state.getChannelItem(data.channel);
         if(data.character.identity === connection.character) {
             const id = data.channel.toLowerCase();
@@ -170,11 +170,11 @@ export default function(this: void, connection: Connection, characters: Characte
             const channel = state.getChannel(data.channel);
             if(channel === undefined) return state.leave(data.channel);
             const member = channel.createMember(characters.get(data.character.identity));
-            channel.addMember(member);
+            await channel.addMember(member);
             if(item !== undefined) item.memberCount++;
         }
     });
-    connection.onMessage('ICH', (data) => {
+    connection.onMessage('ICH', async(data) => {
         const channel = state.getChannel(data.channel);
         if(channel === undefined) return state.leave(data.channel);
         channel.mode = data.mode;
@@ -190,24 +190,24 @@ export default function(this: void, connection: Connection, characters: Characte
         channel.sortedMembers = sorted;
         const item = state.getChannelItem(data.channel);
         if(item !== undefined) item.memberCount = data.users.length;
-        for(const handler of state.handlers) handler('join', channel);
+        for(const handler of state.handlers) await handler('join', channel);
     });
     connection.onMessage('CDS', (data) => {
         const channel = state.getChannel(data.channel);
         if(channel === undefined) return state.leave(data.channel);
         channel.description = decodeHTML(data.description);
     });
-    connection.onMessage('LCH', (data) => {
+    connection.onMessage('LCH', async(data) => {
         const channel = state.getChannel(data.channel);
         if(channel === undefined) return;
         const item = state.getChannelItem(data.channel);
         if(data.character === connection.character) {
             state.joinedChannels.splice(state.joinedChannels.indexOf(channel), 1);
             delete state.joinedMap[channel.id];
-            for(const handler of state.handlers) handler('leave', channel);
+            for(const handler of state.handlers) await handler('leave', channel);
             if(item !== undefined) item.isJoined = false;
         } else {
-            channel.removeMember(data.character);
+            await channel.removeMember(data.character);
             if(item !== undefined) item.memberCount--;
         }
     });
@@ -255,12 +255,11 @@ export default function(this: void, connection: Connection, characters: Characte
         if(channel === undefined) return state.leave(data.channel);
         channel.mode = data.mode;
     });
-    connection.onMessage('FLN', (data) => {
+    connection.onMessage('FLN', async(data) => {
         for(const key in state.joinedMap)
-            state.joinedMap[key]!.removeMember(data.character);
+            await state.joinedMap[key]!.removeMember(data.character);
     });
     const globalHandler = (data: Connection.ServerCommands['AOP'] | Connection.ServerCommands['DOP']) => {
-        //tslint:disable-next-line:forin
         for(const key in state.joinedMap) {
             const channel = state.joinedMap[key]!;
             const member = channel.members[data.character];

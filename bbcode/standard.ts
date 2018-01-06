@@ -160,7 +160,7 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
                         const showP1 = showInline.hash.substr(0, 2);
                         const showP2 = showInline.hash.substr(2, 2);
                         //tslint:disable-next-line:max-line-length
-                        $(element).replaceWith(`<div><img class="imageBlock" src="${this.settings.staticDomain}images/charinline/${showP1}/${showP2}/${showInline.hash}.${showInline.extension}"/></div>`);
+                        $(element).replaceWith(`<div><img class="inline-image" src="${this.settings.staticDomain}images/charinline/${showP1}/${showP2}/${showInline.hash}.${showInline.extension}"/></div>`);
                     });
                     return false;
                 };
@@ -171,7 +171,7 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             } else {
                 const outerEl = parser.createElement('div');
                 const el = parser.createElement('img');
-                el.className = 'imageBlock';
+                el.className = 'inline-image';
                 el.src = `${this.settings.staticDomain}images/charinline/${p1}/${p2}/${inline.hash}.${inline.extension}`;
                 outerEl.appendChild(el);
                 parent.appendChild(outerEl);
@@ -179,7 +179,7 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             }
         }, (_, element, __, ___) => {
             // Need to remove any appended contents, because this is a total hack job.
-            if(element.className !== 'imageBlock')
+            if(element.className !== 'inline-image')
                 return;
             while(element.firstChild !== null)
                 element.removeChild(element.firstChild);

@@ -15,7 +15,7 @@
             </div>
         </div>
         <div class="character-kinks clearfix">
-            <div class="col-xs-3 kinks-favorite">
+            <div class="col-xs-6 col-md-3 kinks-favorite">
                 <div class="kinks-column">
                     <div class="kinks-header">
                         Favorite
@@ -25,7 +25,7 @@
                         :comparisons="comparison"></kink>
                 </div>
             </div>
-            <div class="col-xs-3 kinks-yes">
+            <div class="col-xs-6 col-md-3 kinks-yes">
                 <div class="kinks-column">
                     <div class="kinks-header">
                         Yes
@@ -35,7 +35,7 @@
                         :comparisons="comparison"></kink>
                 </div>
             </div>
-            <div class="col-xs-3 kinks-maybe">
+            <div class="col-xs-6 col-md-3 kinks-maybe">
                 <div class="kinks-column">
                     <div class="kinks-header">
                         Maybe
@@ -45,7 +45,7 @@
                         :comparisons="comparison"></kink>
                 </div>
             </div>
-            <div class="col-xs-3 kinks-no">
+            <div class="col-xs-6 col-md-3 kinks-no">
                 <div class="kinks-column">
                     <div class="kinks-header">
                         No
@@ -56,7 +56,7 @@
                 </div>
             </div>
         </div>
-        <context-menu v-if="shared.authenticated" prop-name="custom" ref="context-menu"></context-menu>
+        <context-menu v-if="shared.authenticated && !oldApi" prop-name="custom" ref="context-menu"></context-menu>
     </div>
 </template>
 
@@ -80,6 +80,8 @@
         //tslint:disable:no-null-keyword
         @Prop({required: true})
         private readonly character: Character;
+        @Prop()
+        readonly oldApi?: true;
         private shared = Store;
         characterToCompare = Utils.Settings.defaultCharacter;
         highlightGroup: number | null = null;
@@ -100,7 +102,7 @@
             try {
                 this.loading = true;
                 this.comparing = true;
-                const kinks = await methods.kinksGet(this.character.character.id);
+                const kinks = await methods.kinksGet(this.characterToCompare);
                 const toAssign: {[key: number]: KinkChoice} = {};
                 for(const kink of kinks)
                     toAssign[kink.id] = kink.choice;
@@ -177,7 +179,7 @@
             for(const kinkId in characterKinks) {
                 const kinkChoice = characterKinks[kinkId]!;
                 const kink = kinks[kinkId];
-                if(kink === undefined) return;
+                if(kink === undefined) continue;
                 const newKink = makeKink(kink);
                 if(typeof kinkChoice === 'number' && typeof displayCustoms[kinkChoice] !== 'undefined') {
                     const custom = displayCustoms[kinkChoice]!;
@@ -203,7 +205,7 @@
         }
 
         contextMenu(event: TouchEvent): void {
-            (<CopyCustomMenu>this.$refs['context-menu']).outerClick(event);
+            if(this.shared.authenticated && !this.oldApi) (<CopyCustomMenu>this.$refs['context-menu']).outerClick(event);
         }
     }
 </script>

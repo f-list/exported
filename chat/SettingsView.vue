@@ -52,7 +52,7 @@
             </div>
             <div class="form-group">
                 <label class="control-label" for="fontSize">{{l('settings.fontSize')}}</label>
-                <input id="fontSize" type="number" min="10" max="24" number class="form-control" v-model="fontSize"/>
+                <input id="fontSize" type="number" min="10" max="24" class="form-control" v-model="fontSize"/>
             </div>
         </div>
         <div v-show="selectedTab == 'notifications'">
@@ -111,7 +111,6 @@
     import Component from 'vue-class-component';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
-    import {requestNotificationsPermission} from './common';
     import core from './core';
     import {Settings as SettingsInterface} from './interfaces';
     import l from './localize';
@@ -206,9 +205,9 @@
                 alwaysNotify: this.alwaysNotify,
                 logMessages: this.logMessages,
                 logAds: this.logAds,
-                fontSize: this.fontSize
+                fontSize: isNaN(this.fontSize) ? 14 : this.fontSize < 10 ? 10 : this.fontSize > 24 ? 24 : this.fontSize
             };
-            if(this.notifications) await requestNotificationsPermission();
+            if(this.notifications) await core.notifications.requestPermission();
         }
     }
 </script>

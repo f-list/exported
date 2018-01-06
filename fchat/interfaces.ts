@@ -114,7 +114,7 @@ export namespace Connection {
         ZZZ: {message: string}
     };
 
-    export type CommandHandler<T extends keyof ServerCommands> = (data: ServerCommands[T], date: Date) => void;
+    export type CommandHandler<T extends keyof ServerCommands> = (data: ServerCommands[T], date: Date) => Promise<void> | void;
     export type TicketProvider = () => Promise<string>;
     export type EventType = 'connecting' | 'connected' | 'closed';
     export type EventHandler = (isReconnect: boolean) => Promise<void> | void;
@@ -180,7 +180,7 @@ export namespace Character {
 export type Character = Character.Character;
 
 export namespace Channel {
-    export type EventHandler = (type: 'join' | 'leave', channel: Channel, member?: Member) => void;
+    export type EventHandler = (type: 'join' | 'leave', channel: Channel, member?: Member) => Promise<void> | void;
 
     export interface State {
         readonly officialChannels: {readonly [key: string]: (ListItem | undefined)};
@@ -230,7 +230,7 @@ export type Channel = Channel.Channel;
 
 export interface WebSocketConnection {
     close(): void
-    onMessage(handler: (message: string) => void): void
+    onMessage(handler: (message: string) => Promise<void>): void
     onOpen(handler: () => void): void
     onClose(handler: () => void): void
     onError(handler: (error: Error) => void): void

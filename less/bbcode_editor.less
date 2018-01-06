@@ -13,3 +13,30 @@
     .alert();
     .alert-danger();
 }
+
+.bbcode-toolbar {
+    @media (max-width: @screen-xs-max) {
+        background: @text-background-color;
+        padding: 10px;
+        position: absolute;
+        top: 0;
+        border-radius: 3px;
+        z-index: 20;
+        display: none;
+        .btn {
+            margin: 3px;
+        }
+    }
+    @media (min-width: @screen-sm-min) {
+        .btn-group();
+        .close {
+            display:none;
+        }
+    }
+}
+
+.bbcode-btn {
+    @media (min-width: @screen-sm-min) {
+        display: none;
+    }
+}

@@ -1,7 +1,8 @@
 <template>
     <span>
         <a href="#" @click.prevent="showLogs" class="btn">
-            <span class="fa" :class="isPersistent ? 'fa-file-text-o' : 'fa-download'"></span> {{l('logs.title')}}
+            <span class="fa" :class="isPersistent ? 'fa-file-text-o' : 'fa-download'"></span>
+            <span class="btn-text">{{l('logs.title')}}</span>
         </a>
         <modal v-if="isPersistent" :buttons="false" ref="dialog" id="logs-dialog" :action="l('logs.title')" dialogClass="modal-lg"
             @open="onOpen" class="form-horizontal">
@@ -9,7 +10,7 @@
                 <label class="col-sm-2">{{l('logs.conversation')}}</label>
                 <div class="col-sm-10">
                     <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
-                        buttonClass="form-control" :placeholder="l('filter')">
+                        buttonClass="form-control" :placeholder="l('filter')"  @input="loadMessages">
                         <template slot-scope="s">{{s.option && ((s.option.id[0] == '#' ? '#' : '') + s.option.name)}}</template>
                     </filterable-select>
                 </div>
@@ -60,7 +61,7 @@
         @Prop({required: true})
         readonly conversation: Conversation;
         selectedConversation: {id: string, name: string} | null = null;
-        selectedDate: Date | null = null;
+        selectedDate: string | null = null;
         isPersistent = LogInterfaces.isPersistent(core.logs);
         conversations = LogInterfaces.isPersistent(core.logs) ? core.logs.conversations : undefined;
         l = l;

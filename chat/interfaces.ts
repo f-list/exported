@@ -50,8 +50,8 @@ export namespace Conversation {
     interface TabConversation extends Conversation {
         isPinned: boolean
         readonly maxMessageLength: number
-        close(): void
-        sort(newIndex: number): void
+        close(): Promise<void> | void
+        sort(newIndex: number): Promise<void>
     }
 
     export interface PrivateConversation extends TabConversation {
@@ -80,6 +80,7 @@ export namespace Conversation {
         readonly consoleTab: Conversation
         readonly recent: ReadonlyArray<RecentConversation>
         readonly selectedConversation: Conversation
+        readonly hasNew: boolean;
         byKey(key: string): Conversation | undefined
         getPrivate(character: Character): PrivateConversation
         reloadSettings(): void
@@ -110,7 +111,7 @@ export namespace Conversation {
         readonly key: string
         readonly unread: UnreadState
         settings: Settings
-        send(): void
+        send(): Promise<void>
         loadLastSent(): void
         show(): void
         loadMore(): void
@@ -121,7 +122,7 @@ export type Conversation = Conversation.Conversation;
 
 export namespace Logs {
     export interface Basic {
-        logMessage(conversation: Conversation, message: Conversation.Message): void
+        logMessage(conversation: Conversation, message: Conversation.Message): Promise<void> | void
         getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>>
     }
 
@@ -177,6 +178,7 @@ export interface Notifications {
     isInBackground: boolean
     notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void
     playSound(sound: string): void
+    requestPermission(): Promise<void>
 }
 
 export interface State {

@@ -4,7 +4,8 @@ import * as path from 'path';
 import {promisify} from 'util';
 import {Settings} from '../chat/common';
 import {Conversation} from '../chat/interfaces';
-import {checkIndex, GeneralSettings, getLogDir, Message as LogMessage, serializeMessage, SettingsStore} from './filesystem';
+import {GeneralSettings} from './common';
+import {checkIndex, getLogDir, Message as LogMessage, serializeMessage, SettingsStore} from './filesystem';
 
 function getRoamingDir(): string | undefined {
     const appdata = process.env.APPDATA;
@@ -37,7 +38,7 @@ export function canImportCharacter(character: string): boolean {
     return getSettingsDir(character) !== undefined;
 }
 
-export function importGeneral(): GeneralSettings | undefined {
+export function importGeneral(data: GeneralSettings): void {
     let dir = getLocalDir();
     let files: string[] = [];
     if(dir !== undefined)
@@ -57,7 +58,6 @@ export function importGeneral(): GeneralSettings | undefined {
     }
     if(file.length === 0) return;
     let elm = new DOMParser().parseFromString(fs.readFileSync(file, 'utf8'), 'application/xml').firstElementChild;
-    const data = new GeneralSettings();
     if(file.slice(-3) === 'xml') {
         if(elm === null) return;
         let elements;
@@ -76,7 +76,6 @@ export function importGeneral(): GeneralSettings | undefined {
             else if(element.getAttribute('name') === 'Host') data.host = element.firstElementChild.textContent;
         }
     }
-    return data;
 }
 
 const charRegex = /([A-Za-z0-9][A-Za-z0-9 \-_]{0,18}[A-Za-z0-9\-_])\b/;

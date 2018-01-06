@@ -65,7 +65,7 @@ export function messageToString(this: void | never, msg: Conversation.Message, t
 
 export function getKey(e: KeyboardEvent): string {
     /*tslint:disable-next-line:strict-boolean-expressions no-any*///because of old browsers.
-    return e.key || (<KeyboardEvent & {keyIdentifier: string}>e).keyIdentifier;
+    return (e.key || (<KeyboardEvent & {keyIdentifier: string}>e).keyIdentifier).toLowerCase();
 }
 
 /*tslint:disable:no-any no-unsafe-any*///because errors can be any
@@ -73,10 +73,6 @@ export function errorToString(e: any): string {
     return e instanceof Error ? e.message : e !== undefined ? e.toString() : '';
 }
 //tslint:enable
-
-export async function requestNotificationsPermission(): Promise<void> {
-    if((<Window & {Notification: Notification | undefined}>window).Notification !== undefined) await Notification.requestPermission();
-}
 
 let messageId = 0;
 

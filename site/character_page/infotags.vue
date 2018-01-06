@@ -1,11 +1,9 @@
 <template>
-    <div class="infotags">
-        <div class="infotag-group" v-for="group in groupedInfotags" :key="group.id">
-            <div class="col-xs-2">
-                <div class="infotag-title">{{group.name}}</div>
-                <hr>
-                <infotag :infotag="infotag" v-for="infotag in group.infotags" :key="infotag.id"></infotag>
-            </div>
+    <div class="infotags row">
+        <div class="infotag-group col-sm-3" v-for="group in groupedInfotags" :key="group.id" style="margin-top:5px">
+            <div class="infotag-title">{{group.name}}</div>
+            <hr>
+            <infotag :infotag="infotag" v-for="infotag in group.infotags" :key="infotag.id"></infotag>
         </div>
     </div>
 </template>

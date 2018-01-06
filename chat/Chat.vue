@@ -32,7 +32,7 @@
     import Channels from '../fchat/channels';
     import Characters from '../fchat/characters';
     import ChatView from './ChatView.vue';
-    import {errorToString, requestNotificationsPermission} from './common';
+    import {errorToString} from './common';
     import Conversations from './conversations';
     import core from './core';
     import l from './localize';
@@ -44,8 +44,8 @@
         @Prop({required: true})
         readonly ownCharacters: string[];
         @Prop({required: true})
-        readonly defaultCharacter: string;
-        selectedCharacter = this.defaultCharacter;
+        readonly defaultCharacter: string | undefined;
+        selectedCharacter = this.defaultCharacter || this.ownCharacters[0]; //tslint:disable-line:strict-boolean-expressions
         error = '';
         connecting = false;
         connected = false;
@@ -59,10 +59,11 @@
                 if(isReconnect) (<Modal>this.$refs['reconnecting']).show(true);
                 if(this.connected) core.notifications.playSound('logout');
                 this.connected = false;
+                this.connecting = false;
             });
             core.connection.onEvent('connecting', async() => {
                 this.connecting = true;
-                if(core.state.settings.notifications) await requestNotificationsPermission();
+                if(core.state.settings.notifications) await core.notifications.requestPermission();
             });
             core.connection.onEvent('connected', () => {
                 (<Modal>this.$refs['reconnecting']).hide();

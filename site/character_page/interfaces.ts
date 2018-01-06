@@ -29,14 +29,15 @@ export interface StoreMethods {
     characterReport(reportData: CharacterReportData): Promise<void>
 
     contactMethodIconUrl(name: string): string
+    sendNoteUrl(character: CharacterInfo): string
 
     fieldsGet(): Promise<void>
 
-    friendDissolve(id: number): Promise<void>
+    friendDissolve(friend: Friend): Promise<void>
     friendRequest(target: number, source: number): Promise<FriendRequest>
-    friendRequestAccept(id: number): Promise<Friend>
-    friendRequestIgnore(id: number): Promise<void>
-    friendRequestCancel(id: number): Promise<void>
+    friendRequestAccept(request: FriendRequest): Promise<Friend>
+    friendRequestIgnore(request: FriendRequest): Promise<void>
+    friendRequestCancel(request: FriendRequest): Promise<void>
 
     friendsGet(id: number): Promise<CharacterFriend[]>
 

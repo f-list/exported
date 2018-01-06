@@ -1,4 +1,5 @@
 const path = require('path');
+const CommonsChunkPlugin = require('webpack/lib/optimize/CommonsChunkPlugin');
 const webpack = require('webpack');
 const UglifyPlugin = require('uglifyjs-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
@@ -6,17 +7,55 @@ const fs = require('fs');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const exportLoader = require('../export-loader');
 
-const config = {
+const mainConfig = {
+    entry: [path.join(__dirname, 'main.ts'), path.join(__dirname, 'application.json')],
+    output: {
+        path: __dirname + '/app',
+        filename: 'main.js'
+    },
+    context: __dirname,
+    target: 'electron-main',
+    module: {
+        loaders: [
+            {
+                test: /\.ts$/,
+                loader: 'ts-loader',
+                options: {
+                    configFile: __dirname + '/tsconfig.json',
+                    transpileOnly: true
+                }
+            },
+            {test: /application.json$/, loader: 'file-loader?name=package.json'},
+            {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'}
+        ]
+    },
+    node: {
+        __dirname: false,
+        __filename: false
+    },
+    plugins: [
+        new ForkTsCheckerWebpackPlugin({workers: 2, async: false, tslint: path.join(__dirname, '../tslint.json')}),
+        exportLoader.delayTypecheck
+    ],
+    resolve: {
+        extensions: ['.ts', '.js']
+    },
+    resolveLoader: {
+        modules: [
+            'node_modules', path.join(__dirname, '../')
+        ]
+    }
+}, rendererConfig = {
     entry: {
-        chat: [path.join(__dirname, 'chat.ts')],
-        main: [path.join(__dirname, 'main.ts'), path.join(__dirname, 'index.html'), path.join(__dirname, 'application.json')]
+        chat: [path.join(__dirname, 'chat.ts'), path.join(__dirname, 'index.html')],
+        window: [path.join(__dirname, 'window.ts'), path.join(__dirname, 'window.html')]
     },
     output: {
         path: __dirname + '/app',
         filename: '[name].js'
     },
     context: __dirname,
-    target: 'electron',
+    target: 'electron-renderer',
     module: {
         loaders: [
             {
@@ -41,8 +80,7 @@ const config = {
             {test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'url-loader?limit=10000&mimetype=application/octet-stream'},
             {test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'url-loader?limit=10000&mimetype=image/svg+xml'},
             {test: /\.(wav|mp3|ogg)$/, loader: 'file-loader?name=sounds/[name].[ext]'},
-            {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'},
-            {test: /application.json$/, loader: 'file-loader?name=package.json'}
+            {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'}
         ]
     },
     node: {
@@ -56,6 +94,7 @@ const config = {
             'window.jQuery': 'jquery/dist/jquery.slim.js'
         }),
         new ForkTsCheckerWebpackPlugin({workers: 2, async: false, tslint: path.join(__dirname, '../tslint.json')}),
+        new CommonsChunkPlugin({name: 'common', minChunks: 2}),
         exportLoader.delayTypecheck
     ],
     resolve: {
@@ -77,20 +116,20 @@ module.exports = function(env) {
     for(const theme of themes) {
         if(!theme.endsWith('.less')) continue;
         const absPath = path.join(themesDir, theme);
-        config.entry.chat.push(absPath);
+        rendererConfig.entry.chat.push(absPath);
         const plugin = new ExtractTextPlugin('themes/' + theme.slice(0, -5) + '.css');
-        config.plugins.push(plugin);
-        config.module.loaders.push({test: absPath, use: plugin.extract(cssOptions)});
+        rendererConfig.plugins.push(plugin);
+        rendererConfig.module.loaders.push({test: absPath, use: plugin.extract(cssOptions)});
     }
     if(dist) {
-        config.devtool = 'source-map';
-        config.plugins.push(
-            new UglifyPlugin({sourceMap: true}),
+        mainConfig.devtool = rendererConfig.devtool = 'source-map';
+        const plugins = [new UglifyPlugin({sourceMap: true}),
             new webpack.DefinePlugin({'process.env.NODE_ENV': JSON.stringify('production')}),
-            new webpack.LoaderOptionsPlugin({minimize: true})
-        );
+            new webpack.LoaderOptionsPlugin({minimize: true})];
+        mainConfig.plugins.push(...plugins);
+        rendererConfig.plugins.push(...plugins);
     } else {
         //config.devtool = 'cheap-module-eval-source-map';
     }
-    return config;
+    return [mainConfig, rendererConfig];
 };
