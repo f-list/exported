@@ -1,5 +1,5 @@
 <template>
-    <modal :action="l('characterSearch.action')" @submit.prevent="submit"
+    <modal :action="l('characterSearch.action')" @submit.prevent="submit" dialogClass="w-100"
         :buttonText="results ? l('characterSearch.again') : undefined" class="character-search">
         <div v-if="options && !results">
             <div v-show="error" class="alert alert-danger">{{error}}</div>
@@ -113,10 +113,9 @@
                 }
             });
             core.connection.onMessage('FKS', (data) => {
-                this.results = data.characters.filter((x) => core.state.hiddenUsers.indexOf(x) === -1)
-                    .map((x) => core.characters.get(x)).sort(sort);
+                this.results = data.characters.map((x) => core.characters.get(x))
+                    .filter((x) => core.state.hiddenUsers.indexOf(x.name) === -1 && !x.isIgnored).sort(sort);
             });
-            (<Modal>this.$children[0]).fixDropdowns();
         }
 
         filterKink(filter: RegExp, kink: Kink): boolean {
@@ -144,7 +143,7 @@
     }
 </script>
 
-<style lang="less">
+<style lang="scss">
     .character-search {
         .dropdown {
             margin-bottom: 10px;

@@ -1,65 +1,77 @@
 <template>
-    <Modal id="memoDialog" :action="'Friends for ' + name" :buttons="false">
+    <Modal id="memoDialog" :action="'Friends for ' + name" :buttons="false" dialog-class="modal-dialog-centered modal-lg">
         <div v-show="loading" class="alert alert-info">Loading friend information.</div>
         <div v-show="error" class="alert alert-danger">{{error}}</div>
         <template v-if="!loading">
-            <div v-if="existing.length" class="well">
-                <h4>Existing Friendships</h4>
-                <hr>
-                <div v-for="friend in existing" class="friend-item">
-                    <character-link :character="friend.source"><img class="character-avatar icon"
-                        :src="avatarUrl(friend.source.name)"/>
-                        {{friend.source.name}}
-                    </character-link>
-                    <span class="date">Since: <date-display :time="friend.createdAt"></date-display></span>
-                    <button type="button" class="btn btn-danger"
-                        @click="dissolve(friend)">
-                        Remove
-                    </button>
+            <div v-if="existing.length" class="card bg-light">
+                <div class="card-header">
+                    <h4>Existing Friendships</h4>
+                </div>
+                <div class="card-body">
+                    <div v-for="friend in existing" class="friend-item">
+                        <character-link :character="friend.source"><img class="character-avatar icon"
+                            :src="avatarUrl(friend.source.name)"/>
+                            {{friend.source.name}}
+                        </character-link>
+                        <span class="date">Since: <date-display :time="friend.createdAt"></date-display></span>
+                        <button type="button" class="btn btn-danger"
+                            @click="dissolve(friend)">
+                            Remove
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div v-if="pending.length" class="well">
-                <h4>Pending Requests To Character</h4>
-                <hr>
-                <div v-for="request in pending" class="friend-item">
-                    <character-link :character="request.source"><img class="character-avatar icon"
-                        :src="avatarUrl(request.source.name)"/>
-                        {{request.source.name}}
-                    </character-link>
-                    <span class="date">Sent: <date-display :time="request.createdAt"></date-display></span>
-                    <button type="button" class="btn btn-danger"
-                        @click="cancel(request)">
-                        Cancel
-                    </button>
+            <div v-if="pending.length" class="card bg-light">
+                <div class="card-header">
+                    <h4>Pending Requests To Character</h4>
+                </div>
+                <div class="card-body">
+                    <div v-for="request in pending" class="friend-item">
+                        <character-link :character="request.source"><img class="character-avatar icon"
+                            :src="avatarUrl(request.source.name)"/>
+                            {{request.source.name}}
+                        </character-link>
+                        <span class="date">Sent: <date-display :time="request.createdAt"></date-display></span>
+                        <button type="button" class="btn btn-danger"
+                            @click="cancel(request)">
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div v-if="incoming.length" class="well">
-                <h4>Pending Requests From Character</h4>
-                <hr>
-                <div v-for="request in incoming" class="friend-item">
-                    <character-link :character="request.target"><img class="character-avatar icon"
-                        :src="avatarUrl(request.target.name)"/>
-                        {{request.target.name}}
-                    </character-link>
-                    <span class="date">Sent: <date-display :time="request.createdAt"></date-display></span>
-                    <button type="button" class="btn btn-success acceptFriend"
-                        @click="accept(request)">
-                        Accept
-                    </button>
-                    <button type="button" class="btn btn-danger ignoreFriend"
-                        @click="ignore(request)">
-                        Ignore
-                    </button>
+            <div v-if="incoming.length" class="card bg-light">
+                <div class="card-header">
+                    <h4>Pending Requests From Character</h4>
+                </div>
+                <div class="card-body">
+                    <div v-for="request in incoming" class="friend-item">
+                        <character-link :character="request.target"><img class="character-avatar icon"
+                            :src="avatarUrl(request.target.name)"/>
+                            {{request.target.name}}
+                        </character-link>
+                        <span class="date">Sent: <date-display :time="request.createdAt"></date-display></span>
+                        <button type="button" class="btn btn-success acceptFriend"
+                            @click="accept(request)">
+                            Accept
+                        </button>
+                        <button type="button" class="btn btn-danger ignoreFriend"
+                            @click="ignore(request)">
+                            Ignore
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="well">
-                <h4>Request Friendship</h4>
-                <hr>
-                <div class="form-inline">
-                    <label class="control-label"
-                        for="friendRequestCharacter">Character: </label>
-                    <character-select id="friendRequestCharacter" v-model="ourCharacter"></character-select>
-                    <button @click="request" class="btn btn-default" :disable="requesting || !ourCharacter">Request</button>
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h4>Request Friendship</h4>
+                </div>
+                <div class="card-body">
+                    <div class="form-inline">
+                        <label class="control-label"
+                            for="friendRequestCharacter">Character: </label>
+                        <character-select id="friendRequestCharacter" v-model="ourCharacter"></character-select>
+                        <button @click="request" class="btn btn-secondary" :disable="requesting || !ourCharacter">Request</button>
+                    </div>
                 </div>
             </div>
         </template>
@@ -80,7 +92,7 @@
     })
     export default class FriendDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
 
         private ourCharacter = Utils.Settings.defaultCharacter;
 

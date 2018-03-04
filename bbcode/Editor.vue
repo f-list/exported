@@ -1,27 +1,32 @@
 <template>
-    <div class="bbcodeEditorContainer">
+    <div class="bbcode-editor">
         <slot></slot>
-        <a tabindex="0" class="btn bbcodeEditorButton bbcode-btn" role="button" @click="showToolbar = true" @blur="showToolbar = false">
-            <span class="fa fa-code"></span></a>
-        <div class="bbcode-toolbar" role="toolbar" :style="showToolbar ? 'display:block' : ''" @mousedown.stop.prevent>
+        <a tabindex="0" class="btn btn-secondary bbcode-btn btn-sm" role="button" @click="showToolbar = true" @blur="showToolbar = false"
+            style="border-bottom-left-radius:0;border-bottom-right-radius:0">
+            <i class="fa fa-code"></i>
+        </a>
+        <div class="bbcode-toolbar btn-toolbar" role="toolbar" :style="showToolbar ? 'display:flex' : ''" @mousedown.stop.prevent>
+            <div class="btn-group" style="flex-wrap:wrap">
+                <div class="btn btn-secondary btn-sm" v-for="button in buttons" :title="button.title" @click.prevent.stop="apply(button)">
+                    <i :class="(button.class ? button.class : 'fa ') + button.icon"></i>
+                </div>
+                <div @click="previewBBCode" class="btn btn-secondary btn-sm" :class="preview ? 'active' : ''"
+                    :title="preview ? 'Close Preview' : 'Preview'">
+                    <i class="fa fa-eye"></i>
+                </div>
+            </div>
             <button type="button" class="close" aria-label="Close" style="margin-left:10px" @click="showToolbar = false">&times;</button>
-            <div class="bbcodeEditorButton btn" v-for="button in buttons" :title="button.title" @click.prevent.stop="apply(button)">
-                <span :class="'fa ' + button.icon"></span>
-            </div>
-            <div @click="previewBBCode" class="bbcodeEditorButton btn" :class="preview ? 'active' : ''"
-                :title="preview ? 'Close Preview' : 'Preview'">
-                <span class="fa fa-eye"></span>
-            </div>
         </div>
-        <div class="bbcodeEditorTextarea">
+        <div class="bbcode-editor-text-area">
             <textarea ref="input" v-model="text" @input="onInput" v-show="!preview" :maxlength="maxlength"
-                :class="'bbcodeTextAreaTextArea ' + classes" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste"
+                :class="finalClasses" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste" style="border-top-left-radius:0"
                 :placeholder="placeholder" @keypress="$emit('keypress', $event)" @keydown="onKeyDown"></textarea>
-            <div class="bbcodePreviewArea" v-show="preview">
-                <div class="bbcodePreviewHeader">
-                    <ul class="bbcodePreviewWarnings" v-show="previewWarnings.length">
+            <div ref="sizer"></div>
+            <div class="bbcode-preview" v-show="preview">
+                <div class="bbcode-preview-warnings">
+                    <div class="alert alert-danger" v-show="previewWarnings.length">
                         <li v-for="warning in previewWarnings">{{warning}}</li>
-                    </ul>
+                    </div>
                 </div>
                 <div class="bbcode" ref="preview-element"></div>
             </div>
@@ -35,6 +40,7 @@
     import {Prop, Watch} from 'vue-property-decorator';
     import {BBCodeElement} from '../chat/bbcode';
     import {getKey} from '../chat/common';
+    import {Keys} from '../keys';
     import {CoreBBCodeParser, urlRegex} from './core';
     import {defaultButtons, EditorButton, EditorSelection} from './editor';
     import {BBCodeParser} from './parser';
@@ -44,7 +50,7 @@
         @Prop()
         readonly extras?: EditorButton[];
         @Prop({default: 1000})
-        readonly maxlength: number;
+        readonly maxlength!: number;
         @Prop()
         readonly classes?: string;
         @Prop()
@@ -53,15 +59,18 @@
         readonly disabled?: boolean;
         @Prop()
         readonly placeholder?: string;
+        @Prop({default: false, type: Boolean})
+        readonly invalid!: boolean;
         preview = false;
         previewWarnings: ReadonlyArray<string> = [];
         previewResult = '';
         text = this.value !== undefined ? this.value : '';
-        element: HTMLTextAreaElement;
-        maxHeight: number;
-        minHeight: number;
+        element!: HTMLTextAreaElement;
+        sizer!: HTMLElement;
+        maxHeight!: number;
+        minHeight!: number;
         showToolbar = false;
-        protected parser: BBCodeParser;
+        protected parser!: BBCodeParser;
         protected defaultButtons = defaultButtons;
         private isShiftPressed = false;
         private undoStack: string[] = [];
@@ -74,16 +83,31 @@
 
         mounted(): void {
             this.element = <HTMLTextAreaElement>this.$refs['input'];
-            const $element = $(this.element);
-            this.maxHeight = parseInt($element.css('max-height'), 10);
+            const styles = getComputedStyle(this.element);
+            this.maxHeight = parseInt(styles.maxHeight! , 10);
             //tslint:disable-next-line:strict-boolean-expressions
-            this.minHeight = parseInt($element.css('min-height'), 10) || $element.outerHeight() || 50;
+            this.minHeight = parseInt(styles.minHeight!, 10) || 50;
             setInterval(() => {
                 if(Date.now() - this.lastInput >= 500 && this.text !== this.undoStack[0] && this.undoIndex === 0) {
                     if(this.undoStack.length >= 30) this.undoStack.pop();
                     this.undoStack.unshift(this.text);
                 }
             }, 500);
+            this.sizer = <HTMLElement>this.$refs['sizer'];
+            this.sizer.style.cssText = styles.cssText;
+            this.sizer.style.height = '0';
+            this.sizer.style.overflow = 'hidden';
+            this.sizer.style.position = 'absolute';
+            this.sizer.style.top = '0';
+            this.sizer.style.visibility = 'hidden';
+            this.resize();
+        }
+
+        get finalClasses(): string | undefined {
+            let classes = this.classes;
+            if(this.invalid)
+                classes += ' is-invalid';
+            return classes;
         }
 
         get buttons(): EditorButton[] {
@@ -169,15 +193,15 @@
 
         onKeyDown(e: KeyboardEvent): void {
             const key = getKey(e);
-            if((e.metaKey || e.ctrlKey) && !e.shiftKey && key !== 'control' && key !== 'meta') {
-                if(key === 'z') {
+            if((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+                if(key === Keys.KeyZ) {
                     e.preventDefault();
                     if(this.undoIndex === 0 && this.undoStack[0] !== this.text) this.undoStack.unshift(this.text);
                     if(this.undoStack.length > this.undoIndex + 1) {
                         this.text = this.undoStack[++this.undoIndex];
                         this.lastInput = Date.now();
                     }
-                } else if(key === 'y') {
+                } else if(key === Keys.KeyY) {
                     e.preventDefault();
                     if(this.undoIndex > 0) {
                         this.text = this.undoStack[--this.undoIndex];
@@ -191,20 +215,20 @@
                         this.apply(button);
                         break;
                     }
-            } else if(key === 'shift') this.isShiftPressed = true;
+            } else if(e.shiftKey) this.isShiftPressed = true;
             this.$emit('keydown', e);
         }
 
         onKeyUp(e: KeyboardEvent): void {
-            if(getKey(e) === 'shift') this.isShiftPressed = false;
+            if(!e.shiftKey) this.isShiftPressed = false;
             this.$emit('keyup', e);
         }
 
         resize(): void {
-            if(this.maxHeight > 0) {
-                this.element.style.height = 'auto';
-                this.element.style.height = `${Math.max(Math.min(this.element.scrollHeight + 5, this.maxHeight), this.minHeight)}px`;
-            }
+            this.sizer.style.fontSize = this.element.style.fontSize;
+            this.sizer.style.lineHeight = this.element.style.lineHeight;
+            this.sizer.textContent = this.element.value;
+            this.element.style.height = `${Math.max(Math.min(this.sizer.scrollHeight, this.maxHeight), this.minHeight)}px`;
         }
 
         onPaste(e: ClipboardEvent): void {

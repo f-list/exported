@@ -1,63 +1,39 @@
 <template>
-    <div id="duplicateDialog" tabindex="-1" class="modal" ref="dialog">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
-                    <h4 class="modal-title">Duplicate character {{name}}</h4>
-                </div>
-                <div class="modal-body form-horizontal">
-                    <p>This will duplicate the character, kinks, infotags, customs, subkinks and images. Guestbook
-                        entries, friends, groups, and bookmarks are not duplicated.</p>
-                    <div class="form-group">
-                        <label class="col-xs-1 control-label">Name:</label>
-
-                        <div class="col-xs-5">
-                            <input type="text" class="form-control" maxlength="60" v-model="newName"
-                                :class="{'has-error': error}"/>
-                        </div>
-                        <div class="col-xs-2">
-                            <button type="button" class="btn btn-default" @click="checkName"
-                                :disabled="newName.length < 2 || checking">
-                                Check Name
-                            </button>
-                        </div>
-                        <div class="col-xs-3">
-                            <ul>
-                                <li v-show="valid" class="text-success">Name available and valid.</li>
-                            </ul>
-                            <ul>
-                                <li v-show="error" class="text-danger">{{ error }}</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-success" @click="duplicate"
-                        :disabled="duplicating || checking">
-                        Duplicate Character
+    <modal id="duplicateDialog" :action="'Duplicate character' + name" :disabled="duplicating || checking" @submit.prevent="duplicate">
+        <p>This will duplicate the character, kinks, infotags, customs, subkinks and images. Guestbook
+            entries, friends, groups, and bookmarks are not duplicated.</p>
+        <div class="form-row mb-2">
+            <form-group-inputgroup class="col-12" :errors="errors" field="name" id="characterName" label="Name">
+                <input class="form-control" type="text" id="characterName" slot-scope="props" :class="props.cls"/>
+                <div slot="button" class="input-group-append">
+                    <button type="button" class="btn btn-secondary" @click="checkName" :disabled="newName.length < 2 || checking">
+                        Check Name
                     </button>
                 </div>
-            </div>
+                <div slot="valid" class="valid-feedback">Name valid and unused.</div>
+            </form-group-inputgroup>
         </div>
-    </div>
+    </modal>
 </template>
 
 <script lang="ts">
-    import Vue from 'vue';
     import Component from 'vue-class-component';
     import {Prop} from 'vue-property-decorator';
+    import CustomDialog from '../../components/custom_dialog';
+    import FormGroupInputgroup from '../../components/form_group_inputgroup.vue';
+    import Modal from '../../components/Modal.vue';
     import * as Utils from '../utils';
     import {methods} from './data_store';
     import {Character} from './interfaces';
 
-    @Component
-    export default class DuplicateDialog extends Vue {
+    @Component({
+        components: {'form-group-inputgroup': FormGroupInputgroup, modal: Modal}
+    })
+    export default class DuplicateDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
 
-        error = '';
+        errors: {[key: string]: string} = {};
         private newName = '';
         valid = false;
 
@@ -68,22 +44,18 @@
             return this.character.character.name;
         }
 
-        show(): void {
-            $(this.$refs['dialog']).modal('show');
-        }
-
         async checkName(): Promise<boolean> {
             try {
                 this.checking = true;
                 const result = await methods.characterNameCheck(this.newName);
                 this.valid = result.valid;
-                this.error = '';
+                this.errors = {};
                 return true;
             } catch(e) {
                 this.valid = false;
-                this.error = '';
+                this.errors = {};
                 if(Utils.isJSONError(e))
-                    this.error = <string>e.response.data.error;
+                    this.errors['name]'] = <string>e.response.data.error;
                 return false;
             } finally {
                 this.checking = false;
@@ -94,13 +66,13 @@
             try {
                 this.duplicating = true;
                 const result = await methods.characterDuplicate(this.character.character.id, this.newName);
-                $(this.$refs['dialog']).modal('hide');
+                this.hide();
                 window.location.assign(result.next);
             } catch(e) {
                 Utils.ajaxError(e, 'Unable to duplicate character');
                 this.valid = false;
                 if(Utils.isJSONError(e))
-                    this.error = <string>e.response.data.error;
+                    this.errors['name'] = <string>e.response.data.error;
             }
             this.duplicating = false;
         }

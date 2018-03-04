@@ -29,9 +29,6 @@
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
-import 'bootstrap/js/dropdown.js';
-import 'bootstrap/js/modal.js';
-import 'bootstrap/js/tab.js';
 import * as Raven from 'raven-js';
 import Vue from 'vue';
 import VueRaven from '../chat/vue-raven';

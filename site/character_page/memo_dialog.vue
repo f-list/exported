@@ -1,5 +1,5 @@
 <template>
-    <Modal id="memoDialog" :action="'Memo for ' + name" buttonText="Save and Close" @close="onClose" @submit="save">
+    <Modal id="memoDialog" :action="'Memo for ' + name" buttonText="Save and Close" @close="onClose" @submit="save" dialog-class="modal-lg modal-dialog-centered">
         <div class="form-group" v-if="editing">
             <textarea v-model="message" maxlength="1000" class="form-control"></textarea>
         </div>
@@ -25,7 +25,7 @@
     })
     export default class MemoDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
 
         private message = '';
         editing = false;

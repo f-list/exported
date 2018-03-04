@@ -5,7 +5,7 @@
         <sidebar id="sidebar" :label="l('chat.menu')" icon="fa-bars">
             <img :src="characterImage(ownCharacter.name)" v-if="showAvatars" style="float:left;margin-right:5px;width:60px"/>
             {{ownCharacter.name}}
-            <a href="#" @click.prevent="logOut" class="btn"><span class="fa fa-sign-out"></span>{{l('chat.logout')}}</a><br/>
+            <a href="#" @click.prevent="logOut" class="btn"><i class="fa fa-sign-out-alt"></i>{{l('chat.logout')}}</a><br/>
             <div>
                 {{l('chat.status')}}
                 <a href="#" @click.prevent="$refs['statusDialog'].show()" class="btn">
@@ -35,9 +35,10 @@
                     <div class="name">
                         <span>{{conversation.character.name}}</span>
                         <div style="text-align:right;line-height:0">
-                            <span class="fa"
-                                :class="{'fa-commenting': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
-                            ></span><span class="pin fa fa-thumb-tack" :class="{'active': conversation.isPinned}" @mousedown.prevent
+                            <span class="fas"
+                                :class="{'fa-comment-alt': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
+                            ></span><span class="fa fa-reply" v-show="needsReply(conversation)"></span>
+                            <span class="pin fa fa-thumbtack" :class="{'active': conversation.isPinned}" @mousedown.prevent
                             @click.stop="conversation.isPinned = !conversation.isPinned" :aria-label="l('chat.pinTab')"></span>
                             <span class="fa fa-times leave" @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span>
                         </div>
@@ -49,7 +50,7 @@
             <div class="list-group conversation-nav" ref="channelConversations">
                 <a v-for="conversation in conversations.channelConversations" href="#" @click.prevent="conversation.show()"
                     :class="getClasses(conversation)" class="list-group-item list-group-item-action item-channel"
-                    :key="conversation.key"><span class="name">{{conversation.name}}</span><span><span class="pin fa fa-thumb-tack"
+                    :key="conversation.key"><span class="name">{{conversation.name}}</span><span><span class="pin fa fa-thumbtack"
                     :class="{'active': conversation.isPinned}" @click.stop="conversation.isPinned = !conversation.isPinned"
                     :aria-label="l('chat.pinTab')" @mousedown.prevent></span><span class="fa fa-times leave"
                     @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span></span>
@@ -66,7 +67,7 @@
                 <a v-for="conversation in conversations.privateConversations" href="#" @click.prevent="conversation.show()"
                     :class="getClasses(conversation)" class="list-group-item list-group-item-action" :key="conversation.key">
                     <img :src="characterImage(conversation.character.name)" v-if="showAvatars"/>
-                    <span class="fa fa-user-circle-o conversation-icon" v-else></span>
+                    <span class="far fa-user-circle conversation-icon" v-else></span>
                     <div class="name">{{conversation.character.name}}</div>
                 </a>
                 <a v-for="conversation in conversations.channelConversations" href="#" @click.prevent="conversation.show()"
@@ -93,6 +94,7 @@
     import Sortable = require('sortablejs');
     import Vue from 'vue';
     import Component from 'vue-class-component';
+    import {Keys} from '../keys';
     import ChannelList from './ChannelList.vue';
     import CharacterSearch from './CharacterSearch.vue';
     import {characterImage, getKey} from './common';
@@ -128,7 +130,7 @@
         characterImage = characterImage;
         conversations = core.conversations;
         getStatusIcon = getStatusIcon;
-        keydownListener: (e: KeyboardEvent) => void;
+        keydownListener!: (e: KeyboardEvent) => void;
 
         mounted(): void {
             this.keydownListener = (e: KeyboardEvent) => this.onKeyDown(e);
@@ -190,12 +192,22 @@
             window.removeEventListener('keydown', this.keydownListener);
         }
 
+        needsReply(conversation: Conversation): boolean {
+            if(!core.state.settings.showNeedsReply) return false;
+            for(let i = conversation.messages.length - 1; i >= 0; --i) {
+                const sender = conversation.messages[i].sender;
+                if(sender !== undefined)
+                    return sender !== core.characters.ownCharacter;
+            }
+            return false;
+        }
+
         onKeyDown(e: KeyboardEvent): void {
             const selected = this.conversations.selectedConversation;
             const pms = this.conversations.privateConversations;
             const channels = this.conversations.channelConversations;
             const console = this.conversations.consoleTab;
-            if(getKey(e) === 'arrowup' && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey)
+            if(getKey(e) === Keys.ArrowUp && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey)
                 if(selected === console) { //tslint:disable-line:curly
                     if(channels.length > 0) channels[channels.length - 1].show();
                     else if(pms.length > 0) pms[pms.length - 1].show();
@@ -210,7 +222,7 @@
                         else console.show();
                     else channels[index - 1].show();
                 }
-            else if(getKey(e) === 'arrowdown' && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey)
+            else if(getKey(e) === Keys.ArrowDown && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey)
                 if(selected === console) { //tslint:disable-line:curly - false positive
                     if(pms.length > 0) pms[0].show();
                     else if(channels.length > 0) channels[0].show();
@@ -263,8 +275,18 @@
     }
 </script>
 
-<style lang="less">
-    @import "../less/flist_variables.less";
+<style lang="scss">
+    @import "~bootstrap/scss/functions";
+    @import "~bootstrap/scss/variables";
+    @import "~bootstrap/scss/mixins/breakpoints";
+
+    body {
+        user-select: none;
+    }
+
+    .bbcode, .message, .profile-viewer {
+        user-select: initial;
+    }
 
     .list-group.conversation-nav {
         margin-bottom: 10px;
@@ -317,8 +339,10 @@
         margin: 0 45px 5px;
         overflow: auto;
         display: none;
+        align-items: stretch;
+        flex-direction: row;
 
-        @media (max-width: @screen-xs-max) {
+        @media (max-width: breakpoint-max(xs)) {
             display: flex;
         }
 
@@ -363,7 +387,7 @@
         .body a.btn {
             padding: 2px 0;
         }
-        @media (min-width: @screen-sm-min) {
+        @media (min-width: breakpoint-min(sm)) {
             .sidebar {
                 position: static;
                 margin: 0;

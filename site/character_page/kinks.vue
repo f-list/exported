@@ -1,58 +1,62 @@
 <template>
     <div class="character-kinks-block" @contextmenu="contextMenu" @touchstart="contextMenu" @touchend="contextMenu">
-        <div class="compare-highlight-block clearfix">
-            <div v-if="shared.authenticated" class="quick-compare-block pull-left form-inline">
+        <div class="compare-highlight-block d-flex justify-content-between">
+            <div v-if="shared.authenticated" class="quick-compare-block form-inline">
                 <character-select v-model="characterToCompare"></character-select>
                 <button class="btn btn-primary" @click="compareKinks" :disabled="loading || !characterToCompare">
                     {{ compareButtonText }}
                 </button>
             </div>
-            <div class="pull-right form-inline">
+            <div class="form-inline">
                 <select v-model="highlightGroup" class="form-control">
                     <option :value="null">None</option>
                     <option v-for="group in kinkGroups" :value="group.id" :key="group.id">{{group.name}}</option>
                 </select>
             </div>
         </div>
-        <div class="character-kinks clearfix">
-            <div class="col-xs-6 col-md-3 kinks-favorite">
-                <div class="kinks-column">
-                    <div class="kinks-header">
-                        Favorite
+        <div class="form-row mt-3">
+            <div class="col-6 col-lg-3">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h4>Favorites</h4>
                     </div>
-                    <hr>
-                    <kink v-for="kink in groupedKinks['favorite']" :kink="kink" :key="kink.id" :highlights="highlighting"
-                        :comparisons="comparison"></kink>
+                    <div class="card-body">
+                        <kink v-for="kink in groupedKinks['favorite']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                            :comparisons="comparison"></kink>
+                    </div>
                 </div>
             </div>
-            <div class="col-xs-6 col-md-3 kinks-yes">
-                <div class="kinks-column">
-                    <div class="kinks-header">
-                        Yes
+            <div class="col-6 col-lg-3">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h4>Yes</h4>
                     </div>
-                    <hr>
-                    <kink v-for="kink in groupedKinks['yes']" :kink="kink" :key="kink.id" :highlights="highlighting"
-                        :comparisons="comparison"></kink>
+                    <div class="card-body">
+                        <kink v-for="kink in groupedKinks['yes']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                            :comparisons="comparison"></kink>
+                    </div>
                 </div>
             </div>
-            <div class="col-xs-6 col-md-3 kinks-maybe">
-                <div class="kinks-column">
-                    <div class="kinks-header">
-                        Maybe
+            <div class="col-6 col-lg-3">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h4>Maybe</h4>
                     </div>
-                    <hr>
-                    <kink v-for="kink in groupedKinks['maybe']" :kink="kink" :key="kink.id" :highlights="highlighting"
-                        :comparisons="comparison"></kink>
+                    <div class="card-body">
+                        <kink v-for="kink in groupedKinks['maybe']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                            :comparisons="comparison"></kink>
+                    </div>
                 </div>
             </div>
-            <div class="col-xs-6 col-md-3 kinks-no">
-                <div class="kinks-column">
-                    <div class="kinks-header">
-                        No
+            <div class="col-6 col-lg-3">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h4>No</h4>
                     </div>
-                    <hr>
-                    <kink v-for="kink in groupedKinks['no']" :kink="kink" :key="kink.id" :highlights="highlighting"
-                        :comparisons="comparison"></kink>
+                    <div class="card-body">
+                        <kink v-for="kink in groupedKinks['no']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                            :comparisons="comparison"></kink>
+                    </div>
                 </div>
             </div>
         </div>
@@ -79,7 +83,7 @@
     export default class CharacterKinksView extends Vue {
         //tslint:disable:no-null-keyword
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
         @Prop()
         readonly oldApi?: true;
         private shared = Store;

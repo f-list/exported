@@ -26,7 +26,7 @@ export abstract class BBCodeTag {
 
 export class BBCodeSimpleTag extends BBCodeTag {
 
-    constructor(tag: string, private elementName: keyof ElementTagNameMap, private classes?: string[], tagList?: string[]) {
+    constructor(tag: string, private elementName: keyof HTMLElementTagNameMap, private classes?: string[], tagList?: string[]) {
         super(tag, tagList);
     }
 
@@ -81,9 +81,9 @@ class ParserTag {
 export class BBCodeParser {
     private _warnings: string[] = [];
     private _tags: {[tag: string]: BBCodeTag | undefined} = {};
-    private _line: number;
-    private _column: number;
-    private _currentTag: ParserTag;
+    private _line = -1;
+    private _column = -1;
+    private _currentTag!: ParserTag;
     private _storeWarnings = false;
 
     parseEverything(input: string): HTMLElement {
@@ -103,7 +103,7 @@ export class BBCodeParser {
         return stack[0].element;
     }
 
-    createElement<K extends keyof HTMLElementTagNameMap>(tag: K | keyof ElementTagNameMap): HTMLElementTagNameMap[K] {
+    createElement<K extends keyof HTMLElementTagNameMap>(tag: K): HTMLElementTagNameMap[K] {
         return document.createElement(tag);
     }
 
@@ -218,6 +218,8 @@ export class BBCodeParser {
                                 quickReset(i);
                                 continue;
                             }
+                            (<HTMLElement & {bbcodeTag: string}>el).bbcodeTag = tagKey;
+                            if(param.length > 0) (<HTMLElement & {bbcodeParam: string}>el).bbcodeParam = param;
                             if(!this._tags[tagKey]!.noClosingTag)
                                 stack.push(new ParserTag(tagKey, param, el, parent, this._line, this._column));
                         } else if(ignoreClosing[tagKey] > 0) {

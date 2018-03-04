@@ -1,11 +1,8 @@
 const path = require('path');
-const CommonsChunkPlugin = require('webpack/lib/optimize/CommonsChunkPlugin');
-const webpack = require('webpack');
-const UglifyPlugin = require('uglifyjs-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const fs = require('fs');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
-const exportLoader = require('../export-loader');
+const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 
 const mainConfig = {
     entry: [path.join(__dirname, 'main.ts'), path.join(__dirname, 'application.json')],
@@ -16,16 +13,16 @@ const mainConfig = {
     context: __dirname,
     target: 'electron-main',
     module: {
-        loaders: [
+        rules: [
             {
                 test: /\.ts$/,
                 loader: 'ts-loader',
                 options: {
-                    configFile: __dirname + '/tsconfig.json',
+                    configFile: __dirname + '/tsconfig-main.json',
                     transpileOnly: true
                 }
             },
-            {test: /application.json$/, loader: 'file-loader?name=package.json'},
+            {test: path.join(__dirname, 'application.json'), loader: 'file-loader?name=package.json', type: 'javascript/auto'},
             {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'}
         ]
     },
@@ -34,16 +31,15 @@ const mainConfig = {
         __filename: false
     },
     plugins: [
-        new ForkTsCheckerWebpackPlugin({workers: 2, async: false, tslint: path.join(__dirname, '../tslint.json')}),
-        exportLoader.delayTypecheck
+        new ForkTsCheckerWebpackPlugin({
+            workers: 2,
+            async: false,
+            tslint: path.join(__dirname, '../tslint.json'),
+            tsconfig: './tsconfig-main.json'
+        })
     ],
     resolve: {
         extensions: ['.ts', '.js']
-    },
-    resolveLoader: {
-        modules: [
-            'node_modules', path.join(__dirname, '../')
-        ]
     }
 }, rendererConfig = {
     entry: {
@@ -57,12 +53,11 @@ const mainConfig = {
     context: __dirname,
     target: 'electron-renderer',
     module: {
-        loaders: [
+        rules: [
             {
                 test: /\.vue$/,
                 loader: 'vue-loader',
                 options: {
-                    preLoaders: {ts: 'export-loader'},
                     preserveWhitespace: false
                 }
             },
@@ -71,7 +66,7 @@ const mainConfig = {
                 loader: 'ts-loader',
                 options: {
                     appendTsSuffixTo: [/\.vue$/],
-                    configFile: __dirname + '/tsconfig.json',
+                    configFile: __dirname + '/tsconfig-renderer.json',
                     transpileOnly: true
                 }
             },
@@ -88,48 +83,45 @@ const mainConfig = {
         __filename: false
     },
     plugins: [
-        new webpack.ProvidePlugin({
-            '$': 'jquery/dist/jquery.slim.js',
-            'jQuery': 'jquery/dist/jquery.slim.js',
-            'window.jQuery': 'jquery/dist/jquery.slim.js'
-        }),
-        new ForkTsCheckerWebpackPlugin({workers: 2, async: false, tslint: path.join(__dirname, '../tslint.json')}),
-        new CommonsChunkPlugin({name: 'common', minChunks: 2}),
-        exportLoader.delayTypecheck
+        new ForkTsCheckerWebpackPlugin({
+            workers: 2,
+            async: false,
+            tslint: path.join(__dirname, '../tslint.json'),
+            tsconfig: './tsconfig-renderer.json',
+            vue: true
+        })
     ],
     resolve: {
         extensions: ['.ts', '.js', '.vue', '.css'],
         alias: {qs: path.join(__dirname, 'qs.ts')}
     },
-    resolveLoader: {
-        modules: [
-            'node_modules', path.join(__dirname, '../')
-        ]
+    optimization: {
+        splitChunks: {chunks: 'all', minChunks: 2, name: 'common'}
     }
 };
 
-module.exports = function(env) {
-    const dist = env === 'production';
-    const themesDir = path.join(__dirname, '../less/themes/chat');
+module.exports = function(mode) {
+    const themesDir = path.join(__dirname, '../scss/themes/chat');
     const themes = fs.readdirSync(themesDir);
-    const cssOptions = {use: [{loader: 'css-loader', options: {minimize: dist}}, 'less-loader']};
+    const cssOptions = {use: ['css-loader', 'sass-loader']};
     for(const theme of themes) {
-        if(!theme.endsWith('.less')) continue;
+        if(!theme.endsWith('.scss')) continue;
         const absPath = path.join(themesDir, theme);
         rendererConfig.entry.chat.push(absPath);
         const plugin = new ExtractTextPlugin('themes/' + theme.slice(0, -5) + '.css');
         rendererConfig.plugins.push(plugin);
-        rendererConfig.module.loaders.push({test: absPath, use: plugin.extract(cssOptions)});
+        rendererConfig.module.rules.push({test: absPath, use: plugin.extract(cssOptions)});
     }
-    if(dist) {
+    const faPath = path.join(themesDir, '../../fa.scss');
+    rendererConfig.entry.chat.push(faPath);
+    const faPlugin = new ExtractTextPlugin('./fa.css');
+    rendererConfig.plugins.push(faPlugin);
+    rendererConfig.module.rules.push({test: faPath, use: faPlugin.extract(cssOptions)});
+    if(mode === 'production') {
         mainConfig.devtool = rendererConfig.devtool = 'source-map';
-        const plugins = [new UglifyPlugin({sourceMap: true}),
-            new webpack.DefinePlugin({'process.env.NODE_ENV': JSON.stringify('production')}),
-            new webpack.LoaderOptionsPlugin({minimize: true})];
-        mainConfig.plugins.push(...plugins);
-        rendererConfig.plugins.push(...plugins);
+        rendererConfig.plugins.push(new OptimizeCssAssetsPlugin());
     } else {
-        //config.devtool = 'cheap-module-eval-source-map';
+        mainConfig.devtool = rendererConfig.devtool = 'none';
     }
     return [mainConfig, rendererConfig];
 };

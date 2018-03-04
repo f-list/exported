@@ -50,14 +50,14 @@
     })
     export default class ConversationSettings extends CustomDialog {
         @Prop({required: true})
-        readonly conversation: Conversation;
+        readonly conversation!: Conversation;
         l = l;
         setting = Conversation.Setting;
-        notify: Conversation.Setting;
-        highlight: Conversation.Setting;
-        highlightWords: string;
-        joinMessages: Conversation.Setting;
-        defaultHighlights: boolean;
+        notify!: Conversation.Setting;
+        highlight!: Conversation.Setting;
+        highlightWords!: string;
+        joinMessages!: Conversation.Setting;
+        defaultHighlights!: boolean;
 
         constructor() {
             super();

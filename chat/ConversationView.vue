@@ -22,8 +22,8 @@
             <div style="display: flex; align-items: center;">
                 <div style="flex: 1;">
                     <span v-show="conversation.channel.id.substr(0, 4) !== 'adh-'" class="fa fa-star" :title="l('channel.official')"
-                        style="margin-right:5px;"></span>
-                    <h4 style="margin: 0; display:inline; vertical-align: middle;">{{conversation.name}}</h4>
+                        style="margin-right:5px;vertical-align:sub"></span>
+                    <h5 style="margin:0;display:inline;vertical-align:middle">{{conversation.name}}</h5>
                     <a @click="descriptionExpanded = !descriptionExpanded" class="btn">
                         <span class="fa" :class="{'fa-chevron-down': !descriptionExpanded, 'fa-chevron-up': descriptionExpanded}"></span>
                         <span class="btn-text">{{l('channel.description')}}</span>
@@ -37,8 +37,9 @@
                         <span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
                 <ul class="nav nav-pills mode-switcher">
-                    <li v-for="mode in modes" :class="{active: conversation.mode == mode, disabled: conversation.channel.mode != 'both'}">
-                        <a href="#" @click.prevent="setMode(mode)">{{l('channel.mode.' + mode)}}</a>
+                    <li v-for="mode in modes" class="nav-item">
+                        <a :class="{active: conversation.mode == mode, disabled: conversation.channel.mode != 'both'}"
+                            class="nav-link" href="#" @click.prevent="setMode(mode)">{{l('channel.mode.' + mode)}}</a>
                     </li>
                 </ul>
             </div>
@@ -51,9 +52,15 @@
             <h4>{{l('chat.consoleTab')}}</h4>
             <logs :conversation="conversation"></logs>
         </div>
+        <div class="search" v-show="showSearch" style="position:relative">
+            <input v-model="searchInput" @keydown.esc="showSearch = false; searchInput = ''" @keypress="lastSearchInput = Date.now()"
+                :placeholder="l('chat.search')" ref="searchField" class="form-control"/>
+            <a class="btn btn-sm btn-light" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:0"
+                @click="showSearch = false"><i class="fas fa-times"></i></a>
+        </div>
         <div class="border-top messages" :class="'messages-' + conversation.mode" style="flex:1;overflow:auto;margin-top:2px"
             ref="messages" @scroll="onMessagesScroll">
-            <template v-for="message in conversation.messages">
+            <template v-for="message in messages">
                 <message-view :message="message" :channel="conversation.channel" :key="message.id"
                     :classes="message == conversation.lastRead ? 'last-read' : ''">
                 </message-view>
@@ -80,20 +87,22 @@
                 <span class="redText" style="flex:1;margin-left:5px">{{conversation.errorText}}</span>
             </div>
             <div style="position:relative; margin-top:5px;">
-                <div class="overlay-disable" v-show="adCountdown">{{adCountdown}}</div>
-                <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="onInput"
-                    :classes="'form-control chat-text-box' + (conversation.isSendingAds ? ' ads-text-box' : '')" :disabled="adCountdown"
+                <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="keepScroll"
+                    :classes="'form-control chat-text-box' + (conversation.isSendingAds ? ' ads-text-box' : '')"
                     ref="textBox" style="position:relative" :maxlength="conversation.maxMessageLength">
                     <div style="float:right;text-align:right;display:flex;align-items:center">
-                        <div v-show="conversation.maxMessageLength" style="margin-right: 5px;">
+                        <div v-show="conversation.maxMessageLength" style="margin-right:5px">
                             {{getByteLength(conversation.enteredText)}} / {{conversation.maxMessageLength}}
                         </div>
                         <ul class="nav nav-pills send-ads-switcher" v-if="conversation.channel" style="position:relative;z-index:10">
-                            <li :class="{active: !conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}">
-                                <a href="#" @click.prevent="setSendingAds(false)">{{l('channel.mode.chat')}}</a>
+                            <li class="nav-item">
+                                <a href="#" :class="{active: !conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
+                                    class="nav-link" @click.prevent="setSendingAds(false)">{{l('channel.mode.chat')}}</a>
                             </li>
-                            <li :class="{active: conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}">
-                                <a href="#" @click.prevent="setSendingAds(true)">{{l('channel.mode.ads')}}</a>
+                            <li class="nav-item">
+                                <a href="#" :class="{active: conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
+                                    class="nav-link" @click.prevent="setSendingAds(true)">
+                                    {{l('channel.mode.ads' + (adCountdown ? '.countdown' : ''), adCountdown)}}</a>
                             </li>
                         </ul>
                     </div>
@@ -113,6 +122,7 @@
     import {Prop, Watch} from 'vue-property-decorator';
     import {EditorButton, EditorSelection} from '../bbcode/editor';
     import Modal from '../components/Modal.vue';
+    import {Keys} from '../keys';
     import {BBCodeView, Editor} from './bbcode';
     import CommandHelp from './CommandHelp.vue';
     import {characterImage, getByteLength, getKey} from './common';
@@ -135,16 +145,29 @@
     })
     export default class ConversationView extends Vue {
         @Prop({required: true})
-        readonly reportDialog: ReportDialog;
+        readonly reportDialog!: ReportDialog;
         modes = channelModes;
         descriptionExpanded = false;
         l = l;
         extraButtons: EditorButton[] = [];
         getByteLength = getByteLength;
         tabOptions: string[] | undefined;
-        tabOptionsIndex: number;
-        tabOptionSelection: EditorSelection;
+        tabOptionsIndex!: number;
+        tabOptionSelection!: EditorSelection;
+        showSearch = false;
+        searchInput = '';
+        search = '';
+        lastSearchInput = 0;
         messageCount = 0;
+        searchTimer = 0;
+        windowHeight = window.innerHeight;
+        resizeHandler = () => {
+            const messageView = <HTMLElement>this.$refs['messages'];
+            if(this.windowHeight - window.innerHeight + messageView.scrollTop + messageView.offsetHeight >= messageView.scrollHeight - 15)
+                messageView.scrollTop = messageView.scrollHeight - messageView.offsetHeight;
+            this.windowHeight = window.innerHeight;
+        }
+        keydownHandler!: EventListener;
 
         created(): void {
             this.extraButtons = [{
@@ -153,10 +176,32 @@
                 icon: 'fa-question',
                 handler: () => (<Modal>this.$refs['helpDialog']).show()
             }];
+            window.addEventListener('resize', this.resizeHandler);
+            window.addEventListener('keydown', this.keydownHandler = ((e: KeyboardEvent) => {
+                if(getKey(e) === Keys.KeyF && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+                    this.showSearch = true;
+                    this.$nextTick(() => (<HTMLElement>this.$refs['searchField']).focus());
+                }
+            }) as EventListener);
+            this.searchTimer = window.setInterval(() => {
+                if(Date.now() - this.lastSearchInput > 500 && this.search !== this.searchInput)
+                    this.search = this.searchInput;
+            }, 500);
+        }
+
+        destroyed(): void {
+            window.removeEventListener('resize', this.resizeHandler);
+            window.removeEventListener('keydown', this.keydownHandler);
+            clearInterval(this.searchTimer);
         }
 
         get conversation(): Conversation {
             return core.conversations.selectedConversation;
+        }
+
+        get messages(): ReadonlyArray<Conversation.Message> {
+            return this.search !== '' ? this.conversation.messages.filter((x) => x.text.indexOf(this.search) !== -1)
+                : this.conversation.messages;
         }
 
         @Watch('conversation')
@@ -168,14 +213,14 @@
         messageAdded(newValue: Conversation.Message[]): void {
             const messageView = <HTMLElement>this.$refs['messages'];
             if(!this.keepScroll() && newValue.length === this.messageCount)
-                this.$nextTick(() => messageView.scrollTop -= (<HTMLElement>messageView.lastElementChild).clientHeight);
+                messageView.scrollTop -= (<HTMLElement>messageView.firstElementChild).clientHeight;
             this.messageCount = newValue.length;
         }
 
         keepScroll(): boolean {
             const messageView = <HTMLElement>this.$refs['messages'];
             if(messageView.scrollTop + messageView.offsetHeight >= messageView.scrollHeight - 15) {
-                setTimeout(() => messageView.scrollTop = messageView.scrollHeight - messageView.offsetHeight, 0);
+                setImmediate(() => messageView.scrollTop = messageView.scrollHeight);
                 return true;
             }
             return false;
@@ -197,18 +242,9 @@
             if(oldValue === 'clear') this.keepScroll();
         }
 
-        onInput(): void {
-            const messageView = <HTMLElement>this.$refs['messages'];
-            const oldHeight = messageView.offsetHeight;
-            if(messageView.scrollTop + messageView.offsetHeight >= messageView.scrollHeight - 15)
-                setTimeout(() => {
-                    if(oldHeight > messageView.offsetHeight) messageView.scrollTop += oldHeight - messageView.offsetHeight;
-                });
-        }
-
         async onKeyDown(e: KeyboardEvent): Promise<void> {
             const editor = <Editor>this.$refs['textBox'];
-            if(getKey(e) === 'tab') {
+            if(getKey(e) === Keys.Tab) {
                 e.preventDefault();
                 if(this.conversation.enteredText.length === 0 || this.isConsoleTab) return;
                 if(this.tabOptions === undefined) {
@@ -242,10 +278,10 @@
                 }
             } else {
                 if(this.tabOptions !== undefined) this.tabOptions = undefined;
-                if(getKey(e) === 'arrowup' && this.conversation.enteredText.length === 0
+                if(getKey(e) === Keys.ArrowUp && this.conversation.enteredText.length === 0
                     && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey)
                     this.conversation.loadLastSent();
-                else if(getKey(e) === 'enter') {
+                else if(getKey(e) === Keys.Enter) {
                     if(e.shiftKey) return;
                     e.preventDefault();
                     await this.conversation.send();
@@ -270,14 +306,10 @@
             }
         }
 
-        get showAdCountdown(): boolean {
-            return Conversation.isChannel(this.conversation) && this.conversation.adCountdown > 0 && this.conversation.isSendingAds;
-        }
-
         get adCountdown(): string | undefined {
-            if(!this.showAdCountdown) return;
-            const conv = (<Conversation.ChannelConversation>this.conversation);
-            return l('chat.adCountdown', Math.floor(conv.adCountdown / 60).toString(), (conv.adCountdown % 60).toString());
+            if(!Conversation.isChannel(this.conversation) || this.conversation.adCountdown <= 0) return;
+            return l('chat.adCountdown',
+                Math.floor(this.conversation.adCountdown / 60).toString(), (this.conversation.adCountdown % 60).toString());
         }
 
         get characterImage(): string {
@@ -301,11 +333,14 @@
     }
 </script>
 
-<style lang="less">
-    @import "../less/flist_variables.less";
+<style lang="scss">
+    @import "~bootstrap/scss/functions";
+    @import "~bootstrap/scss/variables";
+    @import "~bootstrap/scss/mixins/breakpoints";
+
     #conversation {
         .header {
-            @media (min-width: @screen-sm-min) {
+            @media (min-width: breakpoint-min(sm)) {
                 margin-right: 32px;
             }
             a.btn {
@@ -317,7 +352,7 @@
             padding: 3px 10px;
         }
 
-        @media (max-width: @screen-xs-max) {
+        @media (max-width: breakpoint-max(xs)) {
             .mode-switcher a {
                 padding: 5px 8px;
             }

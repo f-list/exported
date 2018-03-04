@@ -54,7 +54,7 @@ export class CoreBBCodeParser extends BBCodeParser {
             } else if(content.length > 0) url = content;
             else {
                 parser.warning('url tag contains no url.');
-                element.textContent = ''; //Dafuq!?
+                element.textContent = '';
                 return;
             }
 
@@ -78,6 +78,7 @@ export class CoreBBCodeParser extends BBCodeParser {
             const span = document.createElement('span');
             span.className = 'link-domain';
             span.textContent = ` [${domain(url)}]`;
+            (<HTMLElement & {bbcodeHide: true}>span).bbcodeHide = true;
             element.appendChild(span);
         }, []));
     }

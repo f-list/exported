@@ -1,0 +1,15 @@
+{
+  "name": "fchat",
+  "version": "3.0.0",
+  "author": "The F-List Team",
+  "description": "F-Chat Themes",
+  "license": "MIT",
+  "dependencies": {
+    "@fortawesome/fontawesome-free-webfonts": "^1.0.3",
+    "bootstrap": "^4.0.0",
+    "node-sass": "^4.7.2"
+  },
+  "scripts": {
+    "build": "node-sass --importer=./importer --output css"
+  }
+}

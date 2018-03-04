@@ -12,9 +12,9 @@
     @Component
     export default class DateDisplay extends Vue {
         @Prop({required: true})
-        readonly time: string | null | number;
-        primary: string;
-        secondary: string;
+        readonly time!: string | null | number;
+        primary: string | undefined;
+        secondary: string | undefined;
 
         constructor(options?: ComponentOptions<Vue>) {
             super(options);

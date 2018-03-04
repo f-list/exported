@@ -33,7 +33,7 @@ function sortMember(this: void | never, array: SortableMember[], member: Sortabl
 
 class Channel implements Interfaces.Channel {
     description = '';
-    opList: string[];
+    opList: string[] = [];
     owner = '';
     mode: Interfaces.Mode = 'both';
     members: {[key: string]: SortableMember | undefined} = {};
@@ -163,16 +163,18 @@ export default function(this: void, connection: Connection, characters: Characte
         const item = state.getChannelItem(data.channel);
         if(data.character.identity === connection.character) {
             const id = data.channel.toLowerCase();
+            if(state.joinedMap[id] !== undefined) return;
             const channel = state.joinedMap[id] = new Channel(id, decodeHTML(data.title));
             state.joinedChannels.push(channel);
             if(item !== undefined) item.isJoined = true;
         } else {
             const channel = state.getChannel(data.channel);
             if(channel === undefined) return state.leave(data.channel);
+            if(channel.members[data.character.identity] !== undefined) return;
             const member = channel.createMember(characters.get(data.character.identity));
             await channel.addMember(member);
-            if(item !== undefined) item.memberCount++;
         }
+        if(item !== undefined) item.memberCount++;
     });
     connection.onMessage('ICH', async(data) => {
         const channel = state.getChannel(data.channel);
@@ -214,7 +216,6 @@ export default function(this: void, connection: Connection, characters: Characte
     connection.onMessage('COA', (data) => {
         const channel = state.getChannel(data.channel);
         if(channel === undefined) return state.leave(data.channel);
-        channel.opList.push(data.character);
         const member = channel.members[data.character];
         if(member === undefined || member.rank === Interfaces.Rank.Owner) return;
         member.rank = Interfaces.Rank.Op;
@@ -229,7 +230,6 @@ export default function(this: void, connection: Connection, characters: Characte
     connection.onMessage('COR', (data) => {
         const channel = state.getChannel(data.channel);
         if(channel === undefined) return state.leave(data.channel);
-        channel.opList.splice(channel.opList.indexOf(data.character), 1);
         const member = channel.members[data.character];
         if(member === undefined || member.rank === Interfaces.Rank.Owner) return;
         member.rank = Interfaces.Rank.Member;

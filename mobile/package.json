@@ -1,17 +1,14 @@
 {
   "name": "net.f_list.fchat",
-  "version": "0.2.10",
+  "version": "0.2.15",
   "displayName": "F-Chat",
   "author": "The F-List Team",
   "description": "F-List.net Chat Client",
   "main": "main.js",
   "license": "MIT",
   "scripts": {
-    "build": "../node_modules/.bin/webpack",
-    "build:dist": "../node_modules/.bin/webpack --env production",
-    "watch": "../node_modules/.bin/webpack --watch"
-  },
-  "devDependencies": {
-    "qs": "^6.5.1"
+    "build": "node ../webpack development",
+    "build:dist": "node ../webpack production",
+    "watch": "node ../webpack watch"
   }
 }

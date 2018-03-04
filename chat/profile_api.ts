@@ -1,11 +1,13 @@
 import Axios from 'axios';
 import Vue from 'vue';
+import Editor from '../bbcode/Editor.vue';
 import {InlineDisplayMode} from '../bbcode/interfaces';
 import {initParser, standardParser} from '../bbcode/standard';
 import CharacterLink from '../components/character_link.vue';
 import CharacterSelect from '../components/character_select.vue';
 import {setCharacters} from '../components/character_select/character_list';
 import DateDisplay from '../components/date_display.vue';
+import SimplePager from '../components/simple_pager.vue';
 import {registerMethod, Store} from '../site/character_page/data_store';
 import {
     Character, CharacterCustom, CharacterFriend, CharacterImage, CharacterImageOld, CharacterInfo, CharacterInfotag, CharacterKink,
@@ -115,7 +117,7 @@ async function fieldsGet(): Promise<void> {
                 validator: oldInfotag.list,
                 search_field: '',
                 allow_legacy: true,
-                infotag_group: parseInt(oldInfotag.group_id, 10)
+                infotag_group: oldInfotag.group_id
             };
         }
         for(const id in fields.listitems) {
@@ -175,6 +177,8 @@ export function init(characters: {[key: string]: number}): void {
     Vue.component('character-select', CharacterSelect);
     Vue.component('character-link', CharacterLink);
     Vue.component('date-display', DateDisplay);
+    Vue.component('simple-pager', SimplePager);
+    Vue.component('bbcode-editor', Editor);
     setCharacters(Object.keys(characters).map((name) => ({name, id: characters[name]})));
     core.connection.onEvent('connecting', () => {
         Utils.Settings.defaultCharacter = characters[core.connection.character];

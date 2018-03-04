@@ -78,7 +78,8 @@
                     name: `/${key} - ${l(`commands.${key}`)}`,
                     help: l(`commands.${key}.help`),
                     context,
-                    permission: command.permission !== undefined ? l(`commands.help.permission${Permission[command.permission]}`) : undefined,
+                    permission: command.permission !== undefined ?
+                        l(`commands.help.permission${Permission[command.permission]}`) : undefined,
                     params,
                     syntax
                 });
@@ -87,7 +88,7 @@
     }
 </script>
 
-<style lang="less">
+<style lang="scss">
     #command-help {
         h4 {
             margin-bottom: 0;

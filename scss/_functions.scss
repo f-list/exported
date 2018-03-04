@@ -1,0 +1,7 @@
+@function theme-color-bg($color-name: "primary") {
+  @return theme-color-level($color-name, -10);
+}
+
+@function theme-color-border($color-name: "primary") {
+  @return theme-color-level($color-name, -9);
+}

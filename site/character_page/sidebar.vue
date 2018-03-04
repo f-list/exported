@@ -1,74 +1,78 @@
 <template>
-    <div id="character-page-sidebar">
-        <div class="character-image-container">
-            <div>
+    <div id="character-page-sidebar" class="card bg-light">
+        <div class="card-header">
+            <div class="character-image-container">
                 <span class="character-name">{{ character.character.name }}</span>
                 <div v-if="character.character.title" class="character-title">{{ character.character.title }}</div>
                 <character-action-menu :character="character"></character-action-menu>
             </div>
-            <img :src="avatarUrl(character.character.name)" class="character-avatar" style="margin-right:10px">
         </div>
-        <div v-if="authenticated" class="character-links-block">
-            <template v-if="character.is_self">
-                <a :href="editUrl" class="edit-link"><i class="fa fa-pencil"></i>Edit</a>
-                <a @click="showDelete" class="delete-link"><i class="fa fa-trash"></i>Delete</a>
-                <a @click="showDuplicate" class="duplicate-link"><i class="fa fa-copy"></i>Duplicate</a>
-            </template>
-            <template v-else>
-                <span v-if="character.self_staff || character.settings.prevent_bookmarks !== true">
-                    <a @click="toggleBookmark" class="btn" :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}">
-                        {{ character.bookmarked ? '-' : '+' }} Bookmark</a>
-                    <span v-if="character.settings.prevent_bookmarks" class="prevents-bookmarks">!</span>
-                </span>
-                <a @click="showFriends" class="friend-link btn"><i class="fa fa-fw fa-user"></i>Friend</a>
-                <a v-if="!oldApi" @click="showReport" class="report-link btn"><i class="fa fa-exclamation-triangle"></i>Report</a>
-            </template>
-            <a @click="showMemo" class="memo-link btn"><i class="fa fa-sticky-note-o fa-fw"></i>Memo</a>
-        </div>
-        <div v-if="character.badges && character.badges.length > 0" class="badges-block">
-            <div v-for="badge in character.badges" class="character-badge" :class="badgeClass(badge)">
-                <i class="fa fa-fw" :class="badgeIconClass(badge)"></i> {{ badgeTitle(badge) }}
+        <div class="card-body">
+            <div class="character-image-container">
+                <img :src="avatarUrl(character.character.name)" class="character-avatar" style="margin-right:10px">
             </div>
-        </div>
+            <div v-if="authenticated" class="d-flex justify-content-between flex-wrap character-links-block">
+                <template v-if="character.is_self">
+                    <a :href="editUrl" class="edit-link"><i class="fa fa-fw fa-pencil-alt"></i>Edit</a>
+                    <a @click="showDelete" class="delete-link"><i class="fa fa-fw fa-trash"></i>Delete</a>
+                    <a @click="showDuplicate" class="duplicate-link"><i class="fa fa-fw fa-copy"></i>Duplicate</a>
+                </template>
+                <template v-else>
+                    <span v-if="character.self_staff || character.settings.prevent_bookmarks !== true">
+                        <a @click="toggleBookmark" :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}">
+                            <i class="fa fa-fw" :class="{'fa-minus': character.bookmarked, 'fa-plus': !character.bookmarked}"></i>Bookmark</a>
+                        <span v-if="character.settings.prevent_bookmarks" class="prevents-bookmarks">!</span>
+                    </span>
+                    <a @click="showFriends" class="friend-link"><i class="fa fa-fw fa-user"></i>Friend</a>
+                    <a v-if="!oldApi" @click="showReport" class="report-link"><i class="fa fa-fw fa-exclamation-triangle"></i>Report</a>
+                </template>
+                <a @click="showMemo" class="memo-link"><i class="far fa-sticky-note fa-fw"></i>Memo</a>
+            </div>
+            <div v-if="character.badges && character.badges.length > 0" class="badges-block">
+                <div v-for="badge in character.badges" class="character-badge px-2 py-1" :class="badgeClass(badge)">
+                    <i class="fa-fw" :class="badgeIconClass(badge)"></i> {{ badgeTitle(badge) }}
+                </div>
+            </div>
 
-        <a v-if="authenticated && !character.is_self" :href="noteUrl" class="character-page-note-link btn" style="padding:0 4px">
-            <span class="fa fa-envelope-o fa-fw"></span>Send Note</a>
-        <div v-if="character.character.online_chat" @click="showInChat" class="character-page-online-chat">Online In Chat</div>
+            <a v-if="authenticated && !character.is_self" :href="noteUrl" class="character-page-note-link btn" style="padding:0 4px">
+                <i class="far fa-envelope fa-fw"></i>Send Note</a>
+            <div v-if="character.character.online_chat" @click="showInChat" class="character-page-online-chat">Online In Chat</div>
 
-        <div class="contact-block">
-            <contact-method v-for="method in contactMethods" :method="method" :key="method.id"></contact-method>
-        </div>
+            <div class="contact-block">
+                <contact-method v-for="method in contactMethods" :method="method" :key="method.id"></contact-method>
+            </div>
 
-        <div class="quick-info-block">
-            <infotag-item v-for="infotag in quickInfoItems" :infotag="infotag" :key="infotag.id"></infotag-item>
-            <div class="quick-info">
-                <span class="quick-info-label">Created: </span>
-                <span class="quick-info-value"><date :time="character.character.created_at"></date></span>
-            </div>
-            <div class="quick-info">
-                <span class="quick-info-label">Last updated: </span>
-                <span class="quick-info-value"><date :time="character.character.updated_at"></date></span>
-            </div>
-            <div class="quick-info" v-if="character.character.last_online_at">
-                <span class="quick-info-label">Last online:</span>
-                <span class="quick-info-value"><date :time="character.character.last_online_at"></date></span>
-            </div>
-            <div class="quick-info">
-                <span class="quick-info-label">Views: </span>
-                <span class="quick-info-value">{{character.character.views}}</span>
-            </div>
-            <div class="quick-info" v-if="character.character.timezone != null">
-                <span class="quick-info-label">Timezone:</span>
-                <span class="quick-info-value">
+            <div class="quick-info-block">
+                <infotag-item v-for="infotag in quickInfoItems" :infotag="infotag" :key="infotag.id"></infotag-item>
+                <div class="quick-info">
+                    <span class="quick-info-label">Created: </span>
+                    <span class="quick-info-value"><date :time="character.character.created_at"></date></span>
+                </div>
+                <div class="quick-info">
+                    <span class="quick-info-label">Last updated: </span>
+                    <span class="quick-info-value"><date :time="character.character.updated_at"></date></span>
+                </div>
+                <div class="quick-info" v-if="character.character.last_online_at">
+                    <span class="quick-info-label">Last online:</span>
+                    <span class="quick-info-value"><date :time="character.character.last_online_at"></date></span>
+                </div>
+                <div class="quick-info">
+                    <span class="quick-info-label">Views: </span>
+                    <span class="quick-info-value">{{character.character.views}}</span>
+                </div>
+                <div class="quick-info" v-if="character.character.timezone != null">
+                    <span class="quick-info-label">Timezone:</span>
+                    <span class="quick-info-value">
                     UTC{{character.character.timezone > 0 ? '+' : ''}}{{character.character.timezone != 0 ? character.character.timezone : ''}}
                 </span>
+                </div>
             </div>
-        </div>
 
-        <div class="character-list-block">
-            <div v-for="listCharacter in character.character_list">
-                <img :src="avatarUrl(listCharacter.name)" class="character-avatar icon" style="margin-right:5px">
-                <character-link :character="listCharacter.name"></character-link>
+            <div class="character-list-block">
+                <div v-for="listCharacter in character.character_list">
+                    <img :src="avatarUrl(listCharacter.name)" class="character-avatar icon" style="margin-right:5px">
+                    <character-link :character="listCharacter.name"></character-link>
+                </div>
             </div>
         </div>
         <template>
@@ -136,7 +140,7 @@
     })
     export default class Sidebar extends Vue {
         @Prop({required: true})
-        readonly character: Character;
+        readonly character!: Character;
         @Prop()
         readonly oldApi?: true;
         readonly shared: SharedStore = Store;
@@ -149,13 +153,13 @@
 
         badgeIconClass(badgeName: string): string {
             const classMap: {[key: string]: string} = {
-                admin: 'fa-star',
-                global: 'fa-star-o',
-                chatop: 'fa-commenting',
-                chanop: 'fa-commenting-o',
-                helpdesk: 'fa-user',
-                developer: 'fa-terminal',
-                'subscription.lifetime': 'fa-certificate'
+                admin: 'fa fa-gem',
+                global: 'far fa-gem',
+                chatop: 'far fa-gem',
+                chanop: 'fa fa-star',
+                helpdesk: 'fa fa-user',
+                developer: 'fa fa-terminal',
+                'subscription.lifetime': 'fa fa-certificate'
             };
             return badgeName in classMap ? classMap[badgeName] : '';
         }

@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import WebKit
+import AVFoundation
 
 class Notification: NSObject, WKScriptMessageHandler, UNUserNotificationCenterDelegate {
     let center = UNUserNotificationCenter.current()
@@ -20,7 +21,7 @@ class Notification: NSObject, WKScriptMessageHandler, UNUserNotificationCenterDe
         }
         switch(data["_type"] as! String) {
         case "notify":
-            notify(data["title"] as! String, data["text"] as! String, data["icon"] as! String, data["data"] as! String, callback)
+            notify(data["notify"] as! Bool, data["title"] as! String, data["text"] as! String, data["icon"] as! String, data["sound"] as! String?, data["data"] as! String, callback)
         case "requestPermission":
             requestPermission(callback)
         default:
@@ -36,9 +37,16 @@ class Notification: NSObject, WKScriptMessageHandler, UNUserNotificationCenterDe
         completionHandler()
     }
     
-    func notify(_ title: String, _ text: String, _ icon: String, _ data: String, _ cb: (String?) -> Void) {
+    func notify(_ notify: Bool, _ title: String, _ text: String, _ icon: String, _ sound: String?, _ data: String, _ cb: (String?) -> Void) {
+        if(!notify) {
+            let player = try! AVAudioPlayer(contentsOf: Bundle.main.url(forResource: "www/sounds/" + sound!, withExtension: "wav")!)
+            player.play()
+        }
         let content = UNMutableNotificationContent()
         content.title = title
+        if(sound != nil) {
+            content.sound = UNNotificationSound(named: Bundle.main.path(forResource: "www/sounds/" + sound!, ofType: "wav")!)
+        }
         content.body = text
         content.userInfo["data"] = data
         center.add(UNNotificationRequest(identifier: "1", content: content, trigger: UNTimeIntervalNotificationTrigger.init(timeInterval: 1, repeats: false)))

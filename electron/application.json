@@ -1,6 +1,6 @@
 {
   "name": "fchat",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "author": "The F-List Team",
   "description": "F-List.net Chat Client",
   "main": "main.js",

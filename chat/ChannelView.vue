@@ -12,9 +12,9 @@
     @Component
     export default class ChannelView extends Vue {
         @Prop({required: true})
-        readonly id: string;
+        readonly id!: string;
         @Prop({required: true})
-        readonly text: string;
+        readonly text!: string;
 
         joinChannel(): void {
             if(this.channel === undefined || !this.channel.isJoined)

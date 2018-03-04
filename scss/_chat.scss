@@ -1,0 +1,266 @@
+.bg-solid-text {
+  background: $text-background-color
+}
+
+.link-preview {
+  background: $text-background-color;
+  border-top-right-radius: 2px;
+  bottom: 0;
+  left: 0;
+  max-width: 40%;
+  overflow-x: hidden;
+  padding: 0.2em 0.5em;
+  font-size: 12px;
+  position: fixed;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  z-index: 100000;
+
+  &.right {
+    left: auto;
+    right: 0;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 0;
+  }
+}
+
+.has-new {
+  background-color: theme-color-level("danger", 4) !important;
+}
+
+.overlay-disable {
+  position: absolute;
+  opacity: 0.8;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  background: #ddd;
+  color: #000;
+}
+
+.sidebar-wrapper {
+  .modal-backdrop {
+    display: none;
+    z-index: 9;
+  }
+
+  &.open {
+    z-index: 11;
+    .modal-backdrop {
+      display: block;
+    }
+    .body {
+      display: block;
+    }
+  }
+}
+
+.sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: $body-bg;
+  z-index: 10;
+  flex-shrink: 0;
+  margin: -10px;
+  padding: 10px;
+
+  .body {
+    display: none;
+    width: 200px;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: auto;
+  }
+
+  .expander {
+    display: block;
+    position: absolute;
+    padding: 3px 4px;
+    border-color: theme-color("secondary");
+    border-top-right-radius: 0;
+    border-top-left-radius: 0;
+    @media (min-width: breakpoint-min(sm)) {
+      .name {
+        display: none;
+      }
+
+      &:hover .name {
+        display: inline;
+      }
+    }
+  }
+
+  &.sidebar-left {
+    border-right: solid 1px $card-border-color;
+    left: 0;
+    margin-right: 0;
+    padding-right: 0;
+
+    .expander {
+      transform: rotate(270deg) translate3d(0, 0, 0);
+      transform-origin: 100% 0;
+      -webkit-transform: rotate(270deg) translate3d(0, 0, 0);
+      -webkit-transform-origin: 100% 0;
+      right: 0;
+    }
+  }
+
+  &.sidebar-right {
+    border-left: solid 1px $card-border-color;
+    right: 0;
+    margin-left: 0;
+    padding-left: 0;
+
+    .expander {
+      transform: rotate(90deg) translate3d(0, 0, 0);
+      transform-origin: 0 0;
+      -webkit-transform: rotate(90deg) translate3d(0, 0, 0);
+      -webkit-transform-origin: 0 0;
+    }
+  }
+}
+
+@mixin sidebar-fixed() {
+  position: static;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  .body {
+    display: block;
+  }
+  .expander {
+    display: none;
+  }
+}
+
+.chat-text-box {
+  min-height: initial !important;
+  max-height: 250px;
+  resize: none;
+}
+
+.ads-text-box, .ads-text-box:focus {
+  background-color: theme-color-level("info", -4);
+}
+
+.border-top {
+  border-top: solid 1px $card-border-color;
+}
+
+.border-bottom {
+  border-bottom: solid 1px $card-border-color;
+}
+
+.message {
+  word-wrap: break-word;
+  word-break: break-word;
+  padding-bottom: 1px;
+}
+
+.message-block {
+  padding: 1px 0;
+  &:not(:last-child) {
+    border-bottom: solid 1px $card-border-color;
+  }
+}
+
+.message-own {
+  background-color: $gray-200;
+}
+
+.message-warn {
+  background-color: theme-color("danger");
+  color: color-yiq(theme-color("danger"));
+}
+
+.messages-both {
+  .message-ad {
+    background-color: theme-color-level("info", -4);
+    padding: 0 2px 2px 2px;
+    box-shadow: $gray-500 -2px -2px 2px inset;
+  }
+}
+
+.message-event {
+  color: $gray-500;
+}
+
+.message-highlight {
+  background-color: theme-color-level("success", -8);
+}
+
+.message-action .bbcode {
+  font-style: italic;
+  i, em {
+    font-style: normal;
+  }
+}
+
+.last-read {
+  border-bottom: solid 2px theme-color-level("success", -2) !important;
+}
+
+.fa.active {
+  color: theme-color("success");
+}
+
+.gender-shemale {
+  color: #CC66FF;
+}
+
+.gender-herm {
+  color: #9B30FF;
+}
+
+.gender-none {
+  color: $gray-500;
+}
+
+.gender-female {
+  color: #FF6699;
+}
+
+.gender-male {
+  color: #6699FF;
+}
+
+.gender-male-herm {
+  color: #007FFF;
+}
+
+.gender-transgender {
+  color: #EE8822;
+}
+
+.gender-cunt-boy {
+  color: #00CC66;
+}
+
+#character-page-sidebar {
+  margin-top: 0; // Fix up hack for merging the header on the character page, which doesn't work on chat.
+}
+
+.profile-viewer {
+  width: 98%;
+  max-width: 98%;
+}
+
+#window-tabs .hasNew {
+  background-color: theme-color-level("warning", -2);
+  border-color: theme-color-level("warning", -4);
+  color: color-yiq(theme-color("warning"));
+  &:hover {
+    background-color: theme-color-level("warning", -4);
+  }
+}
+
+.btn-text {
+  margin-left: 3px;
+  @media (max-width: breakpoint-max(xs)) {
+    display: none;
+  }
+}

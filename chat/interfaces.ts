@@ -18,6 +18,7 @@ export namespace Conversation {
         readonly type: Message.Type.Event,
         readonly text: string,
         readonly time: Date
+        readonly sender?: undefined
     }
 
     export interface ChatMessage {
@@ -141,7 +142,8 @@ export namespace Settings {
     export type Keys = {
         settings: Settings,
         pinned: {channels: string[], private: string[]},
-        conversationSettings: {[key: string]: Conversation.Settings}
+        conversationSettings: {[key: string]: Conversation.Settings | undefined}
+        modes: {[key: string]: Channel.Mode | undefined}
         recent: Conversation.RecentConversation[]
         hiddenUsers: string[]
     };
@@ -169,6 +171,7 @@ export namespace Settings {
         readonly logMessages: boolean;
         readonly logAds: boolean;
         readonly fontSize: number;
+        readonly showNeedsReply: boolean;
     }
 }
 

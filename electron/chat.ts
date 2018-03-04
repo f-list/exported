@@ -29,11 +29,8 @@
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
-import 'bootstrap/js/collapse.js';
-import 'bootstrap/js/dropdown.js';
-import 'bootstrap/js/tab.js';
-import 'bootstrap/js/transition.js';
 import * as electron from 'electron';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as qs from 'querystring';
 import * as Raven from 'raven-js';
@@ -41,12 +38,13 @@ import Vue from 'vue';
 import {getKey} from '../chat/common';
 import l from '../chat/localize';
 import VueRaven from '../chat/vue-raven';
+import {Keys} from '../keys';
 import {GeneralSettings, nativeRequire} from './common';
 import * as SlimcatImporter from './importer';
 import Index from './Index.vue';
 
 document.addEventListener('keydown', (e: KeyboardEvent) => {
-    if(e.ctrlKey && e.shiftKey && getKey(e) === 'i')
+    if(e.ctrlKey && e.shiftKey && getKey(e) === Keys.KeyI)
         electron.remote.getCurrentWebContents().toggleDevTools();
 });
 
@@ -54,8 +52,10 @@ process.env.SPELLCHECKER_PREFER_HUNSPELL = '1';
 const sc = nativeRequire<{
     Spellchecker: {
         new(): {
-            isMisspelled(x: string): boolean,
-            setDictionary(name: string | undefined, dir: string): void,
+            add(word: string): void
+            remove(word: string): void
+            isMisspelled(x: string): boolean
+            setDictionary(name: string | undefined, dir: string): void
             getCorrectionsForMisspelling(word: string): ReadonlyArray<string>
         }
     }
@@ -122,14 +122,30 @@ webContents.on('context-menu', (_, props) => {
         });
     if(props.misspelledWord !== '') {
         const corrections = spellchecker.getCorrectionsForMisspelling(props.misspelledWord);
-        if(corrections.length > 0) {
-            menuTemplate.unshift({type: 'separator'});
+        menuTemplate.unshift({
+            label: l('spellchecker.add'),
+            click: () => {
+                if(customDictionary.indexOf(props.misspelledWord) !== -1) return;
+                spellchecker.add(props.misspelledWord);
+                customDictionary.push(props.misspelledWord);
+                fs.writeFile(customDictionaryPath, JSON.stringify(customDictionary), () => {/**/});
+            }
+        }, {type: 'separator'});
+        if(corrections.length > 0)
             menuTemplate.unshift(...corrections.map((correction: string) => ({
                 label: correction,
                 click: () => webContents.replaceMisspelling(correction)
             })));
-        }
-    }
+        else menuTemplate.unshift({enabled: false, label: l('spellchecker.noCorrections')});
+    } else if(customDictionary.indexOf(props.selectionText) !== -1)
+        menuTemplate.unshift({
+            label: l('spellchecker.remove'),
+            click: () => {
+                spellchecker.remove(props.selectionText);
+                customDictionary.splice(customDictionary.indexOf(props.selectionText), 1);
+                fs.writeFile(customDictionaryPath, JSON.stringify(customDictionary), () => {/**/});
+            }
+        }, {type: 'separator'});
 
     if(menuTemplate.length > 0) electron.remote.Menu.buildFromTemplate(menuTemplate).popup();
 });
@@ -150,6 +166,10 @@ if(params['import'] !== undefined)
         alert(l('importer.error'));
     }
 spellchecker.setDictionary(settings.spellcheckLang, dictDir);
+
+const customDictionaryPath = path.join(settings.logDirectory, 'words');
+const customDictionary = fs.existsSync(customDictionaryPath) ? <string[]>JSON.parse(fs.readFileSync(customDictionaryPath, 'utf8')) : [];
+for(const word of customDictionary) spellchecker.add(word);
 
 //tslint:disable-next-line:no-unused-expression
 new Index({

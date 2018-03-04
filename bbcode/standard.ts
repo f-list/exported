@@ -1,4 +1,3 @@
-import * as $ from 'jquery';
 import {CoreBBCodeParser} from './core';
 import {InlineDisplayMode} from './interfaces';
 import {BBCodeCustomTag, BBCodeSimpleTag} from './parser';
@@ -8,6 +7,7 @@ interface InlineImage {
     hash: string
     extension: string
     nsfw: boolean
+    name?: string
 }
 
 interface StandardParserSettings {
@@ -22,6 +22,18 @@ const usernameRegex = /^[a-zA-Z0-9_\-\s]+$/;
 export class StandardBBCodeParser extends CoreBBCodeParser {
     allowInlines = true;
     inlines: {[key: string]: InlineImage | undefined} | undefined;
+
+    createInline(inline: InlineImage): HTMLElement {
+        const p1 = inline.hash.substr(0, 2);
+        const p2 = inline.hash.substr(2, 2);
+        const outerEl = this.createElement('div');
+        const el = this.createElement('img');
+        el.className = 'inline-image';
+        el.title = el.alt = inline.name!;
+        el.src = `${this.settings.staticDomain}images/charinline/${p1}/${p2}/${inline.hash}.${inline.extension}`;
+        outerEl.appendChild(el);
+        return outerEl;
+    }
 
     constructor(public settings: StandardParserSettings) {
         super();
@@ -54,16 +66,24 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
                 //return null;
             }
             const outer = parser.createElement('div');
-            outer.className = 'collapseHeader';
+            outer.className = 'card bg-light bbcode-collapse';
             const headerText = parser.createElement('div');
-            headerText.className = 'collapseHeaderText';
+            headerText.className = 'card-header bbcode-collapse-header';
+            const icon = parser.createElement('i');
+            icon.className = 'fas fa-chevron-down';
+            icon.style.marginRight = '10px';
+            headerText.appendChild(icon);
+            headerText.appendChild(document.createTextNode(param));
             outer.appendChild(headerText);
-            const innerText = parser.createElement('span');
-            innerText.appendChild(document.createTextNode(param));
-            headerText.appendChild(innerText);
             const body = parser.createElement('div');
-            body.className = 'collapseBlock';
+            body.className = 'card-body bbcode-collapse-body closed';
+            body.style.height = '0';
             outer.appendChild(body);
+            headerText.addEventListener('click', () => {
+                const isCollapsed = parseInt(body.style.height!, 10) === 0;
+                body.style.height = isCollapsed ? `${body.scrollHeight}px` : '0';
+                icon.className = `fas fa-chevron-${isCollapsed ? 'up' : 'down'}`;
+            });
             parent.appendChild(outer);
             return body;
         }));
@@ -122,7 +142,12 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             img.className = 'character-avatar icon';
             parent.replaceChild(img, element);
         }, []));
-        this.addTag('img', new BBCodeCustomTag('img', (p, parent, param) => {
+        this.addTag('img', new BBCodeCustomTag('img', (parser, parent) => {
+            const el = parser.createElement('span');
+            parent.appendChild(el);
+            return el;
+        }, (p, element, parent, param) => {
+            const content = element.textContent!;
             const parser = <StandardBBCodeParser>p;
             if(!this.allowInlines) {
                 parser.warning('Inline images are not allowed here.');
@@ -132,80 +157,36 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
                 parser.warning('This page does not support inline images.');
                 return undefined;
             }
-            let p1: string, p2: string, inline;
             const displayMode = this.settings.inlineDisplayMode;
             if(!/^\d+$/.test(param)) {
                 parser.warning('img tag parameters must be numbers.');
                 return undefined;
             }
-            if(typeof parser.inlines[param] !== 'object') {
+            const inline = parser.inlines[param];
+            if(typeof inline !== 'object') {
                 parser.warning(`Could not find an inline image with id ${param} It will not be visible.`);
                 return undefined;
             }
-            inline = parser.inlines[param]!;
-            p1 = inline.hash.substr(0, 2);
-            p2 = inline.hash.substr(2, 2);
-
+            inline.name = content;
             if(displayMode === InlineDisplayMode.DISPLAY_NONE || (displayMode === InlineDisplayMode.DISPLAY_SFW && inline.nsfw)) {
                 const el = parser.createElement('a');
                 el.className = 'unloadedInline';
                 el.href = '#';
                 el.dataset.inlineId = param;
                 el.onclick = () => {
-                    $('.unloadedInline').each((_, element) => {
-                        const inlineId = $(element).data('inline-id');
-                        if(typeof parser.inlines![inlineId] !== 'object')
-                            return;
-                        const showInline = parser.inlines![inlineId]!;
-                        const showP1 = showInline.hash.substr(0, 2);
-                        const showP2 = showInline.hash.substr(2, 2);
-                        //tslint:disable-next-line:max-line-length
-                        $(element).replaceWith(`<div><img class="inline-image" src="${this.settings.staticDomain}images/charinline/${showP1}/${showP2}/${showInline.hash}.${showInline.extension}"/></div>`);
-                    });
+                    Array.prototype.forEach.call(document.getElementsByClassName('unloadedInline'), ((e: HTMLElement) => {
+                        const showInline = parser.inlines![e.dataset.inlineId!];
+                        if(typeof showInline !== 'object') return;
+                        e.parentElement!.replaceChild(parser.createInline(showInline), e);
+                    }));
                     return false;
                 };
                 const prefix = inline.nsfw ? '[NSFW Inline] ' : '[Inline] ';
                 el.appendChild(document.createTextNode(prefix));
-                parent.appendChild(el);
-                return el;
-            } else {
-                const outerEl = parser.createElement('div');
-                const el = parser.createElement('img');
-                el.className = 'inline-image';
-                el.src = `${this.settings.staticDomain}images/charinline/${p1}/${p2}/${inline.hash}.${inline.extension}`;
-                outerEl.appendChild(el);
-                parent.appendChild(outerEl);
-                return el;
-            }
-        }, (_, element, __, ___) => {
-            // Need to remove any appended contents, because this is a total hack job.
-            if(element.className !== 'inline-image')
-                return;
-            while(element.firstChild !== null)
-                element.removeChild(element.firstChild);
+                parent.replaceChild(el, element);
+            } else parent.replaceChild(parser.createInline(inline), element);
         }, []));
     }
-}
-
-export function initCollapse(): void {
-    $('.collapseHeader[data-bound!=true]').each((_, element) => {
-        const $element = $(element);
-        const $body = $element.children('.collapseBlock');
-        $element.children('.collapseHeaderText').on('click', () => {
-            if($element.hasClass('expandedHeader')) {
-                $body.css('max-height', '0');
-                $element.removeClass('expandedHeader');
-            } else {
-                $body.css('max-height', 'none');
-                const height = $body.outerHeight();
-                $body.css('max-height', '0');
-                $element.addClass('expandedHeader');
-                setTimeout(() => $body.css('max-height', height!), 1);
-                setTimeout(() => $body.css('max-height', 'none'), 250);
-            }
-        });
-    });
-    $('.collapseHeader').attr('data-bound', 'true');
 }
 
 export let standardParser: StandardBBCodeParser;

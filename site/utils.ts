@@ -29,25 +29,24 @@ export function characterURL(name: string): string {
     return `${siteDomain}c/${name}`;
 }
 
-export function groupObjectBy<K extends string, T extends {[k in K]: string | number}>(obj: Dictionary<T>, key: K): Dictionary<T[]> {
+export function groupObjectBy<K extends string, T extends {[k in K]: string}>(obj: Dictionary<T>, key: K): Dictionary<T[]> {
     const newObject: Dictionary<T[]> = {};
     for(const objkey in obj) {
         if(!(objkey in obj)) continue;
         const realItem = obj[objkey]!;
         const newKey = realItem[key];
         if(newObject[<string>newKey] === undefined) newObject[newKey] = [];
-        newObject[newKey]!.push(realItem);
+        newObject[<string>newKey]!.push(realItem);
     }
     return newObject;
 }
 
-export function groupArrayBy<K extends string, T extends {[k in K]: string | number}>(arr: T[], key: K): Dictionary<T[]> {
+export function groupArrayBy<K extends string, T extends {[k in K]: string}>(arr: T[], key: K): Dictionary<T[]> {
     const newObject: Dictionary<T[]> = {};
     arr.map((item) => {
-        const realItem = item;
-        const newKey = realItem[key];
+        const newKey = item[key];
         if(newObject[<string>newKey] === undefined) newObject[newKey] = [];
-        newObject[newKey]!.push(realItem);
+        newObject[<string>newKey]!.push(item);
     });
     return newObject;
 }

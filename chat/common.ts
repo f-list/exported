@@ -1,4 +1,5 @@
 import {format, isToday} from 'date-fns';
+import {Keys} from '../keys';
 import {Character, Conversation, Settings as ISettings} from './interfaces';
 
 export function profileLink(this: void | never, character: string): string {
@@ -40,6 +41,7 @@ export class Settings implements ISettings {
     logMessages = true;
     logAds = false;
     fontSize = 14;
+    showNeedsReply = false;
 }
 
 export class ConversationSettings implements Conversation.Settings {
@@ -63,9 +65,8 @@ export function messageToString(this: void | never, msg: Conversation.Message, t
     return `${text} ${msg.text}\r\n`;
 }
 
-export function getKey(e: KeyboardEvent): string {
-    /*tslint:disable-next-line:strict-boolean-expressions no-any*///because of old browsers.
-    return (e.key || (<KeyboardEvent & {keyIdentifier: string}>e).keyIdentifier).toLowerCase();
+export function getKey(e: KeyboardEvent): Keys {
+    return e.keyCode;
 }
 
 /*tslint:disable:no-any no-unsafe-any*///because errors can be any

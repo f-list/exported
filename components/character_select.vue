@@ -19,7 +19,7 @@
     @Component
     export default class CharacterSelect extends Vue {
         @Prop({required: true, type: Number})
-        readonly value: number;
+        readonly value!: number;
 
         get characters(): SelectItem[] {
             const characterList = getCharacters();

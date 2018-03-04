@@ -3,27 +3,31 @@
         <div v-html="styling"></div>
         <div style="display:flex;align-items:stretch;" class="border-bottom" id="window-tabs">
             <h4>F-Chat</h4>
-            <div :class="'fa fa-cog btn btn-' + (hasUpdate ? 'warning' : 'default')" @click="openMenu"></div>
+            <div class="btn" :class="'btn-' + (hasUpdate ? 'warning' : 'light')" @click="openMenu">
+                <i class="fa fa-cog"></i>
+            </div>
             <ul class="nav nav-tabs" style="border-bottom:0" ref="tabs">
-                <li role="presentation" :class="{active: tab === activeTab, hasNew: tab.hasNew && tab !== activeTab}" v-for="tab in tabs"
-                    :key="tab.view.id">
-                    <a href="#" @click.prevent="show(tab)">
+                <li v-for="tab in tabs" :key="tab.view.id" class="nav-item">
+                    <a href="#" @click.prevent="show(tab)" class="nav-link"
+                        :class="{active: tab === activeTab, hasNew: tab.hasNew && tab !== activeTab}">
                         <img v-if="tab.user" :src="'https://static.f-list.net/images/avatar/' + tab.user.toLowerCase() + '.png'"/>
                         {{tab.user || l('window.newTab')}}
-                        <a href="#" class="fa fa-close btn" :aria-label="l('action.close')" style="margin-left:10px;padding:0;color:inherit"
-                            @click.stop="remove(tab)">
+                        <a href="#" class="btn" :aria-label="l('action.close')" style="margin-left:10px;padding:0;color:inherit"
+                            @click.stop="remove(tab)"><i class="fa fa-times"></i>
                         </a>
                     </a>
                 </li>
-                <li role="presentation" v-show="canOpenTab" class="addTab" id="addTab">
-                    <a href="#" @click.prevent="addTab" class="fa fa-plus"></a>
+                <li v-show="canOpenTab" class="addTab nav-item" id="addTab">
+                    <a href="#" @click.prevent="addTab" class="nav-link"><i class="fa fa-plus"></i></a>
                 </li>
             </ul>
             <div style="flex:1;display:flex;justify-content:flex-end;-webkit-app-region:drag;margin-top:3px" class="btn-group"
                 id="windowButtons">
-                <span class="fa fa-window-minimize btn btn-default" @click.stop="minimize"></span>
-                <span :class="'fa btn btn-default fa-window-' + (isMaximized ? 'restore' : 'maximize')" @click="maximize"></span>
-                <span class="fa fa-close fa-lg btn btn-default" @click.stop="close"></span>
+                <i class="far fa-window-minimize btn btn-light" @click.stop="minimize"></i>
+                <i class="far btn btn-light" :class="'fa-window-' + (isMaximized ? 'restore' : 'maximize')" @click="maximize"></i>
+                <span class="btn btn-light" @click.stop="close">
+                    <i class="fa fa-times fa-lg"></i>
+                </span>
             </div>
         </div>
     </div>
@@ -61,7 +65,7 @@
     @Component
     export default class Window extends Vue {
         //tslint:disable:no-null-keyword
-        settings: GeneralSettings;
+        settings!: GeneralSettings;
         tabs: Tab[] = [];
         activeTab: Tab | null = null;
         tabMap: {[key: number]: Tab} = {};
@@ -77,6 +81,7 @@
             electron.ipcRenderer.on('allow-new-tabs', (_: Event, allow: boolean) => this.canOpenTab = allow);
             electron.ipcRenderer.on('open-tab', () => this.addTab());
             electron.ipcRenderer.on('update-available', () => this.hasUpdate = true);
+            electron.ipcRenderer.on('quit', () => this.tabs.forEach((tab) => this.remove(tab, false)));
             electron.ipcRenderer.on('connect', (_: Event, id: number, name: string) => {
                 const tab = this.tabMap[id];
                 tab.user = name;
@@ -87,6 +92,10 @@
             });
             electron.ipcRenderer.on('disconnect', (_: Event, id: number) => {
                 const tab = this.tabMap[id];
+                if(tab.hasNew) {
+                    tab.hasNew = false;
+                    electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
+                }
                 tab.user = undefined;
                 tab.tray.setToolTip(l('title'));
                 tab.tray.setContextMenu(electron.remote.Menu.buildFromTemplate(this.createTrayMenu(tab)));
@@ -186,6 +195,7 @@
         remove(tab: Tab, shouldConfirm: boolean = true): void {
             if(shouldConfirm && tab.user !== undefined && !confirm(l('chat.confirmLeave'))) return;
             this.tabs.splice(this.tabs.indexOf(tab), 1);
+            electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
             delete this.tabMap[tab.view.webContents.id];
             tab.tray.destroy();
             tab.view.webContents.loadURL('about:blank');
@@ -210,12 +220,12 @@
         }
 
         openMenu(): void {
-            electron.remote.Menu.getApplicationMenu().popup();
+            electron.remote.Menu.getApplicationMenu()!.popup();
         }
     }
 </script>
 
-<style lang="less">
+<style lang="scss">
     #window-tabs {
         user-select: none;
         .btn {

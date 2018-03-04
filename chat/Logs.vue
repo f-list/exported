@@ -1,33 +1,35 @@
 <template>
     <span>
         <a href="#" @click.prevent="showLogs" class="btn">
-            <span class="fa" :class="isPersistent ? 'fa-file-text-o' : 'fa-download'"></span>
+            <span :class="isPersistent ? 'fa fa-file-alt' : 'fa fa-download'"></span>
             <span class="btn-text">{{l('logs.title')}}</span>
         </a>
-        <modal v-if="isPersistent" :buttons="false" ref="dialog" id="logs-dialog" :action="l('logs.title')" dialogClass="modal-lg"
-            @open="onOpen" class="form-horizontal">
-            <div class="form-group">
-                <label class="col-sm-2">{{l('logs.conversation')}}</label>
-                <div class="col-sm-10">
-                    <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
-                        buttonClass="form-control" :placeholder="l('filter')"  @input="loadMessages">
-                        <template slot-scope="s">{{s.option && ((s.option.id[0] == '#' ? '#' : '') + s.option.name)}}</template>
-                    </filterable-select>
-                </div>
+        <modal v-if="isPersistent" :buttons="false" ref="dialog" id="logs-dialog" :action="l('logs.title')"
+            dialogClass="modal-lg w-100 modal-dialog-centered" @open="onOpen">
+            <div class="form-group row" style="flex-shrink:0">
+                <label class="col-2 col-form-label">{{l('logs.conversation')}}</label>
+                <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
+                    :placeholder="l('filter')" @input="loadMessages" class="form-control col-10">
+                    <template slot-scope="s">{{s.option && ((s.option.id[0] == '#' ? '#' : '') + s.option.name)}}</template>
+                </filterable-select>
             </div>
-            <div class="form-group">
-                <label for="date" class="col-sm-2">{{l('logs.date')}}</label>
-                <div class="col-sm-10" style="display:flex">
+            <div class="form-group row" style="flex-shrink:0">
+                <label for="date" class="col-2 col-form-label">{{l('logs.date')}}</label>
+                <div class="col-8">
                     <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
+                        <option>{{l('logs.selectDate')}}</option>
                         <option v-for="date in dates" :value="date.getTime()">{{formatDate(date)}}</option>
                     </select>
-                <button @click="downloadDay" class="btn btn-default" :disabled="!selectedDate"><span class="fa fa-download"></span></button>
+                </div>
+                <div class="col-2">
+                    <button @click="downloadDay" class="btn btn-secondary form-control" :disabled="!selectedDate"><span
+                        class="fa fa-download"></span></button>
                 </div>
             </div>
             <div class="messages-both" style="overflow: auto">
                 <message-view v-for="message in filteredMessages" :message="message" :key="message.id"></message-view>
             </div>
-            <input class="form-control" v-model="filter" :placeholder="l('filter')" v-show="messages"/>
+            <input class="form-control" v-model="filter" :placeholder="l('filter')" v-show="messages" type="text"/>
         </modal>
     </span>
 </template>
@@ -59,7 +61,7 @@
     export default class Logs extends Vue {
         //tslint:disable:no-null-keyword
         @Prop({required: true})
-        readonly conversation: Conversation;
+        readonly conversation!: Conversation;
         selectedConversation: {id: string, name: string} | null = null;
         selectedDate: string | null = null;
         isPersistent = LogInterfaces.isPersistent(core.logs);
@@ -77,7 +79,6 @@
         }
 
         mounted(): void {
-            (<Modal>this.$refs['dialog']).fixDropdowns();
             this.conversationChanged();
         }
 

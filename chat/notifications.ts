@@ -8,6 +8,7 @@ export default class Notifications implements Interface {
 
     notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void {
         if(!this.isInBackground && conversation === core.conversations.selectedConversation && !core.state.settings.alwaysNotify) return;
+        if(core.characters.ownCharacter.status === 'dnd') return;
         this.playSound(sound);
         if(core.state.settings.notifications) {
             /*tslint:disable-next-line:no-object-literal-type-assertion*///false positive

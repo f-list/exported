@@ -15,7 +15,7 @@
                         <character-link :character="post.character"></character-link>, posted <date-display
                         :time="post.postedAt"></date-display>
                     </span>
-                    <button class="btn btn-default" v-show="canEdit" @click="approve" :disabled="approving" style="margin-left:10px">
+                    <button class="btn btn-secondary" v-show="canEdit" @click="approve" :disabled="approving" style="margin-left:10px">
                         {{ (post.approved) ? 'Unapprove' : 'Approve' }}
                     </button>
                 </div>
@@ -24,7 +24,7 @@
                 </button>
             </div>
             <div class="row">
-                <div class="col-xs-12">
+                <div class="col-12">
                     <div class="bbcode guestbook-message" v-bbcode="post.message"></div>
                     <div v-if="post.reply && !replyBox" class="guestbook-reply">
                         <date-display v-if="post.repliedAt" :time="post.repliedAt"></date-display>
@@ -33,7 +33,7 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-xs-12">
+                <div class="col-12">
                     <a v-show="canEdit && !replyBox" class="reply-link" @click="replyBox = !replyBox">
                         {{ post.reply ? 'Edit Reply' : 'Reply' }}
                     </a>
@@ -62,9 +62,9 @@
     })
     export default class GuestbookPostView extends Vue {
         @Prop({required: true})
-        private readonly post: GuestbookPost;
+        private readonly post!: GuestbookPost;
         @Prop({required: true})
-        readonly canEdit: boolean;
+        readonly canEdit!: boolean;
 
         replying = false;
         replyBox = false;

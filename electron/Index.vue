@@ -1,34 +1,36 @@
 <template>
-    <div @mouseover="onMouseOver" id="page" style="position:relative;padding:5px 10px 10px">
+    <div @mouseover="onMouseOver" id="page" style="position:relative;padding:5px 10px 10px" @auxclick.prevent>
         <div v-html="styling"></div>
         <div v-if="!characters" style="display:flex; align-items:center; justify-content:center; height: 100%;">
-            <div class="well well-lg" style="width: 400px;">
-                <h3 style="margin-top:0">{{l('title')}}</h3>
-                <div class="alert alert-danger" v-show="error">
-                    {{error}}
-                </div>
-                <div class="form-group">
-                    <label class="control-label" for="account">{{l('login.account')}}</label>
-                    <input class="form-control" id="account" v-model="settings.account" @keypress.enter="login"/>
-                </div>
-                <div class="form-group">
-                    <label class="control-label" for="password">{{l('login.password')}}</label>
-                    <input class="form-control" type="password" id="password" v-model="password" @keypress.enter="login"/>
-                </div>
-                <div class="form-group" v-show="showAdvanced">
-                    <label class="control-label" for="host">{{l('login.host')}}</label>
-                    <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login"/>
-                </div>
-                <div class="form-group">
-                    <label for="advanced"><input type="checkbox" id="advanced" v-model="showAdvanced"/> {{l('login.advanced')}}</label>
-                </div>
-                <div class="form-group">
-                    <label for="save"><input type="checkbox" id="save" v-model="saveLogin"/> {{l('login.save')}}</label>
-                </div>
-                <div class="form-group text-right" style="margin:0">
-                    <button class="btn btn-primary" @click="login" :disabled="loggingIn">
-                        {{l(loggingIn ? 'login.working' : 'login.submit')}}
-                    </button>
+            <div class="card bg-light" style="width: 400px;">
+                <h3 class="card-header" style="margin-top:0">{{l('title')}}</h3>
+                <div class="card-body">
+                    <div class="alert alert-danger" v-show="error">
+                        {{error}}
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label" for="account">{{l('login.account')}}</label>
+                        <input class="form-control" id="account" v-model="settings.account" @keypress.enter="login" :disabled="loggingIn"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label" for="password">{{l('login.password')}}</label>
+                        <input class="form-control" type="password" id="password" v-model="password" @keypress.enter="login" :disabled="loggingIn"/>
+                    </div>
+                    <div class="form-group" v-show="showAdvanced">
+                        <label class="control-label" for="host">{{l('login.host')}}</label>
+                        <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login" :disabled="loggingIn"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="advanced"><input type="checkbox" id="advanced" v-model="showAdvanced"/> {{l('login.advanced')}}</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="save"><input type="checkbox" id="save" v-model="saveLogin"/> {{l('login.save')}}</label>
+                    </div>
+                    <div class="form-group" style="margin:0;text-align:right">
+                        <button class="btn btn-primary" @click="login" :disabled="loggingIn">
+                            {{l(loggingIn ? 'login.working' : 'login.submit')}}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,7 +44,8 @@
         </modal>
         <modal :buttons="false" ref="profileViewer" dialogClass="profile-viewer">
             <character-page :authenticated="true" :oldApi="true" :name="profileName" :image-preview="true"></character-page>
-            <template slot="title">{{profileName}} <a class="btn fa fa-external-link" @click="openProfileInBrowser"></a></template>
+            <template slot="title">{{profileName}} <a class="btn" @click="openProfileInBrowser"><i class="fa fa-external-link-alt"/></a>
+            </template>
         </modal>
     </div>
 </template>
@@ -50,6 +53,7 @@
 <script lang="ts">
     import Axios from 'axios';
     import * as electron from 'electron';
+    import log from 'electron-log'; //tslint:disable-line:match-default-export-name
     import * as fs from 'fs';
     import * as path from 'path';
     import * as qs from 'querystring';
@@ -71,15 +75,10 @@
     import * as SlimcatImporter from './importer';
     import Notifications from './notifications';
 
-    declare module '../chat/interfaces' {
-        interface State {
-            generalSettings?: GeneralSettings
-        }
-    }
-
     const webContents = electron.remote.getCurrentWebContents();
     const parent = electron.remote.getCurrentWindow().webContents;
 
+    log.info('About to load keytar');
     /*tslint:disable:no-any*///because this is hacky
     const keyStore = nativeRequire<{
         getPassword(account: string): Promise<string>
@@ -89,6 +88,7 @@
     }>('keytar/build/Release/keytar.node');
     for(const key in keyStore) keyStore[key] = promisify(<(...args: any[]) => any>keyStore[key].bind(keyStore, 'fchat'));
     //tslint:enable
+    log.info('Loaded keytar.');
 
     @Component({
         components: {chat: Chat, modal: Modal, characterPage: CharacterPage}
@@ -104,7 +104,7 @@
         error = '';
         defaultCharacter: string | null = null;
         l = l;
-        settings: GeneralSettings;
+        settings!: GeneralSettings;
         importProgress = 0;
         profileName = '';
 
@@ -115,7 +115,8 @@
 
             Vue.set(core.state, 'generalSettings', this.settings);
 
-            electron.ipcRenderer.on('settings', (_: Event, settings: GeneralSettings) => core.state.generalSettings = this.settings = settings);
+            electron.ipcRenderer.on('settings',
+                (_: Event, settings: GeneralSettings) => core.state.generalSettings = this.settings = settings);
             electron.ipcRenderer.on('open-profile', (_: Event, name: string) => {
                 const profileViewer = <Modal>this.$refs['profileViewer'];
                 this.profileName = name;

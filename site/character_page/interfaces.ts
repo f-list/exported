@@ -71,7 +71,7 @@ export interface SharedKinks {
 export type SiteDate = number | string | null;
 export type KinkChoice = 'favorite' | 'yes' | 'maybe' | 'no';
 export type KinkChoiceFull = KinkChoice | number;
-export const CONTACT_GROUP_ID = 1;
+export const CONTACT_GROUP_ID = '1';
 
 export interface DisplayKink {
     id: number
@@ -114,7 +114,7 @@ export interface Infotag {
     search_field: string
     validator: string
     allow_legacy: boolean
-    infotag_group: number
+    infotag_group: string
 }
 
 export interface InfotagGroup {

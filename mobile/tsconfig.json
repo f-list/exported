@@ -20,7 +20,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["*.ts", "../**/*.d.ts"],
+  "include": ["chat.ts", "../**/*.d.ts"],
   "exclude": [
     "node_modules"
   ]

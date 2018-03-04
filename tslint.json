@@ -78,6 +78,7 @@
     ],
     "member-ordering": false,
     "newline-before-return": false,
+    "newline-per-chained-call": false,
     "no-angle-bracket-type-assertion": false,
     "no-bitwise": false,
     "no-conditional-assignment": false,
@@ -85,6 +86,7 @@
     "no-consecutive-blank-lines": false,
     "no-console": false,
     "no-default-export": false,
+    "no-dynamic-delete": false,
     "no-floating-promises": [true, "AxiosPromise"],
     "no-implicit-dependencies": false,
     "no-import-side-effect": [
@@ -99,7 +101,7 @@
     "no-parameter-properties": false,
     "no-parameter-reassignment": false,
     "no-string-literal": false,
-    "no-submodule-imports": [true, "vue", "bootstrap"],
+    "no-submodule-imports": [true, "lodash"],
     "no-unused-variable": false,
     "no-void-expression": false,
     //covered by no-var-keyword and compiler
@@ -120,6 +122,7 @@
       true,
       "allow-public"
     ],
+    "prefer-readonly": false,
     "quotemark": [
       true,
       "single"

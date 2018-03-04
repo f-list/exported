@@ -31,7 +31,7 @@
     })
     export default class InfotagsView extends Vue {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
 
         get groupedInfotags(): DisplayInfotagGroup[] {
             const groups = Store.kinks.infotag_groups;

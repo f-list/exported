@@ -10,15 +10,15 @@ async function queryApi(this: void, endpoint: string, data: object): Promise<Axi
 }
 
 export default class Connection implements Interfaces.Connection {
-    character: string;
+    character = '';
     vars: Interfaces.Vars & {[key: string]: string} = <any>{}; //tslint:disable-line:no-any
     protected socket: WebSocketConnection | undefined = undefined;
     private messageHandlers: {[key in keyof Interfaces.ServerCommands]?: Interfaces.CommandHandler<key>[]} = {};
     private connectionHandlers: {[key in Interfaces.EventType]?: Interfaces.EventHandler[]} = {};
     private errorHandlers: ((error: Error) => void)[] = [];
-    private ticket: string;
+    private ticket = '';
     private cleanClose = false;
-    private reconnectTimer: NodeJS.Timer;
+    private reconnectTimer: NodeJS.Timer | undefined;
     private ticketProvider: Interfaces.TicketProvider;
     private reconnectDelay = 0;
     private isReconnect = false;
@@ -86,7 +86,7 @@ export default class Connection implements Interfaces.Connection {
     }
 
     close(): void {
-        clearTimeout(this.reconnectTimer);
+        if(this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer);
         this.cleanClose = true;
         if(this.socket !== undefined) this.socket.close();
     }

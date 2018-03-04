@@ -2,7 +2,7 @@
     <div class="character-kink" :class="kinkClasses" :id="kinkId" @click="toggleSubkinks" :data-custom="customId"
         @mouseover.stop="showTooltip = true" @mouseout.stop="showTooltip = false">
         <i v-show="kink.hasSubkinks" class="fa" :class="{'fa-minus': !listClosed, 'fa-plus': listClosed}"></i>
-        <i v-show="!kink.hasSubkinks && kink.isCustom" class="fa fa-dot-circle-o custom-kink-icon"></i>
+        <i v-show="!kink.hasSubkinks && kink.isCustom" class="far fa-dot-circle custom-kink-icon"></i>
         <span class="kink-name">{{ kink.name }}</span>
         <template v-if="kink.hasSubkinks">
             <div class="subkink-list" :class="{closed: this.listClosed}">
@@ -10,10 +10,10 @@
                     :highlights="highlights"></kink>
             </div>
         </template>
-        <div class="popover top" v-if="showTooltip" style="display:block;bottom:100%;top:initial;margin-bottom:5px">
+        <div class="popover popover-top" v-if="showTooltip" style="display:block;bottom:100%;top:initial;margin-bottom:5px">
             <div class="arrow" style="left:10%"></div>
-            <h3 class="popover-title">{{kink.name}}</h3>
-            <div class="popover-content"><p>{{kink.description}}</p></div>
+            <h5 class="popover-header">{{kink.name}}</h5>
+            <div class="popover-body"><p>{{kink.description}}</p></div>
         </div>
     </div>
 </template>
@@ -29,11 +29,11 @@
     })
     export default class KinkView extends Vue {
         @Prop({required: true})
-        readonly kink: DisplayKink;
+        readonly kink!: DisplayKink;
         @Prop({required: true})
-        readonly highlights: {[key: number]: boolean};
+        readonly highlights!: {[key: number]: boolean};
         @Prop({required: true})
-        readonly comparisons: {[key: number]: string | undefined};
+        readonly comparisons!: {[key: number]: string | undefined};
         listClosed = true;
         showTooltip = false;
 

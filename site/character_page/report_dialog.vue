@@ -1,76 +1,44 @@
 <template>
-    <div id="reportDialog" tabindex="-1" class="modal" ref="dialog">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal"
-                        aria-label="Close">&times;
-                    </button>
-                    <h4 class="modal-title">Report Character {{ name }}</h4>
-                </div>
-                <div class="modal-body form-horizontal">
-                    <div class="form-group">
-                        <label class="col-xs-4 control-label">Type:</label>
-
-                        <div class="col-xs-8">
-                            <select v-select="validTypes" v-model="type" class="form-control">
-                            </select>
-                        </div>
-                    </div>
-                    <div v-if="type !== 'takedown'">
-                        <div class="form-group" v-if="type === 'profile'">
-                            <label class="col-xs-4 control-label">Violation Type:</label>
-
-                            <div class="col-xs-8">
-                                <select v-select="violationTypes" v-model="violation" class="form-control">
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-xs-4 control-label">Your Character:</label>
-
-                            <div class="col-xs-8">
-                                <character-select v-model="ourCharacter"></character-select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-xs-4 control-label">Reason/Message:</label>
-
-                            <div class="col-xs-8">
-                                <bbcode-editor v-model="message" :maxlength="45000"
-                                    :classes="'form-control'"></bbcode-editor>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-show="type === 'takedown'" class="alert alert-info">
-                        Please file art takedowns from the <a :href="ticketUrl">tickets page.</a>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">
-                        Close
-                    </button>
-                    <button :disabled="!dataValid || submitting" class="btn btn-primary" @click="submitReport">
-                        Report Character
-                    </button>
-                </div>
+    <modal id="reportDialog" :action="'Report character' + name" :disabled="!dataValid || submitting" @submit.prevent="submitReport">
+        <div class="form-group">
+            <label>Type</label>
+            <select v-select="validTypes" v-model="type" class="form-control"></select>
+        </div>
+        <div v-if="type !== 'takedown'">
+            <div class="form-group" v-if="type === 'profile'">
+                <label>Violation Type</label>
+                <select v-select="violationTypes" v-model="violation" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label>Your Character</label>
+                <character-select v-model="ourCharacter"></character-select>
+            </div>
+            <div class="form-group">
+                <label>Reason/Message</label>
+                <bbcode-editor v-model="message" :maxlength="45000" :classes="'form-control'"></bbcode-editor>
             </div>
         </div>
-    </div>
+        <div v-show="type === 'takedown'" class="alert alert-info">
+            Please file art takedowns from the <a :href="ticketUrl">tickets page.</a>
+        </div>
+    </modal>
 </template>
 
 <script lang="ts">
-    import Vue from 'vue';
     import Component from 'vue-class-component';
     import {Prop} from 'vue-property-decorator';
+    import CustomDialog from '../../components/custom_dialog';
+    import Modal from '../../components/Modal.vue';
     import * as Utils from '../utils';
     import {methods} from './data_store';
     import {Character, SelectItem} from './interfaces';
 
-    @Component
-    export default class ReportDialog extends Vue {
+    @Component({
+        components: {modal: Modal}
+    })
+    export default class ReportDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
 
         private ourCharacter = Utils.Settings.defaultCharacter;
         private type = '';
@@ -113,10 +81,6 @@
             return true;
         }
 
-        show(): void {
-            $(this.$refs['dialog']).modal('show');
-        }
-
         async submitReport(): Promise<void> {
             try {
                 this.submitting = true;
@@ -130,7 +94,7 @@
                     reported_character: this.character.character.id
                 });
                 this.submitting = false;
-                $(this.$refs['dialog']).modal('hide');
+                this.hide();
                 Utils.flashSuccess('Character reported.');
             } catch(e) {
                 this.submitting = false;

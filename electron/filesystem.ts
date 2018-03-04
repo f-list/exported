@@ -6,7 +6,13 @@ import {Message as MessageImpl} from '../chat/common';
 import core from '../chat/core';
 import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
 import l from '../chat/localize';
-import {mkdir} from './common';
+import {GeneralSettings, mkdir} from './common';
+
+declare module '../chat/interfaces' {
+    interface State {
+        generalSettings?: GeneralSettings
+    }
+}
 
 const dayMs = 86400000;
 
@@ -204,9 +210,12 @@ function getSettingsDir(character: string = core.connection.character): string {
 
 export class SettingsStore implements Settings.Store {
     async get<K extends keyof Settings.Keys>(key: K, character?: string): Promise<Settings.Keys[K] | undefined> {
-        const file = path.join(getSettingsDir(character), key);
-        if(!fs.existsSync(file)) return undefined;
-        return <Settings.Keys[K]>JSON.parse(fs.readFileSync(file, 'utf8'));
+        try {
+            const file = path.join(getSettingsDir(character), key);
+            return <Settings.Keys[K]>JSON.parse(fs.readFileSync(file, 'utf8'));
+        } catch(e) {
+            return undefined;
+        }
     }
 
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {

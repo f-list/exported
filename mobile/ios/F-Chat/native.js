@@ -3,7 +3,7 @@ var handlers = {};
 
 function sendMessage(handler, type, data) {
     return new Promise(function(resolve, reject) {
-        data._id = "m" + key++;
+        data._id = 'm' + key++;
         data._type = type;
         window.webkit.messageHandlers[handler].postMessage(data);
         handlers[data._id] = {resolve: resolve, reject: reject};
@@ -21,14 +21,11 @@ window.nativeError = function(key, error) {
 };
 
 window.NativeFile = {
-    readFile: function(name, start, length) {
-        return sendMessage('File', 'readFile', {name: name, start: start, length: length});
+    read: function(name) {
+        return sendMessage('File', 'read', {name: name});
     },
-    writeFile: function(name, data) {
-        return sendMessage('File', 'writeFile', {name: name, data: data});
-    },
-    append: function(name, data) {
-        return sendMessage('File', 'append', {name: name, data: data});
+    write: function(name, data) {
+        return sendMessage('File', 'write', {name: name, data: data});
     },
     listDirectories: function(name) {
         return sendMessage('File', 'listDirectories', {name: name});
@@ -45,16 +42,34 @@ window.NativeFile = {
 };
 
 window.NativeNotification = {
-    notify: function(title, text, icon, data) {
-        return sendMessage('Notification', 'notify', {title: title, text: text, icon: icon, data: data});
+    notify: function(notify, title, text, icon, sound, data) {
+        return sendMessage('Notification', 'notify', {notify: notify, title: title, text: text, icon: icon, sound: sound, data: data});
     },
     requestPermission: function() {
         return sendMessage('Notification', 'requestPermission', {});
     }
 };
 
-window.NativeView = {
-    setTheme: function(theme) {
-        return sendMessage('View', 'setTheme', {theme: theme})
+window.NativeBackground = {
+    start: function() {
+        return sendMessage('Background', 'start', {});
+    },
+    stop: function(name) {
+        return sendMessage('Background', 'stop', {});
     }
+};
+
+window.NativeLogs = {
+    init: function(character) {
+        return sendMessage('Logs', 'init', {character: character});
+    },
+    logMessage: function(key, c, time, type, sender, message) {
+        return sendMessage('Logs', 'logMessage', {key: key, conversation: c, time: time, type: type, sender: sender, message: message});
+    },
+    getBacklog: function(key) {
+        return sendMessage('Logs', 'getBacklog', {key: key});
+    },
+    getLogs: function(key, date) {
+        return sendMessage('Logs', 'getBacklog', {key: key, date: date});
+    },
 };

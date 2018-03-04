@@ -1,7 +1,7 @@
 <template>
     <div class="row character-page" id="pageBody">
-        <div class="alert alert-info" v-show="loading" style="margin:0 15px">Loading character information.</div>
-        <div class="alert alert-danger" v-show="error" style="margin:0 15px">{{error}}</div>
+        <div class="alert alert-info" v-show="loading" style="margin:0 15px;flex:1">Loading character information.</div>
+        <div class="alert alert-danger" v-show="error" style="margin:0 15px;flex:1">{{error}}</div>
         <div class="col-sm-3 col-md-2" v-if="!loading">
             <sidebar :character="character" @memo="memo" @bookmarked="bookmarked" :oldApi="oldApi"></sidebar>
         </div>
@@ -20,42 +20,41 @@
                         <br/> {{ character.block_reason }}
                     </div>
                     <div v-if="character.memo" id="headerCharacterMemo" class="alert alert-info">Memo: {{ character.memo.memo }}</div>
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="active"><a href="#overview" aria-controls="overview" role="tab" data-toggle="tab">Overview</a>
-                        </li>
-                        <li role="presentation"><a href="#infotags" aria-controls="infotags" role="tab" data-toggle="tab">Info</a></li>
-                        <li role="presentation" v-if="!oldApi"><a href="#groups" aria-controls="groups" role="tab" data-toggle="tab">Groups</a>
-                        </li>
-                        <li role="presentation"><a href="#images" aria-controls="images" role="tab"
-                            data-toggle="tab">Images ({{ character.character.image_count }})</a></li>
-                        <li v-if="character.settings.guestbook" role="presentation"><a href="#guestbook" aria-controls="guestbook"
-                            role="tab" data-toggle="tab">Guestbook</a></li>
-                        <li v-if="character.is_self || character.settings.show_friends" role="presentation"><a href="#friends"
-                            aria-controls="friends" role="tab" data-toggle="tab">Friends</a></li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <div role="tabpanel" class="tab-pane active" id="overview" aria-labeledby="overview-tab">
-                            <div v-bbcode="character.character.description" class="well"
-                                style="border-top:0;border-top-left-radius:0;border-top-right-radius:0;"></div>
-                            <character-kinks :character="character" :oldApi="oldApi"></character-kinks>
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <tabs class="card-header-tabs" v-model="tab">
+                                <span>Overview</span>
+                                <span>Info</span>
+                                <span v-if="!oldApi">Groups</span>
+                                <span>Images ({{ character.character.image_count }}</span>
+                                <span v-if="character.settings.guestbook">Guestbook</span>
+                                <span v-if="character.is_self || character.settings.show_friends">Friends</span>
+                            </tabs>
                         </div>
-                        <div role="tabpanel" class="tab-pane" id="infotags" aria-labeledby="infotags-tab">
-                            <character-infotags :character="character"></character-infotags>
-                        </div>
-                        <div role="tabpanel" class="tab-pane" id="groups" aria-labeledby="groups-tab" v-if="!oldApi">
-                            <character-groups :character="character" ref="groups"></character-groups>
-                        </div>
-                        <div role="tabpanel" class="tab-pane" id="images" aria-labeledby="images-tab">
-                            <character-images :character="character" ref="images" :use-preview="imagePreview"></character-images>
-                        </div>
-                        <div v-if="character.settings.guestbook" role="tabpanel" class="tab-pane" id="guestbook"
-                            aria-labeledby="guestbook-tab">
-                            <character-guestbook :character="character" ref="guestbook"></character-guestbook>
-                        </div>
-                        <div v-if="character.is_self || character.settings.show_friends" role="tabpanel" class="tab-pane" id="friends"
-                            aria-labeledby="friends-tab">
-                            <character-friends :character="character" ref="friends"></character-friends>
+                        <div class="card-body">
+                            <div class="tab-content">
+                                <div role="tabpanel" class="tab-pane" :class="{active: tab == 0}" id="overview">
+                                    <div v-bbcode="character.character.description"></div>
+                                    <character-kinks :character="character" :oldApi="oldApi" ref="tab0"></character-kinks>
+                                </div>
+                                <div role="tabpanel" class="tab-pane" :class="{active: tab == 1}" id="infotags">
+                                    <character-infotags :character="character" ref="tab1"></character-infotags>
+                                </div>
+                                <div role="tabpanel" class="tab-pane" id="groups" :class="{active: tab == 2}" v-if="!oldApi">
+                                    <character-groups :character="character" ref="tab2"></character-groups>
+                                </div>
+                                <div role="tabpanel" class="tab-pane" id="images" :class="{active: tab == 3}">
+                                    <character-images :character="character" ref="tab3" :use-preview="imagePreview"></character-images>
+                                </div>
+                                <div v-if="character.settings.guestbook" role="tabpanel" class="tab-pane" :class="{active: tab == 4}"
+                                    id="guestbook">
+                                    <character-guestbook :character="character" ref="tab4"></character-guestbook>
+                                </div>
+                                <div v-if="character.is_self || character.settings.show_friends" role="tabpanel" class="tab-pane"
+                                    :class="{active: tab == 5}" id="friends">
+                                    <character-friends :character="character" ref="tab5"></character-friends>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -68,12 +67,13 @@
     import Vue from 'vue';
     import Component from 'vue-class-component';
     import {Prop, Watch} from 'vue-property-decorator';
-    import {initCollapse, standardParser} from '../../bbcode/standard';
+    import {standardParser} from '../../bbcode/standard';
     import * as Utils from '../utils';
     import {methods, Store} from './data_store';
     import {Character, SharedStore} from './interfaces';
 
     import DateDisplay from '../../components/date_display.vue';
+    import Tabs from '../../components/tabs';
     import FriendsView from './friends.vue';
     import GroupsView from './groups.vue';
     import GuestbookView from './guestbook.vue';
@@ -83,13 +83,13 @@
     import Sidebar from './sidebar.vue';
 
     interface ShowableVueTab extends Vue {
-        show?(target: Element): void
+        show?(): void
     }
 
     @Component({
         components: {
             sidebar: Sidebar,
-            date: DateDisplay,
+            date: DateDisplay, tabs: Tabs,
             'character-friends': FriendsView,
             'character-guestbook': GuestbookView,
             'character-groups': GroupsView,
@@ -105,7 +105,7 @@
         @Prop()
         private readonly characterid?: number;
         @Prop({required: true})
-        private readonly authenticated: boolean;
+        private readonly authenticated!: boolean;
         @Prop()
         readonly oldApi?: true;
         @Prop()
@@ -114,6 +114,7 @@
         private character: Character | null = null;
         loading = true;
         error = '';
+        tab = '0';
 
         beforeMount(): void {
             this.shared.authenticated = this.authenticated;
@@ -123,15 +124,11 @@
             if(this.character === null) await this._getCharacter();
         }
 
-        beforeDestroy(): void {
-            $('a[data-toggle="tab"]').off('shown.bs.tab', (e) => this.switchTabHook(e));
-        }
-
-        switchTabHook(evt: JQuery.Event): void {
-            const targetId = (<HTMLElement>evt.target).getAttribute('aria-controls')!;
-            //tslint:disable-next-line:strict-type-predicates no-unbound-method
-            if(typeof this.$refs[targetId] !== 'undefined' && typeof (<ShowableVueTab>this.$refs[targetId]).show === 'function')
-                (<ShowableVueTab>this.$refs[targetId]).show!(<Element>evt.target);
+        @Watch('tab')
+        switchTabHook(): void {
+            const target = <ShowableVueTab>this.$refs[`tab${this.tab}`];
+            //tslint:disable-next-line:no-unbound-method
+            if(typeof target.show === 'function') target.show();
         }
 
         @Watch('name')
@@ -157,10 +154,6 @@
                 standardParser.allowInlines = true;
                 standardParser.inlines = this.character.character.inlines;
                 this.loading = false;
-                this.$nextTick(() => {
-                    $('a[data-toggle="tab"]').on('shown.bs.tab', (e) => this.switchTabHook(e));
-                    initCollapse();
-                });
             } catch(e) {
                 if(Utils.isJSONError(e))
                     this.error = <string>e.response.data.error;

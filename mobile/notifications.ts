@@ -4,7 +4,7 @@ import BaseNotifications from '../chat/notifications'; //tslint:disable-line:mat
 
 declare global {
     const NativeNotification: {
-        notify(notify: boolean, title: string, text: string, icon: string, sound: string | undefined, data: string): void
+        notify(notify: boolean, title: string, text: string, icon: string, sound: string | null, data: string): void
         requestPermission(): void
     };
 }
@@ -17,8 +17,9 @@ document.addEventListener('notification-clicked', (e: Event) => {
 export default class Notifications extends BaseNotifications {
     notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void {
         if(!this.isInBackground && conversation === core.conversations.selectedConversation && !core.state.settings.alwaysNotify) return;
+        if(core.characters.ownCharacter.status === 'dnd') return;
         NativeNotification.notify(core.state.settings.notifications && this.isInBackground, title, body, icon,
-            core.state.settings.playSound ? sound : undefined, conversation.key);
+            core.state.settings.playSound ? sound : null, conversation.key); //tslint:disable-line:no-null-keyword
     }
 
     async requestPermission(): Promise<void> {

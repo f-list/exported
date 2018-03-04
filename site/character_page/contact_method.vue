@@ -26,7 +26,7 @@
     @Component
     export default class ContactMethodView extends Vue {
         @Prop({required: true})
-        private readonly method: DisplayContactMethod;
+        private readonly method!: DisplayContactMethod;
 
         get iconUrl(): string {
             const infotag = Store.kinks.infotags[this.method.id];

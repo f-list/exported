@@ -1,10 +1,6 @@
 <template>
-    <modal :action="l('settings.action')" @submit="submit" @close="init()" id="settings">
-        <ul class="nav nav-tabs" style="flex-shrink:0;margin-bottom:10px">
-            <li role="presentation" v-for="tab in tabs" :class="{active: tab == selectedTab}">
-                <a href="#" @click.prevent="selectedTab = tab">{{l('settings.tabs.' + tab)}}</a>
-            </li>
-        </ul>
+    <modal :action="l('settings.action')" @submit="submit" @close="init()" id="settings" dialogClass="w-100">
+        <tabs style="flex-shrink:0;margin-bottom:10px" :tabs="tabs" v-model="selectedTab"></tabs>
         <div v-show="selectedTab == 'general'">
             <div class="form-group">
                 <label class="control-label" for="disallowedTags">{{l('settings.disallowedTags')}}</label>
@@ -96,13 +92,19 @@
                     {{l('settings.alwaysNotify')}}
                 </label>
             </div>
+            <div class="form-group">
+                <label class="control-label" for="showNeedsReply">
+                    <input type="checkbox" id="showNeedsReply" v-model="showNeedsReply"/>
+                    {{l('settings.showNeedsReply')}}
+                </label>
+            </div>
         </div>
         <div v-show="selectedTab == 'import'" style="display:flex;padding-top:10px">
             <select id="import" class="form-control" v-model="importCharacter" style="flex:1;">
                 <option value="">{{l('settings.import.selectCharacter')}}</option>
                 <option v-for="character in availableImports" :value="character">{{character}}</option>
             </select>
-            <button class="btn btn-default" @click="doImport" :disabled="!importCharacter">{{l('settings.import')}}</button>
+            <button class="btn btn-secondary" @click="doImport" :disabled="!importCharacter">{{l('settings.import')}}</button>
         </div>
     </modal>
 </template>
@@ -111,34 +113,36 @@
     import Component from 'vue-class-component';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
+    import Tabs from '../components/tabs';
     import core from './core';
     import {Settings as SettingsInterface} from './interfaces';
     import l from './localize';
 
     @Component(
-        {components: {modal: Modal}}
+        {components: {modal: Modal, tabs: Tabs}}
     )
     export default class SettingsView extends CustomDialog {
         l = l;
         availableImports: ReadonlyArray<string> = [];
         selectedTab = 'general';
         importCharacter = '';
-        playSound: boolean;
-        clickOpensMessage: boolean;
-        disallowedTags: string;
-        notifications: boolean;
-        highlight: boolean;
-        highlightWords: string;
-        showAvatars: boolean;
-        animatedEicons: boolean;
-        idleTimer: string;
-        messageSeparators: boolean;
-        eventMessages: boolean;
-        joinMessages: boolean;
-        alwaysNotify: boolean;
-        logMessages: boolean;
-        logAds: boolean;
-        fontSize: number;
+        playSound!: boolean;
+        clickOpensMessage!: boolean;
+        disallowedTags!: string;
+        notifications!: boolean;
+        highlight!: boolean;
+        highlightWords!: string;
+        showAvatars!: boolean;
+        animatedEicons!: boolean;
+        idleTimer!: string;
+        messageSeparators!: boolean;
+        eventMessages!: boolean;
+        joinMessages!: boolean;
+        alwaysNotify!: boolean;
+        logMessages!: boolean;
+        logAds!: boolean;
+        fontSize!: number;
+        showNeedsReply!: boolean;
 
         constructor() {
             super();
@@ -168,6 +172,7 @@
             this.logMessages = settings.logMessages;
             this.logAds = settings.logAds;
             this.fontSize = settings.fontSize;
+            this.showNeedsReply = settings.showNeedsReply;
         };
 
         async doImport(): Promise<void> {
@@ -178,14 +183,18 @@
             };
             await importKey('settings');
             await importKey('pinned');
+            await importKey('modes');
             await importKey('conversationSettings');
             this.init();
             core.reloadSettings();
             core.conversations.reloadSettings();
         }
 
-        get tabs(): ReadonlyArray<string> {
-            return this.availableImports.length > 0 ? ['general', 'notifications', 'import'] : ['general', 'notifications'];
+        get tabs(): {readonly [key: string]: string} {
+            const tabs: {[key: string]: string} = {};
+            (this.availableImports.length > 0 ? ['general', 'notifications', 'import'] : ['general', 'notifications'])
+                .forEach((item) => tabs[item] = l(`settings.tabs.${item}`));
+            return tabs;
         }
 
         async submit(): Promise<void> {
@@ -205,7 +214,8 @@
                 alwaysNotify: this.alwaysNotify,
                 logMessages: this.logMessages,
                 logAds: this.logAds,
-                fontSize: isNaN(this.fontSize) ? 14 : this.fontSize < 10 ? 10 : this.fontSize > 24 ? 24 : this.fontSize
+                fontSize: isNaN(this.fontSize) ? 14 : this.fontSize < 10 ? 10 : this.fontSize > 24 ? 24 : this.fontSize,
+                showNeedsReply: this.showNeedsReply
             };
             if(this.notifications) await core.notifications.requestPermission();
         }

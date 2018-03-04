@@ -11,6 +11,7 @@ export class GeneralSettings {
     spellcheckLang: string | undefined = 'en-GB';
     theme = 'default';
     version = electron.app.getVersion();
+    beta = false;
 }
 
 export function mkdir(dir: string): void {

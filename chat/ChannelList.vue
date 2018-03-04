@@ -1,22 +1,15 @@
 <template>
-    <modal :buttons="false" :action="l('chat.channels')" @close="closed">
-        <div style="display: flex; flex-direction: column;">
-            <ul class="nav nav-tabs" style="flex-shrink:0">
-                <li role="presentation" :class="{active: !privateTabShown}">
-                    <a href="#" @click.prevent="privateTabShown = false">{{l('channelList.public')}}</a>
-                </li>
-                <li role="presentation" :class="{active: privateTabShown}">
-                    <a href="#" @click.prevent="privateTabShown = true">{{l('channelList.private')}}</a>
-                </li>
-            </ul>
+    <modal :buttons="false" :action="l('chat.channels')" @close="closed" dialog-class="w-100 channel-list">
+        <div style="display:flex;flex-direction:column">
+            <tabs style="flex-shrink:0" :tabs="[l('channelList.public'), l('channelList.private')]" v-model="tab"></tabs>
             <div style="display: flex; flex-direction: column">
                 <div style="display:flex; padding: 10px 0; flex-shrink: 0;">
                     <input class="form-control" style="flex:1; margin-right:10px;" v-model="filter" :placeholder="l('filter')"/>
                     <a href="#" @click.prevent="sortCount = !sortCount">
-                        <span class="fa fa-2x" :class="{'fa-sort-amount-desc': sortCount, 'fa-sort-alpha-asc': !sortCount}"></span>
+                        <span class="fa fa-2x" :class="{'fa-sort-amount-down': sortCount, 'fa-sort-alpha-down': !sortCount}"></span>
                     </a>
                 </div>
-                <div style="overflow: auto;" v-show="!privateTabShown">
+                <div style="overflow: auto;" v-show="tab == 0">
                     <div v-for="channel in officialChannels" :key="channel.id">
                         <label :for="channel.id">
                             <input type="checkbox" :checked="channel.isJoined" :id="channel.id" @click.prevent="setJoined(channel)"/>
@@ -24,7 +17,7 @@
                         </label>
                     </div>
                 </div>
-                <div style="overflow: auto;" v-show="privateTabShown">
+                <div style="overflow: auto;" v-show="tab == 1">
                     <div v-for="channel in openRooms" :key="channel.id">
                         <label :for="channel.id">
                             <input type="checkbox" :checked="channel.isJoined" :id="channel.id" @click.prevent="setJoined(channel)"/>
@@ -46,13 +39,13 @@
     import Component from 'vue-class-component';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
+    import Tabs from '../components/tabs';
+    import {Channel} from '../fchat';
     import core from './core';
-    import {Channel} from './interfaces';
     import l from './localize';
-    import ListItem = Channel.ListItem;
 
     @Component({
-        components: {modal: Modal}
+        components: {modal: Modal, tabs: Tabs}
     })
     export default class ChannelList extends CustomDialog {
         privateTabShown = false;
@@ -60,6 +53,7 @@
         sortCount = true;
         filter = '';
         createName = '';
+        tab = '0';
 
         get openRooms(): ReadonlyArray<Channel.ListItem> {
             return this.applyFilter(core.channels.openRooms);
@@ -92,8 +86,15 @@
             this.createName = '';
         }
 
-        setJoined(channel: ListItem): void {
+        setJoined(channel: Channel.ListItem): void {
             channel.isJoined ? core.channels.leave(channel.id) : core.channels.join(channel.id);
         }
     }
 </script>
+
+<style>
+    .channel-list .modal-body {
+        display: flex;
+        flex-direction: column;
+    }
+</style>

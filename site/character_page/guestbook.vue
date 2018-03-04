@@ -5,53 +5,22 @@
             <label v-show="canEdit" class="control-label">Unapproved only:
                 <input type="checkbox" v-model="unapprovedOnly"/>
             </label>
-            <nav>
-                <ul class="pager">
-                    <li class="previous" v-show="page > 1">
-                        <a @click="previousPage">
-                            <span aria-hidden="true">&larr;</span>Previous Page
-                        </a>
-                    </li>
-                    <li class="next" v-show="hasNextPage">
-                        <a @click="nextPage">
-                            Next Page<span aria-hidden="true">&rarr;</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+            <simple-pager :next="hasNextPage" :prev="page > 1" @next="nextPage" @prev="previousPage"></simple-pager>
         </div>
         <template v-if="!loading">
             <div class="alert alert-info" v-show="posts.length === 0">No guestbook posts.</div>
             <guestbook-post :post="post" :can-edit="canEdit" v-for="post in posts" :key="post.id" @reload="getPage"></guestbook-post>
             <div v-if="authenticated" class="form-horizontal">
                 <bbcode-editor v-model="newPost.message" :maxlength="5000" classes="form-control"></bbcode-editor>
-                <label class="control-label"
-                    for="guestbookPostPrivate">Private(only visible to owner): </label>
-                <input type="checkbox"
-                    class="form-control"
-                    id="guestbookPostPrivate"
-                    v-model="newPost.privatePost"/>
-                <label class="control-label"
-                    for="guestbook-post-character">Character: </label>
+                <input type="checkbox" id="guestbookPostPrivate" v-model="newPost.privatePost"/>
+                <label class="control-label" for="guestbookPostPrivate">Private(only visible to owner)</label><br/>
+                <label class="control-label" for="guestbook-post-character">Character: </label>
                 <character-select id="guestbook-post-character" v-model="newPost.character"></character-select>
                 <button @click="makePost" class="btn btn-success" :disabled="newPost.posting">Post</button>
             </div>
         </template>
         <div class="guestbook-controls">
-            <nav>
-                <ul class="pager">
-                    <li class="previous" v-show="page > 1">
-                        <a @click="previousPage">
-                            <span aria-hidden="true">&larr;</span>Previous Page
-                        </a>
-                    </li>
-                    <li class="next" v-show="hasNextPage">
-                        <a @click="nextPage">
-                            Next Page<span aria-hidden="true">&rarr;</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+            <simple-pager :next="hasNextPage" :prev="page > 1" @next="nextPage" @prev="previousPage"></simple-pager>
         </div>
     </div>
 </template>
@@ -73,7 +42,7 @@
     })
     export default class GuestbookView extends Vue {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
 
         loading = true;
         error = '';

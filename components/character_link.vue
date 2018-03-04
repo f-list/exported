@@ -14,7 +14,7 @@
     @Component
     export default class CharacterLink extends Vue {
         @Prop({required: true})
-        readonly character: {name: string, id: number, deleted: boolean} | string;
+        readonly character!: {name: string, id: number, deleted: boolean} | string;
 
         get deleted(): boolean {
             return typeof(this.character) === 'string' ? false : this.character.deleted;

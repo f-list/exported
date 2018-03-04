@@ -3,7 +3,8 @@
         <a href="#" @click.prevent="openDialog" class="btn">
             <span class="fa fa-edit"></span> <span class="btn-text">{{l('manageChannel.open')}}</span>
         </a>
-        <modal ref="dialog" :action="l('manageChannel.action', channel.name)" :buttonText="l('manageChannel.submit')" @submit="submit">
+        <modal ref="dialog" :action="l('manageChannel.action', channel.name)" :buttonText="l('manageChannel.submit')" @submit="submit"
+            dialogClass="w-100 modal-lg">
             <div class="form-group" v-show="channel.id.substr(0, 4) === 'adh-'">
                 <label class="control-label" for="isPublic">
                     <input type="checkbox" id="isPublic" v-model="isPublic"/>
@@ -27,13 +28,14 @@
             <div v-if="isChannelOwner">
                 <h4>{{l('manageChannel.mods')}}</h4>
                 <div v-for="(mod, index) in opList">
-                    <a href="#" @click.prevent="opList.splice(index, 1)" class="btn fa fa-times"
-                        style="padding:0;vertical-align:baseline"></a>
+                    <a href="#" @click.prevent="opList.splice(index, 1)" class="btn" style="padding:0;vertical-align:baseline">
+                        <i class="fas fa-times"></i>
+                    </a>
                     {{mod}}
                 </div>
                 <div style="display:flex;margin-top:5px">
                     <input :placeholder="l('manageChannel.modAddName')" v-model="modAddName" class="form-control"/>
-                    <button class="btn btn-default" @click="modAdd" :disabled="!modAddName">{{l('manageChannel.modAdd')}}</button>
+                    <button class="btn btn-secondary" @click="modAdd" :disabled="!modAddName">{{l('manageChannel.modAdd')}}</button>
                 </div>
             </div>
         </modal>
@@ -56,7 +58,7 @@
     })
     export default class ManageChannel extends Vue {
         @Prop({required: true})
-        readonly channel: Channel;
+        readonly channel!: Channel;
         modes = channelModes;
         isPublic = this.channelIsPublic;
         mode = this.channel.mode;

@@ -1,46 +1,37 @@
 <template>
     <div>
-        <div id="userMenu" class="dropdown-menu" v-show="showContextMenu" :style="position"
-            style="position:fixed;padding:10px 10px 5px;display:block;width:200px;z-index:1100" ref="menu">
-            <div v-if="character">
-                <div style="min-height: 65px;" @click.stop>
-                    <img :src="characterImage" style="width: 60px; height:60px; margin-right: 5px; float: left;" v-if="showAvatars"/>
-                    <h4 style="margin:0;">{{character.name}}</h4>
-                    {{l('status.' + character.status)}}
-                </div>
-                <bbcode :text="character.statusText" @click.stop></bbcode>
-                <ul class="dropdown-menu border-top" role="menu"
-                    style="display:block; position:static; border-width:1px 0 0 0; box-shadow:none; padding:0; width:100%; border-radius:0;">
-                    <li><a tabindex="-1" :href="profileLink" target="_blank" v-if="showProfileFirst">
-                        <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a></li>
-                    <li><a tabindex="-1" href="#" @click.prevent="openConversation(true)">
-                        <span class="fa fa-fw fa-comment"></span>{{l('user.messageJump')}}</a></li>
-                    <li><a tabindex="-1" href="#" @click.prevent="openConversation(false)">
-                        <span class="fa fa-fw fa-plus"></span>{{l('user.message')}}</a></li>
-                    <li><a tabindex="-1" :href="profileLink" target="_blank" v-if="!showProfileFirst">
-                        <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a></li>
-                    <li><a tabindex="-1" href="#" @click.prevent="showMemo">
-                        <span class="fa fa-fw fa-sticky-note-o"></span>{{l('user.memo')}}</a></li>
-                    <li><a tabindex="-1" href="#" @click.prevent="setBookmarked">
-                        <span class="fa fa-fw fa-bookmark-o"></span>{{l('user.' + (character.isBookmarked ? 'unbookmark' : 'bookmark'))}}
-                    </a></li>
-                    <li><a tabindex="-1" href="#" @click.prevent="setIgnored">
-                        <span class="fa fa-fw fa-minus-circle"></span>{{l('user.' + (character.isIgnored ? 'unignore' : 'ignore'))}}
-                    </a></li>
-                    <li><a tabindex="-1" href="#" @click.prevent="setHidden">
-                        <span class="fa fa-fw fa-eye-slash"></span>{{l('user.' + (isHidden ? 'unhide' : 'hide'))}}
-                    </a></li>
-                    <li><a tabindex="-1" href="#" @click.prevent="report">
-                        <span class="fa fa-fw fa-exclamation-triangle"></span>{{l('user.report')}}</a></li>
-                    <li v-show="isChannelMod"><a tabindex="-1" href="#" @click.prevent="channelKick">
-                        <span class="fa fa-fw fa-ban"></span>{{l('user.channelKick')}}</a></li>
-                    <li v-show="isChatOp"><a tabindex="-1" href="#" @click.prevent="chatKick" style="color:#f00">
-                        <span class="fa fa-fw fa-trash-o"></span>{{l('user.chatKick')}}</a>
-                    </li>
-                </ul>
+        <div id="userMenu" class="list-group" v-show="showContextMenu" :style="position" v-if="character"
+            style="position:fixed;padding:10px 10px 5px;display:block;width:220px;z-index:1100" ref="menu">
+            <div style="min-height: 65px;padding:5px" class="list-group-item" @click.stop>
+                <img :src="characterImage" style="width:60px;height:60px;margin-right:5px;float:left" v-if="showAvatars"/>
+                <h5 style="margin:0;line-height:1">{{character.name}}</h5>
+                {{l('status.' + character.status)}}
             </div>
+            <bbcode :text="character.statusText" v-show="character.statusText" class="list-group-item" @click.stop></bbcode>
+            <a tabindex="-1" :href="profileLink" target="_blank" v-if="showProfileFirst" class="list-group-item list-group-item-action">
+                <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a>
+            <a tabindex="-1" href="#" @click.prevent="openConversation(true)" class="list-group-item list-group-item-action">
+                <span class="fa fa-fw fa-comment"></span>{{l('user.messageJump')}}</a>
+            <a tabindex="-1" href="#" @click.prevent="openConversation(false)" class="list-group-item list-group-item-action">
+                <span class="fa fa-fw fa-plus"></span>{{l('user.message')}}</a>
+            <a tabindex="-1" :href="profileLink" target="_blank" v-if="!showProfileFirst" class="list-group-item list-group-item-action">
+                <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a>
+            <a tabindex="-1" href="#" @click.prevent="showMemo" class="list-group-item list-group-item-action">
+                <span class="far fa-fw fa-sticky-note"></span>{{l('user.memo')}}</a>
+            <a tabindex="-1" href="#" @click.prevent="setBookmarked" class="list-group-item list-group-item-action">
+                <span class="far fa-fw fa-bookmark"></span>{{l('user.' + (character.isBookmarked ? 'unbookmark' : 'bookmark'))}}</a>
+            <a tabindex="-1" href="#" @click.prevent="setIgnored" class="list-group-item list-group-item-action">
+                <span class="fa fa-fw fa-minus-circle"></span>{{l('user.' + (character.isIgnored ? 'unignore' : 'ignore'))}}</a>
+            <a tabindex="-1" href="#" @click.prevent="setHidden" class="list-group-item list-group-item-action" v-show="!isChatOp">
+                <span class="fa fa-fw fa-eye-slash"></span>{{l('user.' + (isHidden ? 'unhide' : 'hide'))}}</a>
+            <a tabindex="-1" href="#" @click.prevent="report" class="list-group-item list-group-item-action">
+                <span class="fa fa-fw fa-exclamation-triangle"></span>{{l('user.report')}}</a>
+            <a tabindex="-1" href="#" @click.prevent="channelKick" class="list-group-item list-group-item-action" v-show="isChannelMod">
+                <span class="fa fa-fw fa-ban"></span>{{l('user.channelKick')}}</a>
+            <a tabindex="-1" href="#" @click.prevent="chatKick" style="color:#f00" class="list-group-item list-group-item-action"
+                v-show="isChatOp"><span class="far fa-fw fa-trash"></span>{{l('user.chatKick')}}</a>
         </div>
-        <modal :action="l('user.memo.action')" ref="memo" :disabled="memoLoading" @submit="updateMemo">
+        <modal :action="l('user.memo.action')" ref="memo" :disabled="memoLoading" @submit="updateMemo" dialogClass="w-100">
             <div style="float:right;text-align:right;">{{getByteLength(memo)}} / 1000</div>
             <textarea class="form-control" v-model="memo" :disabled="memoLoading" maxlength="1000"></textarea>
         </modal>
@@ -65,17 +56,17 @@
     export default class UserMenu extends Vue {
         //tslint:disable:no-null-keyword
         @Prop({required: true})
-        readonly reportDialog: ReportDialog;
+        readonly reportDialog!: ReportDialog;
         l = l;
         showContextMenu = false;
         getByteLength = getByteLength;
         character: Character | null = null;
         position = {left: '', top: ''};
         characterImage: string | null = null;
-        touchTimer: number | undefined;
+        touchedElement: HTMLElement | undefined;
         channel: Channel | null = null;
         memo = '';
-        memoId: number;
+        memoId = 0;
         memoLoading = false;
 
         openConversation(jump: boolean): void {
@@ -159,7 +150,7 @@
 
         handleEvent(e: MouseEvent | TouchEvent): void {
             const touch = e instanceof TouchEvent ? e.changedTouches[0] : e;
-            let node = <HTMLElement & {character?: Character, channel?: Channel}>touch.target;
+            let node = <HTMLElement & {character?: Character, channel?: Channel, touched?: boolean}>touch.target;
             while(node !== document.body) {
                 if(e.type !== 'click' && node === this.$refs['menu']) return;
                 if(node.character !== undefined || node.dataset['character'] !== undefined || node.parentNode === null) break;
@@ -170,25 +161,18 @@
                 if(node.dataset['character'] !== undefined) node.character = core.characters.get(node.dataset['character']!);
                 else {
                     this.showContextMenu = false;
+                    this.touchedElement = undefined;
                     return;
                 }
             switch(e.type) {
                 case 'click':
-                    if(node.dataset['character'] === undefined) this.onClick(node.character);
+                    if(node.dataset['character'] === undefined)
+                        if(node === this.touchedElement) this.openMenu(touch, node.character, node.channel);
+                        else this.onClick(node.character);
                     e.preventDefault();
                     break;
                 case 'touchstart':
-                    this.touchTimer = window.setTimeout(() => {
-                        this.openMenu(touch, node.character!, node.channel);
-                        this.touchTimer = undefined;
-                    }, 500);
-                    break;
-                case 'touchend':
-                    if(this.touchTimer !== undefined) {
-                        clearTimeout(this.touchTimer);
-                        this.touchTimer = undefined;
-                        if(node.dataset['character'] === undefined) this.onClick(node.character);
-                    }
+                    this.touchedElement = node;
                     break;
                 case 'contextmenu':
                     this.openMenu(touch, node.character, node.channel);
@@ -222,8 +206,13 @@
 </script>
 
 <style>
-    #userMenu li a {
-        padding: 3px 0;
+    #userMenu .list-group-item {
+        padding: 3px;
+    }
+
+    #userMenu .list-group-item-action {
+        border-top: 0;
+        z-index: -1;
     }
 
     .user-view {

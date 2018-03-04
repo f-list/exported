@@ -17,7 +17,7 @@
     @Component
     export default class InfotagView extends Vue {
         @Prop({required: true})
-        private readonly infotag: DisplayInfotag;
+        private readonly infotag!: DisplayInfotag;
 
         get label(): string {
             const infotag = Store.kinks.infotags[this.infotag.id];

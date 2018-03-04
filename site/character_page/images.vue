@@ -1,8 +1,8 @@
 <template>
-    <div class="character-images">
+    <div class="character-images row">
         <div v-show="loading" class="alert alert-info">Loading images.</div>
         <template v-if="!loading">
-            <div class="character-image" v-for="image in images" :key="image.id">
+            <div class="character-image col-xs-6 col-sm-4 col-md-2" v-for="image in images" :key="image.id">
                 <a :href="imageUrl(image)" target="_blank" @click="handleImageClick($event, image)">
                     <img :src="thumbUrl(image)" :title="image.description">
                 </a>
@@ -27,7 +27,7 @@
     @Component
     export default class ImagesView extends Vue {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
         @Prop()
         private readonly usePreview?: boolean;
         private shown = false;

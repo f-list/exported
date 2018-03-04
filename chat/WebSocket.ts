@@ -4,7 +4,7 @@ import l from './localize';
 export default class Socket implements WebSocketConnection {
     static host = 'wss://chat.f-list.net:9799';
     private socket: WebSocket;
-    private errorHandler: (error: Error) => void;
+    private errorHandler: ((error: Error) => void) | undefined;
     private lastHandler: Promise<void> = Promise.resolve();
 
     constructor() {

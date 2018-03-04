@@ -1,150 +1,72 @@
-import {getByteLength, Message as MessageImpl} from '../chat/common';
+import {Message as MessageImpl} from '../chat/common';
 import core from '../chat/core';
 import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
 
 declare global {
     const NativeFile: {
-        readFile(name: string): Promise<string | undefined>
-        readFile(name: string, start: number, length: number): Promise<string | undefined>
-        writeFile(name: string, data: string): Promise<void>
-        listDirectories(name: string): Promise<string>
-        listFiles(name: string): Promise<string>
+        read(name: string): Promise<string | undefined>
+        write(name: string, data: string): Promise<void>
+        listDirectories(name: string): Promise<string[]>
+        listFiles(name: string): Promise<string[]>
         getSize(name: string): Promise<number>
-        append(name: string, data: string): Promise<void>
         ensureDirectory(name: string): Promise<void>
+    };
+    type NativeMessage = {time: number, type: number, sender: string, text: string};
+    const NativeLogs: {
+        init(character: string): Promise<Index>
+        logMessage(key: string, conversation: string, time: number, type: Conversation.Message.Type, sender: string,
+                   message: string): Promise<void>;
+        getBacklog(key: string): Promise<ReadonlyArray<NativeMessage>>;
+        getLogs(key: string, date: number): Promise<ReadonlyArray<NativeMessage>>
     };
 }
 
 const dayMs = 86400000;
+export const appVersion = (<{version: string}>require('./package.json')).version; //tslint:disable-line:no-require-imports
 
 export class GeneralSettings {
     account = '';
     password = '';
     host = 'wss://chat.f-list.net:9799';
     theme = 'default';
+    version = appVersion;
 }
 
-type Index = {[key: string]: {name: string, index: {[key: number]: number | undefined}} | undefined};
-
-function serializeMessage(message: Conversation.Message): string {
-    const time = message.time.getTime() / 1000;
-    let str = String.fromCharCode((time >> 24) % 256) + String.fromCharCode((time >> 16) % 256)
-        + String.fromCharCode((time >> 8) % 256) + String.fromCharCode(time % 256);
-    str += String.fromCharCode(message.type);
-    if(message.type !== Conversation.Message.Type.Event) {
-        str += String.fromCharCode(message.sender.name.length);
-        str += message.sender.name;
-    } else str += '\0';
-    const textLength = message.text.length;
-    str += String.fromCharCode((textLength >> 8) % 256) + String.fromCharCode(textLength % 256);
-    str += message.text;
-    const length = getByteLength(str);
-    str += String.fromCharCode((length >> 8) % 256) + String.fromCharCode(length % 256);
-    return str;
-}
-
-function deserializeMessage(str: string): {message: Conversation.Message, end: number} {
-    let index = 0;
-    const time = str.charCodeAt(index++) << 24 | str.charCodeAt(index++) << 16 | str.charCodeAt(index++) << 8 | str.charCodeAt(index++);
-    const type = str.charCodeAt(index++);
-    const senderLength = str.charCodeAt(index++);
-    const sender = str.substring(index, index += senderLength);
-    const messageLength = str.charCodeAt(index++) << 8 | str.charCodeAt(index++);
-    const text = str.substring(index, index += messageLength);
-    const end = str.charCodeAt(index++) << 8 | str.charCodeAt(index);
-    return {message: new MessageImpl(type, core.characters.get(sender), text, new Date(time * 1000)), end: end + 2};
-}
+type Index = {[key: string]: {name: string, dates: number[]} | undefined};
 
 export class Logs implements Logging.Persistent {
     private index: Index = {};
-    private logDir: string;
 
     constructor() {
         core.connection.onEvent('connecting', async() => {
-            this.index = {};
-            this.logDir = `${core.connection.character}/logs`;
-            await NativeFile.ensureDirectory(this.logDir);
-            const entries = <string[]>JSON.parse(await NativeFile.listFiles(this.logDir));
-            for(const entry of entries)
-                if(entry.substr(-4) === '.idx') {
-                    const str = (await NativeFile.readFile(`${this.logDir}/${entry}`))!;
-                    let i = str.charCodeAt(0);
-                    const name = str.substr(1, i++);
-                    const index: {[key: number]: number} = {};
-                    while(i < str.length) {
-                        const key = str.charCodeAt(i++) << 8 | str.charCodeAt(i++);
-                        index[key] = str.charCodeAt(i++) << 32 | str.charCodeAt(i++) << 24 | str.charCodeAt(i++) << 16 |
-                            str.charCodeAt(i++) << 8 | str.charCodeAt(i++);
-                    }
-                    this.index[entry.slice(0, -4).toLowerCase()] = {name, index};
-                }
+            this.index = await NativeLogs.init(core.connection.character);
         });
     }
 
     async logMessage(conversation: Conversation, message: Conversation.Message): Promise<void> {
-        const file = `${this.logDir}/${conversation.key}`;
-        const serialized = serializeMessage(message);
-        const date = Math.floor(message.time.getTime() / dayMs);
-        let indexBuffer: string | undefined;
+        const time = message.time.getTime();
+        const date = Math.floor(time / dayMs);
         let index = this.index[conversation.key];
-        if(index !== undefined) {
-            if(index.index[date] === undefined) indexBuffer = '';
-        } else {
-            index = this.index[conversation.key] = {name: conversation.name, index: {}};
-            const nameLength = getByteLength(conversation.name);
-            indexBuffer = String.fromCharCode(nameLength) + conversation.name;
-        }
-        if(indexBuffer !== undefined) {
-            const size = await NativeFile.getSize(file);
-            index.index[date] = size;
-            indexBuffer += String.fromCharCode((date >> 8) % 256) + String.fromCharCode(date % 256) +
-                String.fromCharCode((size >> 32) % 256) + String.fromCharCode((size >> 24) % 256) +
-                String.fromCharCode((size >> 16) % 256) + String.fromCharCode((size >> 8) % 256) + String.fromCharCode(size % 256);
-            await NativeFile.append(`${file}.idx`, indexBuffer);
-        }
-        await NativeFile.append(file, serialized);
+        if(index === undefined) index = this.index[conversation.key] = {name: conversation.name, dates: []};
+        if(index.dates[index.dates.length - 1] !== date) index.dates.push(date);
+        return NativeLogs.logMessage(conversation.key, conversation.name, time / 1000, message.type,
+            message.type === Conversation.Message.Type.Event ? '' : message.sender.name, message.text);
     }
 
-    async getBacklog(conversation: Conversation): Promise<Conversation.Message[]> {
-        const file = `${this.logDir}/${conversation.key}`;
-        let count = 20;
-        let messages = new Array<Conversation.Message>(count);
-        let pos = await NativeFile.getSize(file);
-        while(pos > 0 && count > 0) {
-            const l = (await NativeFile.readFile(file, pos - 2, pos))!;
-            const length = (l.charCodeAt(0) << 8 | l.charCodeAt(1));
-            pos = pos - length - 2;
-            messages[--count] = deserializeMessage((await NativeFile.readFile(file, pos, length))!).message;
-        }
-        if(count !== 0) messages = messages.slice(count);
-        return messages;
+    async getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>> {
+        return (await NativeLogs.getBacklog(conversation.key))
+            .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
     }
 
-    async getLogs(key: string, date: Date): Promise<Conversation.Message[]> {
-        const file = `${this.logDir}/${key}`;
-        const messages: Conversation.Message[] = [];
-        const day = date.getTime() / dayMs;
-        const index = this.index[key];
-        if(index === undefined) return [];
-        let pos = index.index[date.getTime() / dayMs];
-        if(pos === undefined) return [];
-        const size = await NativeFile.getSize(file);
-        while(pos < size) {
-            const deserialized = deserializeMessage((await NativeFile.readFile(file, pos, 51000))!);
-            if(Math.floor(deserialized.message.time.getTime() / dayMs) !== day) break;
-            messages.push(deserialized.message);
-            pos += deserialized.end;
-        }
-        return messages;
+    async getLogs(key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {
+        return (await NativeLogs.getLogs(key, date.getTime() / dayMs))
+            .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
     }
 
     getLogDates(key: string): ReadonlyArray<Date> {
         const entry = this.index[key];
         if(entry === undefined) return [];
-        const dates = [];
-        for(const date in entry.index)
-            dates.push(new Date(parseInt(date, 10) * dayMs));
-        return dates;
+        return entry.dates.map((x) => new Date(x * dayMs));
     }
 
     get conversations(): ReadonlyArray<{id: string, name: string}> {
@@ -156,27 +78,27 @@ export class Logs implements Logging.Persistent {
 }
 
 export async function getGeneralSettings(): Promise<GeneralSettings | undefined> {
-    const file = await NativeFile.readFile('!settings');
+    const file = await NativeFile.read('!settings');
     if(file === undefined) return undefined;
     return <GeneralSettings>JSON.parse(file);
 }
 
 export async function setGeneralSettings(value: GeneralSettings): Promise<void> {
-    return NativeFile.writeFile('!settings', JSON.stringify(value));
+    return NativeFile.write('!settings', JSON.stringify(value));
 }
 
 export class SettingsStore implements Settings.Store {
     async get<K extends keyof Settings.Keys>(key: K, character: string = core.connection.character): Promise<Settings.Keys[K] | undefined> {
-        const file = await NativeFile.readFile(`${character}/${key}`);
+        const file = await NativeFile.read(`${character}/${key}`);
         if(file === undefined) return undefined;
         return <Settings.Keys[K]>JSON.parse(file);
     }
 
     async set<K extends keyof Settings.Keys>(key: K, value: Settings.Keys[K]): Promise<void> {
-        return NativeFile.writeFile(`${core.connection.character}/${key}`, JSON.stringify(value));
+        return NativeFile.write(`${core.connection.character}/${key}`, JSON.stringify(value));
     }
 
     async getAvailableCharacters(): Promise<string[]> {
-        return <string[]>JSON.parse(await NativeFile.listDirectories('/'));
+        return NativeFile.listDirectories('/');
     }
 }

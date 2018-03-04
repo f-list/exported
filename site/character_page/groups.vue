@@ -21,7 +21,7 @@
     @Component
     export default class GroupsView extends Vue {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
         private shown = false;
         groups: CharacterGroup[] = [];
         loading = true;

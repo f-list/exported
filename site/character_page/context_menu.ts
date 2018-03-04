@@ -5,8 +5,8 @@ export default abstract class ContextMenu extends Vue {
     abstract propName: string;
     showMenu = false;
     private position = {left: 0, top: 0};
-    private selectedItem: HTMLElement | null;
-    private touchTimer: number;
+    private selectedItem: HTMLElement | null = null;
+    private touchTimer = 0;
 
     abstract itemSelected(element: HTMLElement): void;
 

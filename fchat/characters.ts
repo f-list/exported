@@ -2,7 +2,7 @@ import {decodeHTML} from './common';
 import {Character as Interfaces, Connection} from './interfaces';
 
 class Character implements Interfaces.Character {
-    gender: Interfaces.Gender;
+    gender: Interfaces.Gender = 'None';
     status: Interfaces.Status = 'offline';
     statusText = '';
     isFriend = false;

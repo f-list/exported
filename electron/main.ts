@@ -100,6 +100,7 @@ async function setDictionary(lang: string | undefined): Promise<void> {
 }
 
 const settingsDir = path.join(electron.app.getPath('userData'), 'data');
+mkdir(settingsDir);
 const file = path.join(settingsDir, 'settings');
 const settings = new GeneralSettings();
 let shouldImportSettings = false;
@@ -137,7 +138,7 @@ async function addSpellcheckerItems(menu: Electron.Menu): Promise<void> {
 function setUpWebContents(webContents: Electron.WebContents): void {
     const openLinkExternally = (e: Event, linkUrl: string) => {
         e.preventDefault();
-        const profileMatch = linkUrl.match(/^https?:\/\/(www\.)?f-list.net\/c\/(.+)\/?#?/);
+        const profileMatch = linkUrl.match(/^https?:\/\/(www\.)?f-list.net\/c\/([^/#]+)\/?#?/);
         if(profileMatch !== null && settings.profileViewer) webContents.send('open-profile', decodeURIComponent(profileMatch[2]));
         else electron.shell.openExternal(linkUrl);
     };
@@ -179,6 +180,7 @@ function showPatchNotes(): void {
 }
 
 function onReady(): void {
+    app.setAppUserModelId('net.f-list.f-chat');
     app.on('open-file', createWindow);
 
     if(settings.version !== app.getVersion()) {
@@ -188,6 +190,7 @@ function onReady(): void {
     }
 
     if(process.env.NODE_ENV === 'production') {
+        if(settings.beta) autoUpdater.channel = 'beta';
         autoUpdater.checkForUpdates(); //tslint:disable-line:no-floating-promises
         const updateTimer = setInterval(async() => autoUpdater.checkForUpdates(), 3600000);
         let hasUpdate = false;
@@ -195,12 +198,15 @@ function onReady(): void {
             clearInterval(updateTimer);
             if(hasUpdate) return;
             hasUpdate = true;
-            const menu = electron.Menu.getApplicationMenu();
+            const menu = electron.Menu.getApplicationMenu()!;
             menu.append(new electron.MenuItem({
                 label: l('action.updateAvailable'),
                 submenu: electron.Menu.buildFromTemplate([{
                     label: l('action.update'),
-                    click: () => autoUpdater.quitAndInstall(false, true)
+                    click: () => {
+                        for(const w of windows) w.webContents.send('quit');
+                        autoUpdater.quitAndInstall(false, true);
+                    }
                 }, {
                     label: l('help.changelog'),
                     click: showPatchNotes
@@ -288,6 +294,13 @@ function onReady(): void {
                         label: x,
                         type: <'radio'>'radio'
                     }))
+                }, {
+                    label: l('settings.beta'), type: 'checkbox', checked: settings.beta,
+                    click: (item: Electron.MenuItem) => {
+                        settings.beta = item.checked;
+                        setGeneralSettings(settings);
+                        autoUpdater.channel = item.checked ? 'beta' : 'latest';
+                    }
                 },
                 {type: 'separator'},
                 {role: 'minimize'},

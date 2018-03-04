@@ -21,7 +21,7 @@
     @Component
     export default class FriendsView extends Vue {
         @Prop({required: true})
-        private readonly character: Character;
+        private readonly character!: Character;
         private shown = false;
         friends: CharacterFriend[] = [];
         loading = true;

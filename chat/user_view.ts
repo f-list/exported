@@ -9,21 +9,21 @@ import {Channel, Character} from './interfaces';
 export function getStatusIcon(status: Character.Status): string {
     switch(status) {
         case 'online':
-            return 'fa-user-o';
+            return 'far fa-user';
         case 'looking':
-            return 'fa-eye';
+            return 'fa fa-eye';
         case 'dnd':
-            return 'fa-minus-circle';
+            return 'fa fa-minus-circle';
         case 'offline':
-            return 'fa-ban';
+            return 'fa fa-ban';
         case 'away':
-            return 'fa-circle-o';
+            return 'far fa-circle';
         case 'busy':
-            return 'fa-cog';
+            return 'fa fa-cog';
         case 'idle':
-            return 'fa-clock-o';
+            return 'far fa-clock';
         case 'crown':
-            return 'fa-birthday-cake';
+            return 'fa fa-birthday-cake';
     }
 }
 
@@ -35,21 +35,18 @@ const UserView = Vue.extend({
             context !== undefined ? context.props : (<Vue>this).$options.propsData);
         const character = props.character;
         let rankIcon;
-        if(character.isChatOp) rankIcon = 'fa-diamond';
-        else if(props.channel !== undefined) {
-            const member = props.channel.members[character.name];
-            if(member !== undefined)
-                rankIcon = member.rank === Channel.Rank.Owner ? 'fa-asterisk' :
-                    member.rank === Channel.Rank.Op ? (props.channel.id.substr(0, 4) === 'adh-' ? 'fa-at' : 'fa-star') : '';
-            else rankIcon = '';
-        } else rankIcon = '';
+        if(character.isChatOp) rankIcon = 'far fa-gem';
+        else if(props.channel !== undefined)
+            rankIcon = props.channel.owner === character.name ? 'fa fa-key' : props.channel.opList.indexOf(character.name) !== -1 ?
+                (props.channel.id.substr(0, 4) === 'adh-' ? 'fa fa-shield-alt' : 'fa fa-star') : '';
+        else rankIcon = '';
 
         const html = (props.showStatus !== undefined || character.status === 'crown'
-            ? `<span class="fa fa-fw ${getStatusIcon(character.status)}"></span>` : '') +
-            (rankIcon !== '' ? `<span class="fa ${rankIcon}"></span>` : '') + character.name;
+            ? `<span class="fa-fw ${getStatusIcon(character.status)}"></span>` : '') +
+            (rankIcon !== '' ? `<span class="${rankIcon}"></span>` : '') + character.name;
         return createElement('span', {
             attrs: {class: `user-view gender-${character.gender !== undefined ? character.gender.toLowerCase() : 'none'}`},
-            domProps: {character, channel: props.channel, innerHTML: html}
+            domProps: {character, channel: props.channel, innerHTML: html, bbcodeTag: 'user'}
         });
     }
 });
