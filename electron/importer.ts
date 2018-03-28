@@ -4,6 +4,7 @@ import * as path from 'path';
 import {promisify} from 'util';
 import {Settings} from '../chat/common';
 import {Conversation} from '../chat/interfaces';
+import {isAction} from '../chat/slash_commands';
 import {GeneralSettings} from './common';
 import {checkIndex, getLogDir, Message as LogMessage, serializeMessage, SettingsStore} from './filesystem';
 
@@ -111,7 +112,7 @@ function createMessage(line: string, ownCharacter: string, name: string, isChann
         if(line[lineIndex] === ':') {
             ++lineIndex;
             if(line[lineIndex] === ' ') ++lineIndex;
-            if(line.substr(lineIndex, 3) === '/me') {
+            if(isAction(line)) {
                 type = Conversation.Message.Type.Action;
                 lineIndex += 3;
             }

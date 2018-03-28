@@ -121,21 +121,12 @@ export namespace Conversation {
 
 export type Conversation = Conversation.Conversation;
 
-export namespace Logs {
-    export interface Basic {
-        logMessage(conversation: Conversation, message: Conversation.Message): Promise<void> | void
-        getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>>
-    }
-
-    export interface Persistent extends Basic {
-        readonly conversations: ReadonlyArray<{readonly id: string, readonly name: string}>
-        getLogs(key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>>
-        getLogDates(key: string): ReadonlyArray<Date>
-    }
-
-    export function isPersistent(logs: Basic): logs is Persistent {
-        return (<Partial<Persistent>>logs).getLogs !== undefined;
-    }
+export interface Logs {
+    logMessage(conversation: Conversation, message: Conversation.Message): Promise<void> | void
+    getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>>
+    readonly conversations: ReadonlyArray<{readonly key: string, readonly name: string}>
+    getLogs(key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>>
+    getLogDates(key: string): Promise<ReadonlyArray<Date>>
 }
 
 export namespace Settings {
@@ -150,7 +141,7 @@ export namespace Settings {
 
     export interface Store {
         get<K extends keyof Keys>(key: K, character?: string): Promise<Keys[K] | undefined>
-        getAvailableCharacters(): Promise<ReadonlyArray<string>> | undefined
+        getAvailableCharacters(): Promise<ReadonlyArray<string>>
         set<K extends keyof Keys>(key: K, value: Keys[K]): Promise<void>
     }
 
@@ -172,6 +163,7 @@ export namespace Settings {
         readonly logAds: boolean;
         readonly fontSize: number;
         readonly showNeedsReply: boolean;
+        readonly enterSend: boolean;
     }
 }
 

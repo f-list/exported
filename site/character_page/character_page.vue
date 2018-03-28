@@ -2,10 +2,10 @@
     <div class="row character-page" id="pageBody">
         <div class="alert alert-info" v-show="loading" style="margin:0 15px;flex:1">Loading character information.</div>
         <div class="alert alert-danger" v-show="error" style="margin:0 15px;flex:1">{{error}}</div>
-        <div class="col-sm-3 col-md-2" v-if="!loading">
+        <div class="col-md-4 col-lg-3 col-xl-2" v-if="!loading">
             <sidebar :character="character" @memo="memo" @bookmarked="bookmarked" :oldApi="oldApi"></sidebar>
         </div>
-        <div class="col-sm-9 col-md-10 profile-body" v-if="!loading">
+        <div class="col-md-8 col-lg-9 col-xl-10 profile-body" v-if="!loading">
             <div id="characterView">
                 <div>
                     <div v-if="character.ban_reason" id="headerBanReason" class="alert alert-warning">
@@ -26,7 +26,7 @@
                                 <span>Overview</span>
                                 <span>Info</span>
                                 <span v-if="!oldApi">Groups</span>
-                                <span>Images ({{ character.character.image_count }}</span>
+                                <span>Images ({{ character.character.image_count }})</span>
                                 <span v-if="character.settings.guestbook">Guestbook</span>
                                 <span v-if="character.is_self || character.settings.show_friends">Friends</span>
                             </tabs>
@@ -34,7 +34,7 @@
                         <div class="card-body">
                             <div class="tab-content">
                                 <div role="tabpanel" class="tab-pane" :class="{active: tab == 0}" id="overview">
-                                    <div v-bbcode="character.character.description"></div>
+                                    <div v-bbcode="character.character.description" style="margin-bottom: 10px"></div>
                                     <character-kinks :character="character" :oldApi="oldApi" ref="tab0"></character-kinks>
                                 </div>
                                 <div role="tabpanel" class="tab-pane" :class="{active: tab == 1}" id="infotags">
@@ -133,6 +133,7 @@
 
         @Watch('name')
         async onCharacterSet(): Promise<void> {
+            this.tab = '0';
             return this._getCharacter();
         }
 

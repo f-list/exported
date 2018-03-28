@@ -58,7 +58,8 @@ const mainConfig = {
                 test: /\.vue$/,
                 loader: 'vue-loader',
                 options: {
-                    preserveWhitespace: false
+                    preserveWhitespace: false,
+                    cssSourceMap: false
                 }
             },
             {
@@ -71,9 +72,9 @@ const mainConfig = {
                 }
             },
             {test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
-            {test: /\.(woff|woff2)$/, loader: 'url-loader?prefix=font/&limit=5000'},
-            {test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'url-loader?limit=10000&mimetype=application/octet-stream'},
-            {test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'url-loader?limit=10000&mimetype=image/svg+xml'},
+            {test: /\.(woff2?)$/, loader: 'file-loader'},
+            {test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
+            {test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
             {test: /\.(wav|mp3|ogg)$/, loader: 'file-loader?name=sounds/[name].[ext]'},
             {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'}
         ]
@@ -93,7 +94,7 @@ const mainConfig = {
     ],
     resolve: {
         extensions: ['.ts', '.js', '.vue', '.css'],
-        alias: {qs: path.join(__dirname, 'qs.ts')}
+        alias: {qs: 'querystring'}
     },
     optimization: {
         splitChunks: {chunks: 'all', minChunks: 2, name: 'common'}
@@ -118,6 +119,7 @@ module.exports = function(mode) {
     rendererConfig.plugins.push(faPlugin);
     rendererConfig.module.rules.push({test: faPath, use: faPlugin.extract(cssOptions)});
     if(mode === 'production') {
+        process.env.NODE_ENV = 'production';
         mainConfig.devtool = rendererConfig.devtool = 'source-map';
         rendererConfig.plugins.push(new OptimizeCssAssetsPlugin());
     } else {

@@ -13,6 +13,12 @@
                 </label>
             </div>
             <div class="form-group">
+                <label class="control-label" for="enterSend">
+                    <input type="checkbox" id="enterSend" v-model="enterSend"/>
+                    {{l('settings.enterSend')}}
+                </label>
+            </div>
+            <div class="form-group">
                 <label class="control-label" for="showAvatars">
                     <input type="checkbox" id="showAvatars" v-model="showAvatars"/>
                     {{l('settings.showAvatars')}}
@@ -59,6 +65,12 @@
                 </label>
             </div>
             <div class="form-group">
+                <label class="control-label" for="alwaysNotify">
+                    <input type="checkbox" id="alwaysNotify" v-model="alwaysNotify" :disabled="!playSound"/>
+                    {{l('settings.alwaysNotify')}}
+                </label>
+            </div>
+            <div class="form-group">
                 <label class="control-label" for="notifications">
                     <input type="checkbox" id="notifications" v-model="notifications"/>
                     {{l('settings.notifications')}}
@@ -84,12 +96,6 @@
                 <label class="control-label" for="joinMessages">
                     <input type="checkbox" id="joinMessages" v-model="joinMessages"/>
                     {{l('settings.joinMessages')}}
-                </label>
-            </div>
-            <div class="form-group">
-                <label class="control-label" for="alwaysNotify">
-                    <input type="checkbox" id="alwaysNotify" v-model="alwaysNotify"/>
-                    {{l('settings.alwaysNotify')}}
                 </label>
             </div>
             <div class="form-group">
@@ -143,6 +149,7 @@
         logAds!: boolean;
         fontSize!: number;
         showNeedsReply!: boolean;
+        enterSend!: boolean;
 
         constructor() {
             super();
@@ -150,8 +157,7 @@
         }
 
         async created(): Promise<void> {
-            const available = core.settingsStore.getAvailableCharacters();
-            this.availableImports = available !== undefined ? (await available).filter((x) => x !== core.connection.character) : [];
+            this.availableImports = (await core.settingsStore.getAvailableCharacters()).filter((x) => x !== core.connection.character);
         }
 
         init = function(this: SettingsView): void {
@@ -173,6 +179,7 @@
             this.logAds = settings.logAds;
             this.fontSize = settings.fontSize;
             this.showNeedsReply = settings.showNeedsReply;
+            this.enterSend = settings.enterSend;
         };
 
         async doImport(): Promise<void> {
@@ -215,7 +222,8 @@
                 logMessages: this.logMessages,
                 logAds: this.logAds,
                 fontSize: isNaN(this.fontSize) ? 14 : this.fontSize < 10 ? 10 : this.fontSize > 24 ? 24 : this.fontSize,
-                showNeedsReply: this.showNeedsReply
+                showNeedsReply: this.showNeedsReply,
+                enterSend: this.enterSend
             };
             if(this.notifications) await core.notifications.requestPermission();
         }

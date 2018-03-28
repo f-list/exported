@@ -42,7 +42,7 @@ function rebuild(e: HTMLElement, binding: VNodeDirective): void {
                         newEl.disabled = true;
                 }
             } else {
-                newEl = document.createElement('optgroup');
+                newEl = <any>document.createElement('optgroup'); //tslint:disable-line:no-any
                 newEl.label = op.label;
                 buildOptions(newEl, op.options);
             }

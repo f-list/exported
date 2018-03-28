@@ -52,7 +52,7 @@ const vue = <Vue & VueState>new Vue({
 
 const data = {
     connection: <Connection | undefined>undefined,
-    logs: <Logs.Basic | undefined>undefined,
+    logs: <Logs | undefined>undefined,
     settingsStore: <Settings.Store | undefined>undefined,
     state: vue.state,
     bbCodeParser: <BBCodeParser | undefined>undefined,
@@ -79,7 +79,7 @@ const data = {
     }
 };
 
-export function init(this: void, connection: Connection, logsClass: new() => Logs.Basic, settingsClass: new() => Settings.Store,
+export function init(this: void, connection: Connection, logsClass: new() => Logs, settingsClass: new() => Settings.Store,
                      notificationsClass: new() => Notifications): void {
     data.connection = connection;
     data.logs = new logsClass();
@@ -93,7 +93,7 @@ export function init(this: void, connection: Connection, logsClass: new() => Log
 
 export interface Core {
     readonly connection: Connection
-    readonly logs: Logs.Basic
+    readonly logs: Logs
     readonly state: StateInterface
     readonly settingsStore: Settings.Store
     readonly conversations: Conversation.State

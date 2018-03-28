@@ -33,10 +33,10 @@ export function groupObjectBy<K extends string, T extends {[k in K]: string}>(ob
     const newObject: Dictionary<T[]> = {};
     for(const objkey in obj) {
         if(!(objkey in obj)) continue;
-        const realItem = obj[objkey]!;
+        const realItem = <T>obj[objkey];
         const newKey = realItem[key];
         if(newObject[<string>newKey] === undefined) newObject[newKey] = [];
-        newObject[<string>newKey]!.push(realItem);
+        newObject[newKey]!.push(realItem);
     }
     return newObject;
 }

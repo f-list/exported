@@ -1,13 +1,13 @@
 <template>
-    <div style="display:flex;flex-direction:column;height:100%;padding:1px" :class="'platform-' + platform">
+    <div style="display:flex;flex-direction:column;height:100%;padding:1px" :class="'platform-' + platform" @auxclick.prevent>
         <div v-html="styling"></div>
         <div style="display:flex;align-items:stretch;" class="border-bottom" id="window-tabs">
             <h4>F-Chat</h4>
-            <div class="btn" :class="'btn-' + (hasUpdate ? 'warning' : 'light')" @click="openMenu">
+            <div class="btn" :class="'btn-' + (hasUpdate ? 'warning' : 'light')" @click="openMenu" id="settings">
                 <i class="fa fa-cog"></i>
             </div>
             <ul class="nav nav-tabs" style="border-bottom:0" ref="tabs">
-                <li v-for="tab in tabs" :key="tab.view.id" class="nav-item">
+                <li v-for="tab in tabs" :key="tab.view.id" class="nav-item" @auxclick="remove(tab)">
                     <a href="#" @click.prevent="show(tab)" class="nav-link"
                         :class="{active: tab === activeTab, hasNew: tab.hasNew && tab !== activeTab}">
                         <img v-if="tab.user" :src="'https://static.f-list.net/images/avatar/' + tab.user.toLowerCase() + '.png'"/>
@@ -53,6 +53,12 @@
         return {x: 0, y: height, width: bounds.width, height: bounds.height - height};
     }
 
+    function destroyTab(tab: Tab): void {
+        tab.tray.destroy();
+        tab.view.webContents.loadURL('about:blank');
+        electron.ipcRenderer.send('tab-closed');
+    }
+
     interface Tab {
         user: string | undefined,
         view: Electron.BrowserView
@@ -80,8 +86,12 @@
             electron.ipcRenderer.on('settings', (_: Event, settings: GeneralSettings) => this.settings = settings);
             electron.ipcRenderer.on('allow-new-tabs', (_: Event, allow: boolean) => this.canOpenTab = allow);
             electron.ipcRenderer.on('open-tab', () => this.addTab());
-            electron.ipcRenderer.on('update-available', () => this.hasUpdate = true);
-            electron.ipcRenderer.on('quit', () => this.tabs.forEach((tab) => this.remove(tab, false)));
+            electron.ipcRenderer.on('update-available', (_: Event, available: boolean) => this.hasUpdate = available);
+            electron.ipcRenderer.on('fix-logs', () => this.activeTab!.view.webContents.send('fix-logs'));
+            electron.ipcRenderer.on('quit', () => {
+                this.tabs.forEach(destroyTab);
+                this.tabs = [];
+            });
             electron.ipcRenderer.on('connect', (_: Event, id: number, name: string) => {
                 const tab = this.tabMap[id];
                 tab.user = name;
@@ -130,12 +140,16 @@
             window.onbeforeunload = () => {
                 const isConnected = this.tabs.reduce((cur, tab) => cur || tab.user !== undefined, false);
                 if(process.env.NODE_ENV !== 'production' || !isConnected) {
-                    this.tabs.forEach((tab) => this.remove(tab, false));
+                    this.tabs.forEach(destroyTab);
                     return;
                 }
                 if(!this.settings.closeToTray)
                     return setImmediate(() => {
-                        if(confirm(l('chat.confirmLeave'))) this.tabs.forEach((tab) => this.remove(tab, false));
+                        if(confirm(l('chat.confirmLeave'))) {
+                            this.tabs.forEach(destroyTab);
+                            this.tabs = [];
+                            browserWindow.close();
+                        }
                     });
                 browserWindow.hide();
                 return false;
@@ -154,14 +168,15 @@
             }
         }
 
+        trayClicked(tab: Tab): void {
+            browserWindow.show();
+            if(this.isMaximized) browserWindow.maximize();
+            this.show(tab);
+        }
+
         createTrayMenu(tab: Tab): Electron.MenuItemConstructorOptions[] {
             return [
-                {
-                    label: l('action.open'), click: () => {
-                        browserWindow.show();
-                        this.show(tab);
-                    }
-                },
+                {label: l('action.open'), click: () => this.trayClicked(tab)},
                 {label: l('action.quit'), click: () => this.remove(tab, false)}
             ];
         }
@@ -169,7 +184,7 @@
         addTab(): void {
             const tray = new electron.remote.Tray(trayIcon);
             tray.setToolTip(l('title'));
-            tray.on('click', (_) => browserWindow.show());
+            tray.on('click', (_) => this.trayClicked(tab));
             const view = new electron.remote.BrowserView();
             view.setAutoResize({width: true, height: true});
             view.webContents.loadURL(url.format({
@@ -197,10 +212,7 @@
             this.tabs.splice(this.tabs.indexOf(tab), 1);
             electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
             delete this.tabMap[tab.view.webContents.id];
-            tab.tray.destroy();
-            tab.view.webContents.loadURL('about:blank');
-            electron.ipcRenderer.send('tab-closed');
-            delete tab.view;
+            destroyTab(tab);
             if(this.tabs.length === 0) {
                 if(process.env.NODE_ENV === 'production') browserWindow.close();
             } else if(this.activeTab === tab) this.show(this.tabs[0]);
@@ -230,7 +242,7 @@
         user-select: none;
         .btn {
             border-radius: 0;
-            padding: 5px 15px;
+            padding: 2px 15px;
             display: flex;
             margin: 0px -1px -1px 0;
             align-items: center;
@@ -245,7 +257,7 @@
             height: 100%;
             a {
                 display: flex;
-                padding: 5px 10px;
+                padding: 2px 10px;
                 height: 100%;
                 align-items: center;
                 &:first-child {
@@ -270,6 +282,10 @@
             align-self: center;
             -webkit-app-region: drag;
         }
+
+        .fa {
+            line-height: inherit;
+        }
     }
 
     #windowButtons .btn {
@@ -278,12 +294,19 @@
     }
 
     .platform-darwin {
-        #windowButtons .btn {
+        #windowButtons .btn, #settings {
             display: none;
         }
 
-        #window-tabs h4 {
-            margin: 9px 34px 9px 77px;
+        #window-tabs {
+            h4 {
+                margin: 0 34px 0 77px;
+            }
+
+            .btn, li a {
+                padding-top: 5px;
+                padding-bottom: 5px;
+            }
         }
     }
 </style>

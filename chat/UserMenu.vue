@@ -7,7 +7,7 @@
                 <h5 style="margin:0;line-height:1">{{character.name}}</h5>
                 {{l('status.' + character.status)}}
             </div>
-            <bbcode :text="character.statusText" v-show="character.statusText" class="list-group-item" @click.stop></bbcode>
+            <bbcode id="userMenuStatus" :text="character.statusText" v-show="character.statusText" class="list-group-item"></bbcode>
             <a tabindex="-1" :href="profileLink" target="_blank" v-if="showProfileFirst" class="list-group-item list-group-item-action">
                 <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a>
             <a tabindex="-1" href="#" @click.prevent="openConversation(true)" class="list-group-item list-group-item-action">
@@ -152,7 +152,7 @@
             const touch = e instanceof TouchEvent ? e.changedTouches[0] : e;
             let node = <HTMLElement & {character?: Character, channel?: Channel, touched?: boolean}>touch.target;
             while(node !== document.body) {
-                if(e.type !== 'click' && node === this.$refs['menu']) return;
+                if(e.type !== 'click' && node === this.$refs['menu'] || node.id === 'userMenuStatus') return;
                 if(node.character !== undefined || node.dataset['character'] !== undefined || node.parentNode === null) break;
                 node = node.parentElement!;
             }
@@ -217,5 +217,6 @@
 
     .user-view {
         cursor: pointer;
+        font-weight: 500;
     }
 </style>

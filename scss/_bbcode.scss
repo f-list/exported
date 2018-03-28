@@ -76,7 +76,7 @@ span.justifyText {
 }
 
 div.indentText {
-  padding-left: 3rem;
+  padding-left: 5%;
 }
 
 .character-avatar {
@@ -89,6 +89,13 @@ div.indentText {
   }
 }
 
+.bbcode {
+  white-space: pre-wrap;
+  .row > * {
+    margin-bottom: 5px;
+  }
+}
+
 .bbcode-collapse-header {
   font-weight: bold;
   cursor: pointer;
@@ -97,7 +104,6 @@ div.indentText {
 }
 
 .bbcode-collapse-body {
-  height: 0;
   margin-left: 0.5rem;
   transition: height 0.2s;
   overflow-y: hidden;
@@ -120,4 +126,9 @@ div.indentText {
 
 .link-domain {
   color: $text-muted;
+  text-shadow: none;
+}
+
+.user-link {
+  text-shadow: none;
 }

@@ -1,5 +1,5 @@
 <template>
-    <div style="display: flex; flex-direction: column;" id="command-help">
+    <modal dialogClass="modal-lg" :buttons="false" :action="l('commands.help')" id="command-help">
         <div style="overflow: auto;">
             <div v-for="command in filteredCommands">
                 <h4>{{command.name}}</h4>
@@ -16,12 +16,13 @@
             </div>
         </div>
         <input class="form-control" v-model="filter" :placeholder="l('filter')"/>
-    </div>
+    </modal>
 </template>
 
 <script lang="ts">
-    import Vue from 'vue';
     import Component from 'vue-class-component';
+    import CustomDialog from '../components/custom_dialog';
+    import Modal from '../components/Modal.vue';
     import core from './core';
     import l from './localize';
     import commands, {CommandContext, ParamType, Permission} from './slash_commands';
@@ -35,8 +36,10 @@
         syntax: string
     };
 
-    @Component
-    export default class CommandHelp extends Vue {
+    @Component({
+        components: {modal: Modal}
+    })
+    export default class CommandHelp extends CustomDialog {
         commands: CommandItem[] = [];
         filter = '';
         l = l;
@@ -96,6 +99,10 @@
 
         .params {
             padding-left: 20px;
+        }
+        .modal-body {
+            display: flex;
+            flex-direction: column;
         }
     }
 </style>

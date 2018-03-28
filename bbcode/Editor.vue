@@ -76,17 +76,23 @@
         private undoStack: string[] = [];
         private undoIndex = 0;
         private lastInput = 0;
+        //tslint:disable:strict-boolean-expressions
+        private resizeListener!: () => void;
 
         created(): void {
             this.parser = new CoreBBCodeParser();
+            this.resizeListener = () => {
+                const styles = getComputedStyle(this.element);
+                this.maxHeight = parseInt(styles.maxHeight!, 10) || 250;
+                this.minHeight = parseInt(styles.minHeight!, 10) || 60;
+            };
         }
 
         mounted(): void {
             this.element = <HTMLTextAreaElement>this.$refs['input'];
             const styles = getComputedStyle(this.element);
-            this.maxHeight = parseInt(styles.maxHeight! , 10);
-            //tslint:disable-next-line:strict-boolean-expressions
-            this.minHeight = parseInt(styles.minHeight!, 10) || 50;
+            this.maxHeight = parseInt(styles.maxHeight!, 10) || 250;
+            this.minHeight = parseInt(styles.minHeight!, 10) || 60;
             setInterval(() => {
                 if(Date.now() - this.lastInput >= 500 && this.text !== this.undoStack[0] && this.undoIndex === 0) {
                     if(this.undoStack.length >= 30) this.undoStack.pop();
@@ -101,6 +107,12 @@
             this.sizer.style.top = '0';
             this.sizer.style.visibility = 'hidden';
             this.resize();
+            window.addEventListener('resize', this.resizeListener);
+        }
+        //tslint:enable
+
+        destroyed(): void {
+            window.removeEventListener('resize', this.resizeListener);
         }
 
         get finalClasses(): string | undefined {
@@ -227,8 +239,10 @@
         resize(): void {
             this.sizer.style.fontSize = this.element.style.fontSize;
             this.sizer.style.lineHeight = this.element.style.lineHeight;
+            this.sizer.style.width = `${this.element.offsetWidth}px`;
             this.sizer.textContent = this.element.value;
             this.element.style.height = `${Math.max(Math.min(this.sizer.scrollHeight, this.maxHeight), this.minHeight)}px`;
+            this.sizer.style.width = '0';
         }
 
         onPaste(e: ClipboardEvent): void {

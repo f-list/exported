@@ -10,13 +10,21 @@ export const enum ParamType {
 
 const defaultDelimiters: {[key: number]: string | undefined} = {[ParamType.Character]: ',', [ParamType.String]: ''};
 
+export function isAction(this: void, text: string): boolean {
+    return /^\/me\b/i.test(text);
+}
+
+export function isWarn(this: void, text: string): boolean {
+    return /^\/warn\b/i.test(text);
+}
+
 export function isCommand(this: void, text: string): boolean {
-    return text.charAt(0) === '/' && text.substr(1, 2) !== 'me' && text.substr(1, 4) !== 'warn';
+    return text.charAt(0) === '/' && !isAction(text) && !isWarn(text);
 }
 
 export function parse(this: void | never, input: string, context: CommandContext): ((this: Conversation) => void) | string {
     const commandEnd = input.indexOf(' ');
-    const name = input.substring(1, commandEnd !== -1 ? commandEnd : undefined);
+    const name = input.substring(1, commandEnd !== -1 ? commandEnd : undefined).toLowerCase();
     const command = commands[name];
     if(command === undefined) return l('commands.unknown');
     const args = `${commandEnd !== -1 ? input.substr(commandEnd + 1) : ''}`;

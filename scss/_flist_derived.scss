@@ -17,10 +17,10 @@ $collapse-border: darken($card-border-color, 25%) !default;
 
 // Character page quick kink comparison
 $quick-compare-active-border: $black-color !default;
-$quick-compare-favorite-bg: theme-color-bg("info") !default;
-$quick-compare-yes-bg: theme-color-bg("success") !default;
-$quick-compare-maybe-bg: theme-color-bg("warning") !default;
-$quick-compare-no-bg: theme-color-bg("danger") !default;
+$quick-compare-favorite-bg: theme-color-level("info", -6) !default;
+$quick-compare-yes-bg: theme-color-level("success", -6) !default;
+$quick-compare-maybe-bg: theme-color-level("warning", -6) !default;
+$quick-compare-no-bg: theme-color-level("danger", -6) !default;
 
 // character page badges
 $character-badge-bg: darken($card-bg, 10%) !default;

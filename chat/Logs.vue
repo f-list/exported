@@ -1,49 +1,46 @@
 <template>
-    <span>
-        <a href="#" @click.prevent="showLogs" class="btn">
-            <span :class="isPersistent ? 'fa fa-file-alt' : 'fa fa-download'"></span>
-            <span class="btn-text">{{l('logs.title')}}</span>
-        </a>
-        <modal v-if="isPersistent" :buttons="false" ref="dialog" id="logs-dialog" :action="l('logs.title')"
-            dialogClass="modal-lg w-100 modal-dialog-centered" @open="onOpen">
-            <div class="form-group row" style="flex-shrink:0">
-                <label class="col-2 col-form-label">{{l('logs.conversation')}}</label>
+    <modal :buttons="false" ref="dialog" id="logs-dialog" :action="l('logs.title')"
+        dialogClass="modal-lg w-100 modal-dialog-centered" @open="onOpen">
+        <div class="form-group row" style="flex-shrink:0">
+            <label class="col-2 col-form-label">{{l('logs.conversation')}}</label>
+            <div class="col-10">
                 <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
-                    :placeholder="l('filter')" @input="loadMessages" class="form-control col-10">
-                    <template slot-scope="s">{{s.option && ((s.option.id[0] == '#' ? '#' : '') + s.option.name)}}</template>
+                    :placeholder="l('filter')" @input="loadMessages">
+                    <template slot-scope="s">
+                        {{s.option && ((s.option.key[0] == '#' ? '#' : '') + s.option.name) || l('logs.selectConversation')}}</template>
                 </filterable-select>
             </div>
-            <div class="form-group row" style="flex-shrink:0">
-                <label for="date" class="col-2 col-form-label">{{l('logs.date')}}</label>
-                <div class="col-8">
-                    <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
-                        <option>{{l('logs.selectDate')}}</option>
-                        <option v-for="date in dates" :value="date.getTime()">{{formatDate(date)}}</option>
-                    </select>
-                </div>
-                <div class="col-2">
-                    <button @click="downloadDay" class="btn btn-secondary form-control" :disabled="!selectedDate"><span
-                        class="fa fa-download"></span></button>
-                </div>
+        </div>
+        <div class="form-group row" style="flex-shrink:0">
+            <label for="date" class="col-2 col-form-label">{{l('logs.date')}}</label>
+            <div class="col-8">
+                <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
+                    <option :value="null">{{l('logs.selectDate')}}</option>
+                    <option v-for="date in dates" :value="date.getTime()">{{formatDate(date)}}</option>
+                </select>
             </div>
-            <div class="messages-both" style="overflow: auto">
-                <message-view v-for="message in filteredMessages" :message="message" :key="message.id"></message-view>
+            <div class="col-2">
+                <button @click="downloadDay" class="btn btn-secondary form-control" :disabled="!selectedDate"><span
+                    class="fa fa-download"></span></button>
             </div>
-            <input class="form-control" v-model="filter" :placeholder="l('filter')" v-show="messages" type="text"/>
-        </modal>
-    </span>
+        </div>
+        <div class="messages-both" style="overflow: auto">
+            <message-view v-for="message in filteredMessages" :message="message" :key="message.id"></message-view>
+        </div>
+        <input class="form-control" v-model="filter" :placeholder="l('filter')" v-show="messages" type="text"/>
+    </modal>
 </template>
 
 <script lang="ts">
     import {format} from 'date-fns';
-    import Vue from 'vue';
     import Component from 'vue-class-component';
     import {Prop, Watch} from 'vue-property-decorator';
+    import CustomDialog from '../components/custom_dialog';
     import FilterableSelect from '../components/FilterableSelect.vue';
     import Modal from '../components/Modal.vue';
     import {messageToString} from './common';
     import core from './core';
-    import {Conversation, Logs as LogInterfaces} from './interfaces';
+    import {Conversation} from './interfaces';
     import l from './localize';
     import MessageView from './message_view';
 
@@ -58,14 +55,14 @@
     @Component({
         components: {modal: Modal, 'message-view': MessageView, 'filterable-select': FilterableSelect}
     })
-    export default class Logs extends Vue {
+    export default class Logs extends CustomDialog {
         //tslint:disable:no-null-keyword
         @Prop({required: true})
         readonly conversation!: Conversation;
-        selectedConversation: {id: string, name: string} | null = null;
+        selectedConversation: {key: string, name: string} | null = null;
+        dates: ReadonlyArray<Date> = [];
         selectedDate: string | null = null;
-        isPersistent = LogInterfaces.isPersistent(core.logs);
-        conversations = LogInterfaces.isPersistent(core.logs) ? core.logs.conversations : undefined;
+        conversations = core.logs.conversations.slice();
         l = l;
         filter = '';
         messages: ReadonlyArray<Conversation.Message> = [];
@@ -78,51 +75,37 @@
                 (x) => filter.test(x.text) || x.type !== Conversation.Message.Type.Event && filter.test(x.sender.name));
         }
 
-        mounted(): void {
-            this.conversationChanged();
+        async mounted(): Promise<void> {
+            return this.conversationChanged();
         }
 
-        filterConversation(filter: RegExp, conversation: {id: string, name: string}): boolean {
+        filterConversation(filter: RegExp, conversation: {key: string, name: string}): boolean {
             return filter.test(conversation.name);
         }
 
         @Watch('conversation')
-        conversationChanged(): void {
-            this.selectedConversation =
-                //tslint:disable-next-line:strict-boolean-expressions
-                this.conversations !== undefined && this.conversations.filter((x) => x.id === this.conversation.key)[0] || null;
+        async conversationChanged(): Promise<void> {
+            //tslint:disable-next-line:strict-boolean-expressions
+            this.selectedConversation = this.conversations.filter((x) => x.key === this.conversation.key)[0] || null;
         }
 
-        async showLogs(): Promise<void> {
-            if(this.isPersistent) (<Modal>this.$refs['dialog']).show();
-            else this.download(`logs-${this.conversation.name}.txt`, await core.logs.getBacklog(this.conversation));
+        @Watch('selectedConversation')
+        async conversationSelected(): Promise<void> {
+            this.dates = this.selectedConversation === null ? [] :
+                (await core.logs.getLogDates(this.selectedConversation.key)).slice().reverse();
         }
 
         download(file: string, logs: ReadonlyArray<Conversation.Message>): void {
-            const blob = new Blob(logs.map((x) => messageToString(x, formatTime)));
-            //tslint:disable-next-line:strict-type-predicates
-            if(navigator.msSaveBlob !== undefined) {
-                navigator.msSaveBlob(blob, file);
-                return;
-            }
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            if('download' in a) {
-                a.href = url;
-                a.setAttribute('download', file);
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                setTimeout(() => {
-                    a.click();
-                    document.body.removeChild(a);
-                });
-            } else {
-                const iframe = document.createElement('iframe');
-                document.body.appendChild(iframe);
-                iframe.src = url;
-                setTimeout(() => document.body.removeChild(iframe));
-            }
-            setTimeout(() => self.URL.revokeObjectURL(a.href));
+            a.target = '_blank';
+            a.href = `data:${encodeURIComponent(file)},${encodeURIComponent(logs.map((x) => messageToString(x, formatTime)).join(''))}`;
+            a.setAttribute('download', file);
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            setTimeout(() => {
+                a.click();
+                document.body.removeChild(a);
+            });
         }
 
         downloadDay(): void {
@@ -131,20 +114,23 @@
         }
 
         async onOpen(): Promise<void> {
-            this.conversations = (<LogInterfaces.Persistent>core.logs).conversations;
+            this.conversations = core.logs.conversations.slice();
+            this.conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
             this.$forceUpdate();
             await this.loadMessages();
         }
 
-        get dates(): ReadonlyArray<Date> | undefined {
-            if(!LogInterfaces.isPersistent(core.logs) || this.selectedConversation === null) return;
-            return core.logs.getLogDates(this.selectedConversation.id).slice().reverse();
-        }
-
         async loadMessages(): Promise<ReadonlyArray<Conversation.Message>> {
-            if(this.selectedDate === null || this.selectedConversation === null || !LogInterfaces.isPersistent(core.logs))
+            if(this.selectedDate === null || this.selectedConversation === null)
                 return this.messages = [];
-            return this.messages = await core.logs.getLogs(this.selectedConversation.id, new Date(this.selectedDate));
+            return this.messages = await core.logs.getLogs(this.selectedConversation.key, new Date(this.selectedDate));
         }
     }
 </script>
+
+<style>
+    #logs-dialog .modal-body {
+        display: flex;
+        flex-direction: column;
+    }
+</style>

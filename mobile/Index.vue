@@ -44,8 +44,8 @@
         </div>
         <chat v-else :ownCharacters="characters" :defaultCharacter="defaultCharacter" ref="chat"></chat>
         <modal :buttons="false" ref="profileViewer" dialogClass="profile-viewer">
-            <character-page :authenticated="false" :oldApi="true" :name="profileName"></character-page>
-            <template slot="title">{{profileName}} <a class="btn" @click="openProfileInBrowser"><i class="fa fa-external-link-alt"/></a>
+            <character-page :authenticated="true" :oldApi="true" :name="profileName"></character-page>
+            <template slot="title">{{profileName}} <a class="btn" @click="openProfileInBrowser"><i class="fa fa-external-link-alt"></i></a>
             </template>
         </modal>
     </div>
@@ -99,7 +99,6 @@
         settingsStore = new SettingsStore();
         l = l;
         settings: GeneralSettings | null = null;
-        importProgress = 0;
         profileName = '';
 
         async created(): Promise<void> {

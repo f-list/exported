@@ -1,10 +1,10 @@
 <template>
-    <dropdown class="dropdown filterable-select">
+    <dropdown class="filterable-select" :keepOpen="keepOpen">
         <template slot="title" v-if="multiple">{{label}}</template>
         <slot v-else slot="title" :option="selected">{{label}}</slot>
 
         <div style="padding:10px;">
-            <input v-model="filter" class="form-control" :placeholder="placeholder"/>
+            <input v-model="filter" class="form-control" :placeholder="placeholder" @mousedown.stop @focus="keepOpen = true"  @blur="keepOpen = false"/>
         </div>
         <div class="dropdown-items">
             <template v-if="multiple">
@@ -47,6 +47,7 @@
         readonly title?: string;
         filter = '';
         selected: object | object[] | null = this.value !== undefined ? this.value : (this.multiple !== undefined ? [] : null);
+        keepOpen = false;
 
         @Watch('value')
         watchValue(newValue: object | object[] | null): void {

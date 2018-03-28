@@ -2,12 +2,9 @@ const path = require('path');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 const config = {
-    entry: {
-        chat: [__dirname + '/chat.ts', __dirname + '/index.html']
-    },
+    entry: __dirname + '/chat.ts',
     output: {
-        path: __dirname + '/www',
-        filename: '[name].js'
+        path: __dirname + '/dist'
     },
     context: __dirname,
     module: {
@@ -34,8 +31,7 @@ const config = {
             {test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
             {test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
             {test: /\.(wav|mp3|ogg)$/, loader: 'file-loader?name=sounds/[name].[ext]'},
-            {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'},
-            {test: /\.scss/, use: ['css-loader', 'sass-loader']}
+            {test: /\.scss/, use: ['style-loader', 'css-loader', 'sass-loader']}
         ]
     },
     plugins: [

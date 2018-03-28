@@ -34,7 +34,7 @@ export class GeneralSettings {
 
 type Index = {[key: string]: {name: string, dates: number[]} | undefined};
 
-export class Logs implements Logging.Persistent {
+export class Logs implements Logging {
     private index: Index = {};
 
     constructor() {
@@ -63,16 +63,15 @@ export class Logs implements Logging.Persistent {
             .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
     }
 
-    getLogDates(key: string): ReadonlyArray<Date> {
+    async getLogDates(key: string): Promise<ReadonlyArray<Date>> {
         const entry = this.index[key];
         if(entry === undefined) return [];
         return entry.dates.map((x) => new Date(x * dayMs));
     }
 
-    get conversations(): ReadonlyArray<{id: string, name: string}> {
-        const conversations: {id: string, name: string}[] = [];
-        for(const key in this.index) conversations.push({id: key, name: this.index[key]!.name});
-        conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
+    get conversations(): ReadonlyArray<{key: string, name: string}> {
+        const conversations: {key: string, name: string}[] = [];
+        for(const key in this.index) conversations.push({key, name: this.index[key]!.name});
         return conversations;
     }
 }

@@ -1,9 +1,9 @@
 .purpleText {
-  text-shadow: #306 0 0 4px;
+  text-shadow: #306 1px 1px 1px, #306 -1px 1px 1px, #306 1px -1px 1px, #306 -1px -1px 1px;
 }
 
 .blackText {
-  text-shadow: $gray-800 0 0 4px;
+  text-shadow: $gray-600 1px 1px 1px, $gray-600 -1px 1px 1px, $gray-600 1px -1px 1px, $gray-600 -1px -1px 1px;
 }
 
 $blue-color: #06f;

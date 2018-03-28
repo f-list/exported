@@ -1,6 +1,6 @@
 import {CoreBBCodeParser} from './core';
 import {InlineDisplayMode} from './interfaces';
-import {BBCodeCustomTag, BBCodeSimpleTag} from './parser';
+import {BBCodeCustomTag, BBCodeSimpleTag, BBCodeTextTag} from './parser';
 
 interface InlineImage {
     id: number
@@ -39,8 +39,8 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
         super();
         const hrTag = new BBCodeSimpleTag('hr', 'hr', [], []);
         hrTag.noClosingTag = true;
-        this.addTag('hr', hrTag);
-        this.addTag('quote', new BBCodeCustomTag('quote', (parser, parent, param) => {
+        this.addTag(hrTag);
+        this.addTag(new BBCodeCustomTag('quote', (parser, parent, param) => {
             if(param !== '')
                 parser.warning('Unexpected paramter on quote tag.');
             const element = parser.createElement('blockquote');
@@ -51,15 +51,23 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             parent.appendChild(element);
             return element;
         }));
-        this.addTag('left', new BBCodeSimpleTag('left', 'span', ['leftText']));
-        this.addTag('right', new BBCodeSimpleTag('right', 'span', ['rightText']));
-        this.addTag('center', new BBCodeSimpleTag('center', 'span', ['centerText']));
-        this.addTag('justify', new BBCodeSimpleTag('justify', 'span', ['justifyText']));
-        this.addTag('big', new BBCodeSimpleTag('big', 'span', ['bigText'], ['url', 'i', 'u', 'b', 'color', 's']));
-        this.addTag('small', new BBCodeSimpleTag('small', 'span', ['smallText'], ['url', 'i', 'u', 'b', 'color', 's']));
-        this.addTag('indent', new BBCodeSimpleTag('indent', 'div', ['indentText']));
-        this.addTag('heading', new BBCodeSimpleTag('heading', 'h2', [], ['url', 'i', 'u', 'b', 'color', 's']));
-        this.addTag('collapse', new BBCodeCustomTag('collapse', (parser, parent, param) => {
+        this.addTag(new BBCodeSimpleTag('left', 'span', ['leftText']));
+        this.addTag(new BBCodeSimpleTag('right', 'span', ['rightText']));
+        this.addTag(new BBCodeSimpleTag('center', 'span', ['centerText']));
+        this.addTag(new BBCodeSimpleTag('justify', 'span', ['justifyText']));
+        this.addTag(new BBCodeSimpleTag('big', 'span', ['bigText'], ['url', 'i', 'u', 'b', 'color', 's']));
+        this.addTag(new BBCodeSimpleTag('small', 'span', ['smallText'], ['url', 'i', 'u', 'b', 'color', 's']));
+        this.addTag(new BBCodeSimpleTag('indent', 'div', ['indentText']));
+        this.addTag(new BBCodeSimpleTag('heading', 'h2', [], ['url', 'i', 'u', 'b', 'color', 's']));
+        this.addTag(new BBCodeSimpleTag('row', 'div', ['row']));
+        this.addTag(new BBCodeCustomTag('col', (parser, parent, param) => {
+            const col = parser.createElement('div');
+            col.className = param === '1' ? 'col-lg-3 col-md-4 col-12' : param === '2' ? 'col-lg-4 col-md-6 col-12' :
+                param === '3' ? 'col-lg-6 col-md-8 col-12' : 'col-md';
+            parent.appendChild(col);
+            return col;
+        }));
+        this.addTag(new BBCodeCustomTag('collapse', (parser, parent, param) => {
             if(param === '') { //tslint:disable-line:curly
                 parser.warning('title parameter is required.');
                 // HACK: Compatability fix with old site. Titles are not trimmed on old site, so empty collapse titles need to be allowed.
@@ -76,25 +84,33 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             headerText.appendChild(document.createTextNode(param));
             outer.appendChild(headerText);
             const body = parser.createElement('div');
-            body.className = 'card-body bbcode-collapse-body closed';
+            body.className = 'bbcode-collapse-body';
             body.style.height = '0';
             outer.appendChild(body);
+            const inner = parser.createElement('div');
+            inner.className = 'card-body';
+            body.appendChild(inner);
+            let timeout: number;
             headerText.addEventListener('click', () => {
                 const isCollapsed = parseInt(body.style.height!, 10) === 0;
-                body.style.height = isCollapsed ? `${body.scrollHeight}px` : '0';
+                if(isCollapsed) timeout = window.setTimeout(() => body.style.height = '', 200);
+                else {
+                    clearTimeout(timeout);
+                    body.style.transition = 'initial';
+                    setImmediate(() => {
+                        body.style.transition = '';
+                        body.style.height = '0';
+                    });
+                }
+                body.style.height = `${body.scrollHeight}px`;
                 icon.className = `fas fa-chevron-${isCollapsed ? 'up' : 'down'}`;
             });
             parent.appendChild(outer);
-            return body;
+            return inner;
         }));
-        this.addTag('user', new BBCodeCustomTag('user', (parser, parent, _) => {
-            const el = parser.createElement('span');
-            parent.appendChild(el);
-            return el;
-        }, (parser, element, parent, param) => {
+        this.addTag(new BBCodeTextTag('user', (parser, parent, param, content) => {
             if(param !== '')
                 parser.warning('Unexpected parameter on user tag.');
-            const content = element.innerText;
             if(!usernameRegex.test(content))
                 return;
             const a = parser.createElement('a');
@@ -102,16 +118,12 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             a.target = '_blank';
             a.className = 'character-link';
             a.appendChild(document.createTextNode(content));
-            parent.replaceChild(a, element);
-        }, []));
-        this.addTag('icon', new BBCodeCustomTag('icon', (parser, parent, _) => {
-            const el = parser.createElement('span');
-            parent.appendChild(el);
-            return el;
-        }, (parser, element, parent, param) => {
+            parent.appendChild(a);
+            return a;
+        }));
+        this.addTag(new BBCodeTextTag('icon', (parser, parent, param, content) => {
             if(param !== '')
                 parser.warning('Unexpected parameter on icon tag.');
-            const content = element.innerText;
             if(!usernameRegex.test(content))
                 return;
             const a = parser.createElement('a');
@@ -120,17 +132,14 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             const img = parser.createElement('img');
             img.src = `${this.settings.staticDomain}images/avatar/${content.toLowerCase()}.png`;
             img.className = 'character-avatar icon';
+            img.title = img.alt = content;
             a.appendChild(img);
-            parent.replaceChild(a, element);
-        }, []));
-        this.addTag('eicon', new BBCodeCustomTag('eicon', (parser, parent, _) => {
-            const el = parser.createElement('span');
-            parent.appendChild(el);
-            return el;
-        }, (parser, element, parent, param) => {
+            parent.appendChild(a);
+            return a;
+        }));
+        this.addTag(new BBCodeTextTag('eicon', (parser, parent, param, content) => {
             if(param !== '')
                 parser.warning('Unexpected parameter on eicon tag.');
-            const content = element.innerText;
 
             if(!usernameRegex.test(content))
                 return;
@@ -140,14 +149,11 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
             const img = parser.createElement('img');
             img.src = `${this.settings.staticDomain}images/eicon/${content.toLowerCase()}${extension}`;
             img.className = 'character-avatar icon';
-            parent.replaceChild(img, element);
-        }, []));
-        this.addTag('img', new BBCodeCustomTag('img', (parser, parent) => {
-            const el = parser.createElement('span');
-            parent.appendChild(el);
-            return el;
-        }, (p, element, parent, param) => {
-            const content = element.textContent!;
+            img.title = img.alt = content;
+            parent.appendChild(img);
+            return img;
+        }));
+        this.addTag(new BBCodeTextTag('img', (p, parent, param, content) => {
             const parser = <StandardBBCodeParser>p;
             if(!this.allowInlines) {
                 parser.warning('Inline images are not allowed here.');
@@ -168,24 +174,26 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
                 return undefined;
             }
             inline.name = content;
+            let element: HTMLElement;
             if(displayMode === InlineDisplayMode.DISPLAY_NONE || (displayMode === InlineDisplayMode.DISPLAY_SFW && inline.nsfw)) {
-                const el = parser.createElement('a');
+                const el = element = parser.createElement('a');
                 el.className = 'unloadedInline';
                 el.href = '#';
                 el.dataset.inlineId = param;
                 el.onclick = () => {
-                    Array.prototype.forEach.call(document.getElementsByClassName('unloadedInline'), ((e: HTMLElement) => {
-                        const showInline = parser.inlines![e.dataset.inlineId!];
+                    Array.from(document.getElementsByClassName('unloadedInline')).forEach((e) => {
+                        const showInline = parser.inlines![(<HTMLElement>e).dataset.inlineId!];
                         if(typeof showInline !== 'object') return;
                         e.parentElement!.replaceChild(parser.createInline(showInline), e);
-                    }));
+                    });
                     return false;
                 };
                 const prefix = inline.nsfw ? '[NSFW Inline] ' : '[Inline] ';
                 el.appendChild(document.createTextNode(prefix));
-                parent.replaceChild(el, element);
-            } else parent.replaceChild(parser.createInline(inline), element);
-        }, []));
+                parent.appendChild(el);
+            } else parent.appendChild(element = parser.createInline(inline));
+            return element;
+        }));
     }
 }
 

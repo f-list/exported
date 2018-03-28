@@ -9,7 +9,7 @@
         "build": "node ../webpack development",
         "build:dist": "node ../webpack production",
         "watch": "node ../webpack watch",
-        "start": "electron app"
+        "start": "../node_modules/.bin/electron app"
     },
     "build": {
         "appId": "net.f-list.f-chat",

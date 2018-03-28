@@ -42,6 +42,7 @@ export class Settings implements ISettings {
     logAds = false;
     fontSize = 14;
     showNeedsReply = false;
+    enterSend = true;
 }
 
 export class ConversationSettings implements Conversation.Settings {
@@ -83,7 +84,7 @@ export class Message implements Conversation.ChatMessage {
 
     constructor(readonly type: Conversation.Message.Type, readonly sender: Character, readonly text: string,
                 readonly time: Date = new Date()) {
-        if(Conversation.Message.Type[type] === undefined) throw new Error('Unknown type'); /*tslint:disable-line*/ //TODO debug code
+        if(Conversation.Message.Type[type] === undefined) throw new Error('Unknown type'); //tslint:disable-line
     }
 }
 

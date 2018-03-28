@@ -1,4 +1,4 @@
-import {Component, CreateElement, RenderContext, VNode, VNodeChildren} from 'vue';
+import {Component, CreateElement, RenderContext, VNode, VNodeChildrenArrayContents} from 'vue';
 import {Channel} from '../fchat';
 import {BBCodeView} from './bbcode';
 import {formatTime} from './common';
@@ -24,7 +24,8 @@ const MessageView: Component = {
     render(createElement: CreateElement,
            context: RenderContext<{message: Conversation.Message, classes?: string, channel?: Channel}>): VNode {
         const message = context.props.message;
-        const children: (VNode | string | VNodeChildren)[] = [`[${formatTime(message.time)}] `];
+        const children: VNodeChildrenArrayContents =
+            [createElement('span', {staticClass: 'message-time'}, `[${formatTime(message.time)}] `)];
         /*tslint:disable-next-line:prefer-template*///unreasonable here
         let classes = `message message-${Conversation.Message.Type[message.type].toLowerCase()}` +
             (core.state.settings.messageSeparators ? ' message-block' : '') +

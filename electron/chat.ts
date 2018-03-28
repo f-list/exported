@@ -29,6 +29,7 @@
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
+import {exec} from 'child_process';
 import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -95,6 +96,7 @@ webContents.on('context-menu', (_, props) => {
             id: 'copy',
             label: l('action.copy'),
             role: can('Copy') ? 'copy' : '',
+            accelerator: 'CmdOrCtrl+C',
             enabled: can('Copy')
         });
     if(props.isEditable)
@@ -102,11 +104,13 @@ webContents.on('context-menu', (_, props) => {
             id: 'cut',
             label: l('action.cut'),
             role: can('Cut') ? 'cut' : '',
+            accelerator: 'CmdOrCtrl+X',
             enabled: can('Cut')
         }, {
             id: 'paste',
             label: l('action.paste'),
             role: props.editFlags.canPaste ? 'paste' : '',
+            accelerator: 'CmdOrCtrl+V',
             enabled: props.editFlags.canPaste
         });
     else if(props.linkURL.length > 0 && props.mediaType === 'none' && props.linkURL.substr(0, props.pageURL.length) !== props.pageURL)
@@ -119,6 +123,13 @@ webContents.on('context-menu', (_, props) => {
                 else
                     electron.clipboard.writeText(props.linkURL);
             }
+        });
+    else if(hasText)
+        menuTemplate.push({
+            label: l('action.copyWithoutBBCode'),
+            enabled: can('Copy'),
+            accelerator: 'CmdOrCtrl+Shift+C',
+            click: () => electron.clipboard.writeText(props.selectionText)
         });
     if(props.misspelledWord !== '') {
         const corrections = spellchecker.getCorrectionsForMisspelling(props.misspelledWord);
@@ -150,7 +161,9 @@ webContents.on('context-menu', (_, props) => {
     if(menuTemplate.length > 0) electron.remote.Menu.buildFromTemplate(menuTemplate).popup();
 });
 
-const dictDir = path.join(electron.remote.app.getPath('userData'), 'spellchecker');
+let dictDir = path.join(electron.remote.app.getPath('userData'), 'spellchecker');
+if(process.platform === 'win32')
+   exec(`for /d %I in ("${dictDir}") do @echo %~sI`, (_, stdout) => { dictDir = stdout.trim(); });
 electron.webFrame.setSpellCheckProvider('', false, {spellCheck: (text) => !spellchecker.isMisspelled(text)});
 electron.ipcRenderer.on('settings', async(_: Event, s: GeneralSettings) => spellchecker.setDictionary(s.spellcheckLang, dictDir));
 

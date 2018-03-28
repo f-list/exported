@@ -37,7 +37,7 @@
         <chat v-else :ownCharacters="characters" :defaultCharacter="defaultCharacter" ref="chat"></chat>
         <div ref="linkPreview" class="link-preview"></div>
         <modal :action="l('importer.importing')" ref="importModal" :buttons="false">
-            {{l('importer.importingNote')}}
+            <span style="white-space:pre-wrap">{{l('importer.importingNote')}}</span>
             <div class="progress" style="margin-top:5px">
                 <div class="progress-bar" :style="{width: importProgress * 100 + '%'}"></div>
             </div>
@@ -46,6 +46,15 @@
             <character-page :authenticated="true" :oldApi="true" :name="profileName" :image-preview="true"></character-page>
             <template slot="title">{{profileName}} <a class="btn" @click="openProfileInBrowser"><i class="fa fa-external-link-alt"/></a>
             </template>
+        </modal>
+        <modal :action="l('fixLogs.action')" ref="fixLogsModal" @submit="fixLogs" buttonClass="btn-danger">
+            <span style="white-space:pre-wrap">{{l('fixLogs.text')}}</span>
+            <div class="form-group">
+                <label class="control-label">{{l('fixLogs.character')}}</label>
+                <select id="import" class="form-control" v-model="fixCharacter">
+                    <option v-for="character in fixCharacters" :value="character">{{character}}</option>
+                </select>
+            </div>
         </modal>
     </div>
 </template>
@@ -71,7 +80,7 @@
     import Connection from '../fchat/connection';
     import CharacterPage from '../site/character_page/character_page.vue';
     import {GeneralSettings, nativeRequire} from './common';
-    import {Logs, SettingsStore} from './filesystem';
+    import {fixLogs, Logs, SettingsStore} from './filesystem';
     import * as SlimcatImporter from './importer';
     import Notifications from './notifications';
 
@@ -107,6 +116,8 @@
         settings!: GeneralSettings;
         importProgress = 0;
         profileName = '';
+        fixCharacters: ReadonlyArray<string> = [];
+        fixCharacter = '';
 
         async created(): Promise<void> {
             if(this.settings.account.length > 0) this.saveLogin = true;
@@ -121,6 +132,11 @@
                 const profileViewer = <Modal>this.$refs['profileViewer'];
                 this.profileName = name;
                 profileViewer.show();
+            });
+            electron.ipcRenderer.on('fix-logs', async() => {
+                this.fixCharacters = await new SettingsStore().getAvailableCharacters();
+                this.fixCharacter = this.fixCharacters[0];
+                (<Modal>this.$refs['fixLogsModal']).show();
             });
 
             window.addEventListener('beforeunload', () => {
@@ -142,7 +158,10 @@
                     this.error = data.error;
                     return;
                 }
-                if(this.saveLogin) electron.ipcRenderer.send('save-login', this.settings.account, this.settings.host);
+                if(this.saveLogin) {
+                    electron.ipcRenderer.send('save-login', this.settings.account, this.settings.host);
+                    await keyStore.setPassword(this.settings.account, this.password);
+                }
                 Socket.host = this.settings.host;
                 const connection = new Connection(`F-Chat 3.0 (${process.platform})`, electron.remote.app.getVersion(), Socket,
                     this.settings.account, this.password);
@@ -151,7 +170,7 @@
                         alert(l('login.alreadyLoggedIn'));
                         return core.connection.close();
                     }
-                    this.character = core.connection.character;
+                    this.character = connection.character;
                     if((await core.settingsStore.get('settings')) === undefined &&
                         SlimcatImporter.canImportCharacter(core.connection.character)) {
                         if(!confirm(l('importer.importGeneral'))) return core.settingsStore.set('settings', new Settings());
@@ -181,6 +200,19 @@
                 if(process.env.NODE_ENV !== 'production') throw e;
             } finally {
                 this.loggingIn = false;
+            }
+        }
+
+        fixLogs(): void {
+            if(!electron.ipcRenderer.sendSync('connect', this.fixCharacter)) return alert(l('login.alreadyLoggedIn'));
+            try {
+                fixLogs(this.fixCharacter);
+                alert(l('fixLogs.success'));
+            } catch(e) {
+                alert(l('fixLogs.error'));
+                throw e;
+            } finally {
+                electron.ipcRenderer.send('disconnect', this.fixCharacter);
             }
         }
 

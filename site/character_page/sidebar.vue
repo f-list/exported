@@ -1,16 +1,12 @@
 <template>
     <div id="character-page-sidebar" class="card bg-light">
         <div class="card-header">
-            <div class="character-image-container">
-                <span class="character-name">{{ character.character.name }}</span>
-                <div v-if="character.character.title" class="character-title">{{ character.character.title }}</div>
-                <character-action-menu :character="character"></character-action-menu>
-            </div>
+            <span class="character-name">{{ character.character.name }}</span>
+            <div v-if="character.character.title" class="character-title">{{ character.character.title }}</div>
+            <character-action-menu :character="character"></character-action-menu>
         </div>
         <div class="card-body">
-            <div class="character-image-container">
-                <img :src="avatarUrl(character.character.name)" class="character-avatar" style="margin-right:10px">
-            </div>
+            <img :src="avatarUrl(character.character.name)" class="character-avatar" style="margin-right:10px">
             <div v-if="authenticated" class="d-flex justify-content-between flex-wrap character-links-block">
                 <template v-if="character.is_self">
                     <a :href="editUrl" class="edit-link"><i class="fa fa-fw fa-pencil-alt"></i>Edit</a>
@@ -19,14 +15,17 @@
                 </template>
                 <template v-else>
                     <span v-if="character.self_staff || character.settings.prevent_bookmarks !== true">
-                        <a @click="toggleBookmark" :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}">
-                            <i class="fa fa-fw" :class="{'fa-minus': character.bookmarked, 'fa-plus': !character.bookmarked}"></i>Bookmark</a>
+                        <a @click.prevent="toggleBookmark" :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}"
+                            href="#" class="btn">
+                            <i class="fa fa-fw" :class="{'fa-minus': character.bookmarked, 'fa-plus': !character.bookmarked}"></i>Bookmark
+                        </a>
                         <span v-if="character.settings.prevent_bookmarks" class="prevents-bookmarks">!</span>
                     </span>
-                    <a @click="showFriends" class="friend-link"><i class="fa fa-fw fa-user"></i>Friend</a>
-                    <a v-if="!oldApi" @click="showReport" class="report-link"><i class="fa fa-fw fa-exclamation-triangle"></i>Report</a>
+                    <a href="#" @click.prevent="showFriends" class="friend-link btn"><i class="fa fa-fw fa-user"></i>Friend</a>
+                    <a href="#" v-if="!oldApi" @click.prevent="showReport" class="report-link btn">
+                        <i class="fa fa-fw fa-exclamation-triangle"></i>Report</a>
                 </template>
-                <a @click="showMemo" class="memo-link"><i class="far fa-sticky-note fa-fw"></i>Memo</a>
+                <a href="#" @click.prevent="showMemo" class="memo-link btn"><i class="far fa-sticky-note fa-fw"></i>Memo</a>
             </div>
             <div v-if="character.badges && character.badges.length > 0" class="badges-block">
                 <div v-for="badge in character.badges" class="character-badge px-2 py-1" :class="badgeClass(badge)">

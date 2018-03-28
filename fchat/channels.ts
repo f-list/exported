@@ -22,10 +22,11 @@ function sortMember(this: void | never, array: SortableMember[], member: Sortabl
         if(member.character.isChatOp && !other.character.isChatOp) break;
         if(other.rank > member.rank) continue;
         if(member.rank > other.rank) break;
-        if(other.character.isFriend && !member.character.isFriend) continue;
-        if(member.character.isFriend && !other.character.isFriend) break;
-        if(other.character.isBookmarked && !member.character.isBookmarked) continue;
-        if(member.character.isBookmarked && !other.character.isBookmarked) break;
+        if(!member.character.isFriend) {
+            if(other.character.isFriend) continue;
+            if(other.character.isBookmarked && !member.character.isBookmarked) continue;
+            if(member.character.isBookmarked && !other.character.isBookmarked) break;
+        } else if(!other.character.isFriend) break;
         if(member.key < other.key) break;
     }
     array.splice(i, 0, member);

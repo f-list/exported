@@ -4,7 +4,7 @@
 //class="fa" :class="statusIcon"></span> <span class="fa" :class="rankIcon"></span>{{character.name}}</span>
 
 import Vue, {CreateElement, RenderContext, VNode} from 'vue';
-import {Channel, Character} from './interfaces';
+import {Channel, Character} from '../fchat';
 
 export function getStatusIcon(status: Character.Status): string {
     switch(status) {
@@ -40,14 +40,14 @@ const UserView = Vue.extend({
             rankIcon = props.channel.owner === character.name ? 'fa fa-key' : props.channel.opList.indexOf(character.name) !== -1 ?
                 (props.channel.id.substr(0, 4) === 'adh-' ? 'fa fa-shield-alt' : 'fa fa-star') : '';
         else rankIcon = '';
-
-        const html = (props.showStatus !== undefined || character.status === 'crown'
-            ? `<span class="fa-fw ${getStatusIcon(character.status)}"></span>` : '') +
-            (rankIcon !== '' ? `<span class="${rankIcon}"></span>` : '') + character.name;
+        const children: (VNode | string)[] = [character.name];
+        if(rankIcon !== '') children.unshift(createElement('span', {staticClass: rankIcon}));
+        if(props.showStatus !== undefined || character.status === 'crown')
+            children.unshift(createElement('span', {staticClass: `fa-fw ${getStatusIcon(character.status)}`}));
         return createElement('span', {
             attrs: {class: `user-view gender-${character.gender !== undefined ? character.gender.toLowerCase() : 'none'}`},
-            domProps: {character, channel: props.channel, innerHTML: html, bbcodeTag: 'user'}
-        });
+            domProps: {character, channel: props.channel, bbcodeTag: 'user'}
+        }, children);
     }
 });
 

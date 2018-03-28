@@ -29,18 +29,18 @@
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
-import Axios from 'axios';
 import * as electron from 'electron';
 import log from 'electron-log'; //tslint:disable-line:match-default-export-name
 import {autoUpdater} from 'electron-updater';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as url from 'url';
-import {promisify} from 'util';
 import l from '../chat/localize';
 import {GeneralSettings, mkdir} from './common';
+import {ensureDictionary, getAvailableDictionaries} from './dictionaries';
 import * as windowState from './window_state';
 import BrowserWindow = Electron.BrowserWindow;
+import MenuItem = Electron.MenuItem;
 
 // Module to control application life.
 const app = electron.app;
@@ -60,54 +60,21 @@ log.transports.file.maxSize = 5 * 1024 * 1024;
 log.transports.file.file = path.join(baseDir, 'log.txt');
 log.info('Starting application.');
 
-const dictDir = path.join(baseDir, 'spellchecker');
-mkdir(dictDir);
-const downloadUrl = 'https://client.f-list.net/dictionaries/';
-type DictionaryIndex = {[key: string]: {file: string, time: number} | undefined};
-let availableDictionaries: DictionaryIndex | undefined;
-const writeFile = promisify(fs.writeFile);
-const requestConfig = {responseType: 'arraybuffer'};
-
-async function getAvailableDictionaries(): Promise<ReadonlyArray<string>> {
-    if(availableDictionaries === undefined) {
-        const indexPath = path.join(dictDir, 'index.json');
-        try {
-            if(!fs.existsSync(indexPath) || fs.statSync(indexPath).mtimeMs + 86400000 * 7 < Date.now()) {
-                availableDictionaries = (await Axios.get<DictionaryIndex>(`${downloadUrl}index.json`)).data;
-                await writeFile(indexPath, JSON.stringify(availableDictionaries));
-            } else availableDictionaries = <DictionaryIndex>JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-        } catch(e) {
-            availableDictionaries = {};
-            log.error(`Error loading dictionaries: ${e}`);
-        }
-    }
-    return Object.keys(availableDictionaries).sort();
-}
-
 async function setDictionary(lang: string | undefined): Promise<void> {
-    const dict = availableDictionaries![lang!];
-    if(dict !== undefined) {
-        const dicPath = path.join(dictDir, `${lang}.dic`);
-        if(!fs.existsSync(dicPath) || fs.statSync(dicPath).mtimeMs / 1000 < dict.time) {
-            await writeFile(dicPath, new Buffer((await Axios.get<string>(`${downloadUrl}${dict.file}.dic`, requestConfig)).data));
-            await writeFile(path.join(dictDir, `${lang}.aff`),
-                new Buffer((await Axios.get<string>(`${downloadUrl}${dict.file}.aff`, requestConfig)).data));
-            fs.utimesSync(dicPath, dict.time, dict.time);
-        }
-    }
+    if(lang !== undefined) await ensureDictionary(lang);
     settings.spellcheckLang = lang;
     setGeneralSettings(settings);
 }
 
 const settingsDir = path.join(electron.app.getPath('userData'), 'data');
 mkdir(settingsDir);
-const file = path.join(settingsDir, 'settings');
+const settingsFile = path.join(settingsDir, 'settings');
 const settings = new GeneralSettings();
 let shouldImportSettings = false;
-if(!fs.existsSync(file)) shouldImportSettings = true;
+if(!fs.existsSync(settingsFile)) shouldImportSettings = true;
 else
     try {
-        Object.assign(settings, <GeneralSettings>JSON.parse(fs.readFileSync(file, 'utf8')));
+        Object.assign(settings, <GeneralSettings>JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
     } catch(e) {
         log.error(`Error loading settings: ${e}`);
     }
@@ -119,6 +86,7 @@ function setGeneralSettings(value: GeneralSettings): void {
 }
 
 async function addSpellcheckerItems(menu: Electron.Menu): Promise<void> {
+    if(settings.spellcheckLang !== undefined) await ensureDictionary(settings.spellcheckLang);
     const dictionaries = await getAvailableDictionaries();
     const selected = settings.spellcheckLang;
     menu.append(new electron.MenuItem({
@@ -151,13 +119,12 @@ function createWindow(): Electron.BrowserWindow | undefined {
     if(tabCount >= 3) return;
     const lastState = windowState.getSavedWindowState();
     const windowProperties: Electron.BrowserWindowConstructorOptions & {maximized: boolean} = {
-        ...lastState, center: lastState.x === undefined
+        ...lastState, center: lastState.x === undefined, show: false
     };
     if(process.platform === 'darwin') windowProperties.titleBarStyle = 'hiddenInset';
     else windowProperties.frame = false;
     const window = new electron.BrowserWindow(windowProperties);
     windows.push(window);
-    if(lastState.maximized) window.maximize();
 
     window.loadURL(url.format({
         pathname: path.join(__dirname, 'window.html'),
@@ -171,7 +138,10 @@ function createWindow(): Electron.BrowserWindow | undefined {
     // Save window state when it is being closed.
     window.on('close', () => windowState.setSavedWindowState(window));
     window.on('closed', () => windows.splice(windows.indexOf(window), 1));
-
+    window.once('ready-to-show', () => {
+        window.show();
+        if(lastState.maximized) window.maximize();
+    });
     return window;
 }
 
@@ -190,30 +160,37 @@ function onReady(): void {
     }
 
     if(process.env.NODE_ENV === 'production') {
-        if(settings.beta) autoUpdater.channel = 'beta';
+        autoUpdater.channel = settings.beta ? 'beta' : 'latest';
         autoUpdater.checkForUpdates(); //tslint:disable-line:no-floating-promises
         const updateTimer = setInterval(async() => autoUpdater.checkForUpdates(), 3600000);
-        let hasUpdate = false;
         autoUpdater.on('update-downloaded', () => {
             clearInterval(updateTimer);
-            if(hasUpdate) return;
-            hasUpdate = true;
             const menu = electron.Menu.getApplicationMenu()!;
-            menu.append(new electron.MenuItem({
-                label: l('action.updateAvailable'),
-                submenu: electron.Menu.buildFromTemplate([{
-                    label: l('action.update'),
-                    click: () => {
-                        for(const w of windows) w.webContents.send('quit');
-                        autoUpdater.quitAndInstall(false, true);
-                    }
-                }, {
-                    label: l('help.changelog'),
-                    click: showPatchNotes
-                }])
-            }));
+            const item = menu.getMenuItemById('update') as MenuItem | null;
+            if(item !== null) item.visible = true;
+            else
+                menu.append(new electron.MenuItem({
+                    label: l('action.updateAvailable'),
+                    submenu: electron.Menu.buildFromTemplate([{
+                        label: l('action.update'),
+                        click: () => {
+                            for(const w of windows) w.webContents.send('quit');
+                            autoUpdater.quitAndInstall(false, true);
+                        }
+                    }, {
+                        label: l('help.changelog'),
+                        click: showPatchNotes
+                    }]),
+                    id: 'update'
+                }));
             electron.Menu.setApplicationMenu(menu);
-            for(const w of windows) w.webContents.send('update-available');
+            for(const w of windows) w.webContents.send('update-available', true);
+        });
+        autoUpdater.on('update-not-available', () => {
+            (<any>autoUpdater).downloadedUpdateHelper.clear(); //tslint:disable-line:no-any no-unsafe-any
+            for(const w of windows) w.webContents.send('update-available', false);
+            const item = electron.Menu.getApplicationMenu()!.getMenuItemById('update') as MenuItem | null;
+            if(item !== null) item.visible = false;
         });
     }
 
@@ -261,10 +238,7 @@ function onReady(): void {
                                 cancelId: 1
                             });
                             if(button === 0) {
-                                for(const w of windows) {
-                                    w.webContents.on('will-prevent-unload', (e) => e.preventDefault());
-                                    w.close();
-                                }
+                                for(const w of windows) w.webContents.send('quit');
                                 settings.logDirectory = dir[0];
                                 setGeneralSettings(settings);
                                 app.quit();
@@ -296,11 +270,15 @@ function onReady(): void {
                     }))
                 }, {
                     label: l('settings.beta'), type: 'checkbox', checked: settings.beta,
-                    click: (item: Electron.MenuItem) => {
+                    click: async(item: Electron.MenuItem) => {
                         settings.beta = item.checked;
                         setGeneralSettings(settings);
                         autoUpdater.channel = item.checked ? 'beta' : 'latest';
+                        return autoUpdater.checkForUpdates();
                     }
+                }, {
+                    label: l('fixLogs.action'),
+                    click: (_, window: BrowserWindow) => window.webContents.send('fix-logs')
                 },
                 {type: 'separator'},
                 {role: 'minimize'},
@@ -309,7 +287,7 @@ function onReady(): void {
                     label: l('action.quit'),
                     click(_: Electron.MenuItem, w: Electron.BrowserWindow): void {
                         if(characters.length === 0) return app.quit();
-                        const button = electron.dialog.showMessageBox(w,  {
+                        const button = electron.dialog.showMessageBox(w, {
                             message: l('chat.confirmLeave'),
                             buttons: [l('confirmYes'), l('confirmNo')],
                             cancelId: 1
@@ -383,12 +361,13 @@ function onReady(): void {
     const badge = electron.nativeImage.createFromPath(path.join(__dirname, <string>require('./build/badge.png')));
     electron.ipcMain.on('has-new', (e: Event & {sender: Electron.WebContents}, hasNew: boolean) => {
         if(process.platform === 'darwin') app.dock.setBadge(hasNew ? '!' : '');
-        electron.BrowserWindow.fromWebContents(e.sender).setOverlayIcon(hasNew ? badge : emptyBadge, hasNew ? 'New messages' : '');
+        const window = electron.BrowserWindow.fromWebContents(e.sender) as BrowserWindow | undefined;
+        if(window !== undefined) window.setOverlayIcon(hasNew ? badge : emptyBadge, hasNew ? 'New messages' : '');
     });
     createWindow();
 }
 
-const running = app.makeSingleInstance(createWindow);
+const running = process.env.NODE_ENV === 'production' && app.makeSingleInstance(createWindow);
 if(running) app.quit();
 else app.on('ready', onReady);
 app.on('window-all-closed', () => app.quit());

@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {Message as MessageImpl} from '../chat/common';
 import core from '../chat/core';
-import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
+import {Character, Conversation, Logs as Logging, Settings} from '../chat/interfaces';
 import l from '../chat/localize';
 import {GeneralSettings, mkdir} from './common';
 
@@ -94,20 +94,64 @@ export function serializeMessage(message: Message): {serialized: Buffer, size: n
     return {serialized: buffer, size: offset + 2};
 }
 
-function deserializeMessage(buffer: Buffer): {end: number, message: Conversation.Message} {
-    const time = buffer.readUInt32LE(0, noAssert);
-    const type = buffer.readUInt8(4, noAssert);
-    const senderLength = buffer.readUInt8(5, noAssert);
+function deserializeMessage(buffer: Buffer, characterGetter: (name: string) => Character = (name) => core.characters.get(name),
+                            unsafe: boolean = noAssert): {end: number, message: Conversation.Message} {
+    const time = buffer.readUInt32LE(0, unsafe);
+    const type = buffer.readUInt8(4, unsafe);
+    const senderLength = buffer.readUInt8(5, unsafe);
     let offset = senderLength + 6;
     const sender = buffer.toString('utf8', 6, offset);
-    const messageLength = buffer.readUInt16LE(offset, noAssert);
+    const messageLength = buffer.readUInt16LE(offset, unsafe);
     offset += 2;
     const text = buffer.toString('utf8', offset, offset += messageLength);
-    const message = new MessageImpl(type, core.characters.get(sender), text, new Date(time * 1000));
+    const message = new MessageImpl(type, characterGetter(sender), text, new Date(time * 1000));
     return {message, end: offset + 2};
 }
 
-export class Logs implements Logging.Persistent {
+export function fixLogs(character: string): void {
+    const dir = getLogDir(character);
+    const files = fs.readdirSync(dir);
+    const buffer = Buffer.allocUnsafe(50100);
+    for(const file of files)
+        if(file.substr(-4) !== '.idx') {
+            const fd = fs.openSync(path.join(dir, file), 'r+');
+            const indexFd = fs.openSync(path.join(dir, `${file}.idx`), 'r+');
+            fs.readSync(indexFd, buffer, 0, 1, 0);
+            let pos = 0, lastDay = 0;
+            const nameEnd = buffer.readUInt8(0, noAssert) + 1;
+            fs.readSync(indexFd, buffer, 0, nameEnd, null); //tslint:disable-line:no-null-keyword
+            buffer.toString('utf8', 1, nameEnd);
+            fs.ftruncateSync(indexFd, nameEnd);
+            const size = (fs.fstatSync(fd)).size;
+            try {
+                while(pos < size) {
+                    buffer.fill(-1);
+                    fs.readSync(fd, buffer, 0, 50100, pos);
+                    const deserialized = deserializeMessage(buffer, (name) => ({
+                        gender: 'None', status: 'online', statusText: '', isFriend: false, isBookmarked: false, isChatOp: false,
+                        isIgnored: false, name
+                    }), false);
+                    const time = deserialized.message.time;
+                    const day = Math.floor(time.getTime() / dayMs - time.getTimezoneOffset() / 1440);
+                    if(day > lastDay) {
+                        buffer.writeUInt16LE(day, 0, noAssert);
+                        buffer.writeUIntLE(pos, 2, 5, noAssert);
+                        fs.writeSync(indexFd, buffer, 0, 7);
+                        lastDay = day;
+                    }
+                    if(buffer.readUInt16LE(deserialized.end - 2) !== deserialized.end - 2) throw new Error();
+                    pos += deserialized.end;
+                }
+            } catch {
+                fs.ftruncateSync(fd, pos);
+            } finally {
+                fs.closeSync(fd);
+                fs.closeSync(indexFd);
+            }
+        }
+}
+
+export class Logs implements Logging {
     private index: Index = {};
 
     constructor() {
@@ -150,10 +194,11 @@ export class Logs implements Logging.Persistent {
             messages[--count] = deserializeMessage(buffer).message;
         }
         if(count !== 0) messages = messages.slice(count);
+        fs.closeSync(fd);
         return messages;
     }
 
-    getLogDates(key: string): ReadonlyArray<Date> {
+    async getLogDates(key: string): Promise<ReadonlyArray<Date>> {
         const entry = this.index[key];
         if(entry === undefined) return [];
         const dates = [];
@@ -181,6 +226,7 @@ export class Logs implements Logging.Persistent {
             messages.push(deserialized.message);
             pos += deserialized.end;
         }
+        fs.closeSync(fd);
         return messages;
     }
 
@@ -194,10 +240,9 @@ export class Logs implements Logging.Persistent {
         writeFile(file, buffer, {flag: 'a'});
     }
 
-    get conversations(): ReadonlyArray<{id: string, name: string}> {
-        const conversations: {id: string, name: string}[] = [];
-        for(const key in this.index) conversations.push({id: key, name: this.index[key]!.name});
-        conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
+    get conversations(): ReadonlyArray<{key: string, name: string}> {
+        const conversations: {key: string, name: string}[] = [];
+        for(const key in this.index) conversations.push({key, name: this.index[key]!.name});
         return conversations;
     }
 }

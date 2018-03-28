@@ -15,7 +15,7 @@
             </div>
         </div>
         <div class="form-row mt-3">
-            <div class="col-6 col-lg-3">
+            <div class="col-sm-6 col-lg-3">
                 <div class="card bg-light">
                     <div class="card-header">
                         <h4>Favorites</h4>
@@ -26,7 +26,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
+            <div class="col-sm-6 col-lg-3">
                 <div class="card bg-light">
                     <div class="card-header">
                         <h4>Yes</h4>
@@ -37,7 +37,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
+            <div class="col-sm-6 col-lg-3">
                 <div class="card bg-light">
                     <div class="card-header">
                         <h4>Maybe</h4>
@@ -48,7 +48,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
+            <div class="col-sm-6 col-lg-3">
                 <div class="card bg-light">
                     <div class="card-header">
                         <h4>No</h4>

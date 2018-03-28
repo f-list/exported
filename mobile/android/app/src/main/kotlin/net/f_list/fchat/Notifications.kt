@@ -40,6 +40,7 @@ class Notifications(private val ctx: Context) {
 			player.setAudioStreamType(AudioManager.STREAM_NOTIFICATION)
 			player.prepare()
 			player.start()
+			player.setOnCompletionListener { it.release() }
 		}
 		val intent = Intent(ctx, MainActivity::class.java)
 		intent.action = "notification"

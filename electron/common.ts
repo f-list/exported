@@ -8,7 +8,7 @@ export class GeneralSettings {
     profileViewer = true;
     host = 'wss://chat.f-list.net:9799';
     logDirectory = path.join(electron.app.getPath('userData'), 'data');
-    spellcheckLang: string | undefined = 'en-GB';
+    spellcheckLang: string | undefined = 'en_GB';
     theme = 'default';
     version = electron.app.getVersion();
     beta = false;

@@ -3,7 +3,7 @@ import * as qs from 'qs';
 import {Connection as Interfaces, WebSocketConnection} from './interfaces';
 
 const fatalErrors = [2, 3, 4, 9, 30, 31, 33, 39, 40, 62, -4];
-const dieErrors = [9, 30, 31, 39];
+const dieErrors = [9, 30, 31, 39, 40];
 
 async function queryApi(this: void, endpoint: string, data: object): Promise<AxiosResponse> {
     return Axios.post(`https://www.f-list.net/json/api/${endpoint}`, qs.stringify(data));
@@ -158,8 +158,10 @@ export default class Connection implements Interfaces.Connection {
                 if(fatalErrors.indexOf(data.number) !== -1) {
                     const error = new Error(data.message);
                     for(const handler of this.errorHandlers) handler(error);
-                    if(dieErrors.indexOf(data.number) !== -1) this.close();
-                    else this.socket!.close();
+                    if(dieErrors.indexOf(data.number) !== -1) {
+                        this.close();
+                        this.character = '';
+                    } else this.socket!.close();
                 }
                 break;
             case 'NLN':

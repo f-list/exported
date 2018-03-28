@@ -4,11 +4,11 @@ import {characterImage, ConversationSettings, EventMessage, Message, messageToSt
 import core from './core';
 import {Channel, Character, Connection, Conversation as Interfaces} from './interfaces';
 import l from './localize';
-import {CommandContext, isCommand, parse as parseCommand} from './slash_commands';
+import {CommandContext, isAction, isCommand, isWarn, parse as parseCommand} from './slash_commands';
 import MessageType = Interfaces.Message.Type;
 
 function createMessage(this: void, type: MessageType, sender: Character, text: string, time?: Date): Message {
-    if(type === MessageType.Message && text.match(/^\/me\b/) !== null) {
+    if(type === MessageType.Message && isAction(text)) {
         type = MessageType.Action;
         text = text.substr(text.charAt(4) === ' ' ? 4 : 3);
     }
@@ -262,7 +262,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
 
     async addMessage(message: Interfaces.Message): Promise<void> {
         await this.logPromise;
-        if((message.type === MessageType.Message || message.type === MessageType.Ad) && message.text.match(/^\/warn\b/) !== null) {
+        if((message.type === MessageType.Message || message.type === MessageType.Ad) && isWarn(message.text)) {
             const member = this.channel.members[message.sender.name];
             if(member !== undefined && member.rank > Channel.Rank.Member || message.sender.isChatOp)
                 message = new Message(MessageType.Warn, message.sender, message.text.substr(6), message.time);

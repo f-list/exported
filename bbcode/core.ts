@@ -1,4 +1,4 @@
-import {BBCodeCustomTag, BBCodeParser, BBCodeSimpleTag} from './parser';
+import {BBCodeCustomTag, BBCodeParser, BBCodeSimpleTag, BBCodeTextTag} from './parser';
 
 const urlFormat = '((?:https?|ftps?|irc)://[^\\s/$.?#"\']+\\.[^\\s"]+)';
 export const findUrlRegex = new RegExp(`(\\[url[=\\]]\\s*)?${urlFormat}`, 'gi');
@@ -21,31 +21,27 @@ export class CoreBBCodeParser extends BBCodeParser {
     /*tslint:disable-next-line:typedef*///https://github.com/palantir/tslint/issues/711
     constructor(public makeLinksClickable = true) {
         super();
-        this.addTag('b', new BBCodeSimpleTag('b', 'strong'));
-        this.addTag('i', new BBCodeSimpleTag('i', 'em'));
-        this.addTag('u', new BBCodeSimpleTag('u', 'u'));
-        this.addTag('s', new BBCodeSimpleTag('s', 'del'));
-        this.addTag('noparse', new BBCodeSimpleTag('noparse', 'span', [], []));
-        this.addTag('sub', new BBCodeSimpleTag('sub', 'sub', [], ['b', 'i', 'u', 's']));
-        this.addTag('sup', new BBCodeSimpleTag('sup', 'sup', [], ['b', 'i', 'u', 's']));
-        this.addTag('color', new BBCodeCustomTag('color', (parser, parent, param) => {
-            const el = parser.createElement('span');
-            parent.appendChild(el);
+        this.addTag(new BBCodeSimpleTag('b', 'strong'));
+        this.addTag(new BBCodeSimpleTag('i', 'em'));
+        this.addTag(new BBCodeSimpleTag('u', 'u'));
+        this.addTag(new BBCodeSimpleTag('s', 'del'));
+        this.addTag(new BBCodeSimpleTag('noparse', 'span', [], []));
+        this.addTag(new BBCodeSimpleTag('sub', 'sub', [], ['b', 'i', 'u', 's']));
+        this.addTag(new BBCodeSimpleTag('sup', 'sup', [], ['b', 'i', 'u', 's']));
+        this.addTag(new BBCodeCustomTag('color', (parser, parent, param) => {
             const cregex = /^(red|blue|white|yellow|pink|gray|green|orange|purple|black|brown|cyan)$/;
             if(!cregex.test(param)) {
                 parser.warning('Invalid color parameter provided.');
-                return el;
+                return undefined;
             }
-            el.className = `${param}Text`;
-            return el;
-        }));
-        this.addTag('url', new BBCodeCustomTag('url', (parser, parent, _) => {
             const el = parser.createElement('span');
+            el.className = `${param}Text`;
             parent.appendChild(el);
             return el;
-        }, (parser, element, _, param) => {
-            const content = element.textContent!.trim();
-            while(element.firstChild !== null) element.removeChild(element.firstChild);
+        }));
+        this.addTag(new BBCodeTextTag('url', (parser, parent, param, content) => {
+            const element = parser.createElement('span');
+            parent.appendChild(element);
 
             let url: string, display: string = content;
             if(param.length > 0) {
@@ -80,7 +76,8 @@ export class CoreBBCodeParser extends BBCodeParser {
             span.textContent = ` [${domain(url)}]`;
             (<HTMLElement & {bbcodeHide: true}>span).bbcodeHide = true;
             element.appendChild(span);
-        }, []));
+            return element;
+        }));
     }
 
     parseEverything(input: string): HTMLElement {

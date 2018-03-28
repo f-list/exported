@@ -1,18 +1,20 @@
 <template>
     <div style="height:100%; display:flex; flex-direction:column; flex:1; margin:0 5px; position:relative;" id="conversation">
         <div style="display:flex" v-if="conversation.character" class="header">
-            <img :src="characterImage" style="height:60px; width:60px; margin-right: 10px;" v-if="showAvatars"/>
-            <div style="flex: 1; position: relative; display: flex; flex-direction: column">
+            <img :src="characterImage" style="height:60px;width:60px;margin-right:10px" v-if="settings.showAvatars"/>
+            <div style="flex:1;position:relative;display:flex;flex-direction:column">
                 <div>
                     <user :character="conversation.character"></user>
-                    <logs :conversation="conversation"></logs>
+                    <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn">
+                        <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
+                    </a>
                     <a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn">
                         <span class="fa fa-cog"></span> <span class="btn-text">{{l('conversationSettings.title')}}</span>
                     </a>
-                    <a href="#" @click.prevent="reportDialog.report();" class="btn"><span class="fa fa-exclamation-triangle"></span>
-                        <span class="btn-text">{{l('chat.report')}}</span></a>
+                    <a href="#" @click.prevent="reportDialog.report();" class="btn">
+                        <span class="fa fa-exclamation-triangle"></span><span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
-                <div style="overflow: auto">
+                <div style="overflow:auto;max-height:50px">
                     {{l('status.' + conversation.character.status)}}
                     <span v-show="conversation.character.statusText"> – <bbcode :text="conversation.character.statusText"></bbcode></span>
                 </div>
@@ -29,12 +31,14 @@
                         <span class="btn-text">{{l('channel.description')}}</span>
                     </a>
                     <manage-channel :channel="conversation.channel" v-if="isChannelMod"></manage-channel>
-                    <logs :conversation="conversation"></logs>
+                    <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn">
+                        <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
+                    </a>
                     <a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn">
                         <span class="fa fa-cog"></span> <span class="btn-text">{{l('conversationSettings.title')}}</span>
                     </a>
-                    <a href="#" @click.prevent="reportDialog.report();" class="btn"><span class="fa fa-exclamation-triangle"></span>
-                        <span class="btn-text">{{l('chat.report')}}</span></a>
+                    <a href="#" @click.prevent="reportDialog.report();" class="btn">
+                        <span class="fa fa-exclamation-triangle"></span><span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
                 <ul class="nav nav-pills mode-switcher">
                     <li v-for="mode in modes" class="nav-item">
@@ -50,7 +54,9 @@
         </div>
         <div v-else class="header" style="display:flex;align-items:center">
             <h4>{{l('chat.consoleTab')}}</h4>
-            <logs :conversation="conversation"></logs>
+            <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn">
+                <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
+            </a>
         </div>
         <div class="search" v-show="showSearch" style="position:relative">
             <input v-model="searchInput" @keydown.esc="showSearch = false; searchInput = ''" @keypress="lastSearchInput = Date.now()"
@@ -86,7 +92,7 @@
                 <span class="fa fa-times" style="cursor:pointer" @click.stop="conversation.errorText = ''"></span>
                 <span class="redText" style="flex:1;margin-left:5px">{{conversation.errorText}}</span>
             </div>
-            <div style="position:relative; margin-top:5px;">
+            <div style="position:relative;margin-top:5px">
                 <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="keepScroll"
                     :classes="'form-control chat-text-box' + (conversation.isSendingAds ? ' ads-text-box' : '')"
                     ref="textBox" style="position:relative" :maxlength="conversation.maxMessageLength">
@@ -94,25 +100,25 @@
                         <div v-show="conversation.maxMessageLength" style="margin-right:5px">
                             {{getByteLength(conversation.enteredText)}} / {{conversation.maxMessageLength}}
                         </div>
-                        <ul class="nav nav-pills send-ads-switcher" v-if="conversation.channel" style="position:relative;z-index:10">
+                        <ul class="nav nav-pills send-ads-switcher" v-if="conversation.channel"
+                            style="position:relative;z-index:10;margin-right:5px">
                             <li class="nav-item">
                                 <a href="#" :class="{active: !conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
                                     class="nav-link" @click.prevent="setSendingAds(false)">{{l('channel.mode.chat')}}</a>
                             </li>
                             <li class="nav-item">
                                 <a href="#" :class="{active: conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
-                                    class="nav-link" @click.prevent="setSendingAds(true)">
-                                    {{l('channel.mode.ads' + (adCountdown ? '.countdown' : ''), adCountdown)}}</a>
+                                    class="nav-link" @click.prevent="setSendingAds(true)">{{adsMode}}</a>
                             </li>
                         </ul>
+                        <div class="btn btn-sm btn-primary" v-show="!settings.enterSend" @click="conversation.send()">{{l('chat.send')}}</div>
                     </div>
                 </bbcode-editor>
             </div>
         </div>
-        <modal ref="helpDialog" dialogClass="modal-lg" :buttons="false" :action="l('commands.help')">
-            <command-help></command-help>
-        </modal>
+        <command-help ref="helpDialog"></command-help>
         <settings ref="settingsDialog" :conversation="conversation"></settings>
+        <logs ref="logsDialog" :conversation="conversation"></logs>
     </div>
 </template>
 
@@ -121,14 +127,13 @@
     import Component from 'vue-class-component';
     import {Prop, Watch} from 'vue-property-decorator';
     import {EditorButton, EditorSelection} from '../bbcode/editor';
-    import Modal from '../components/Modal.vue';
     import {Keys} from '../keys';
     import {BBCodeView, Editor} from './bbcode';
     import CommandHelp from './CommandHelp.vue';
     import {characterImage, getByteLength, getKey} from './common';
     import ConversationSettings from './ConversationSettings.vue';
     import core from './core';
-    import {Channel, channelModes, Character, Conversation} from './interfaces';
+    import {Channel, channelModes, Character, Conversation, Settings} from './interfaces';
     import l from './localize';
     import Logs from './Logs.vue';
     import ManageChannel from './ManageChannel.vue';
@@ -139,7 +144,7 @@
 
     @Component({
         components: {
-            user: UserView, 'bbcode-editor': Editor, 'manage-channel': ManageChannel, modal: Modal, settings: ConversationSettings,
+            user: UserView, 'bbcode-editor': Editor, 'manage-channel': ManageChannel, settings: ConversationSettings,
             logs: Logs, 'message-view': MessageView, bbcode: BBCodeView, 'command-help': CommandHelp
         }
     })
@@ -174,7 +179,7 @@
                 title: 'Help\n\nClick this button for a quick overview of slash commands.',
                 tag: '?',
                 icon: 'fa-question',
-                handler: () => (<Modal>this.$refs['helpDialog']).show()
+                handler: () => (<CommandHelp>this.$refs['helpDialog']).show()
             }];
             window.addEventListener('resize', this.resizeHandler);
             window.addEventListener('keydown', this.keydownHandler = ((e: KeyboardEvent) => {
@@ -220,7 +225,7 @@
         keepScroll(): boolean {
             const messageView = <HTMLElement>this.$refs['messages'];
             if(messageView.scrollTop + messageView.offsetHeight >= messageView.scrollHeight - 15) {
-                setImmediate(() => messageView.scrollTop = messageView.scrollHeight);
+                this.$nextTick(() => setTimeout(() => messageView.scrollTop = messageView.scrollHeight, 0));
                 return true;
             }
             return false;
@@ -282,7 +287,7 @@
                     && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey)
                     this.conversation.loadLastSent();
                 else if(getKey(e) === Keys.Enter) {
-                    if(e.shiftKey) return;
+                    if(e.shiftKey === this.settings.enterSend) return;
                     e.preventDefault();
                     await this.conversation.send();
                 }
@@ -306,9 +311,10 @@
             }
         }
 
-        get adCountdown(): string | undefined {
-            if(!Conversation.isChannel(this.conversation) || this.conversation.adCountdown <= 0) return;
-            return l('chat.adCountdown',
+        get adsMode(): string | undefined {
+            if(!Conversation.isChannel(this.conversation)) return;
+            if(this.conversation.adCountdown <= 0) return l('channel.mode.ads');
+            else return l('channel.mode.ads.countdown',
                 Math.floor(this.conversation.adCountdown / 60).toString(), (this.conversation.adCountdown % 60).toString());
         }
 
@@ -316,8 +322,8 @@
             return characterImage(this.conversation.name);
         }
 
-        get showAvatars(): boolean {
-            return core.state.settings.showAvatars;
+        get settings(): Settings {
+            return core.state.settings;
         }
 
         get isConsoleTab(): boolean {
@@ -340,10 +346,10 @@
 
     #conversation {
         .header {
-            @media (min-width: breakpoint-min(sm)) {
+            @media (min-width: breakpoint-min(md)) {
                 margin-right: 32px;
             }
-            a.btn {
+            .btn {
                 padding: 2px 5px;
             }
         }
@@ -352,7 +358,7 @@
             padding: 3px 10px;
         }
 
-        @media (max-width: breakpoint-max(xs)) {
+        @media (max-width: breakpoint-max(sm)) {
             .mode-switcher a {
                 padding: 5px 8px;
             }

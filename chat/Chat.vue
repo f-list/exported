@@ -31,40 +31,43 @@
     import Modal from '../components/Modal.vue';
     import Channels from '../fchat/channels';
     import Characters from '../fchat/characters';
+    import {Keys} from '../keys';
     import ChatView from './ChatView.vue';
-    import {errorToString} from './common';
+    import {errorToString, getKey} from './common';
     import Conversations from './conversations';
     import core from './core';
     import l from './localize';
 
     type BBCodeNode = Node & {bbcodeTag?: string, bbcodeParam?: string, bbcodeHide?: boolean};
 
-    function copyNode(str: string, node: BBCodeNode, range: Range, flags: {endFound?: true, rootFound?: true}): string {
+    function copyNode(str: string, node: BBCodeNode, range: Range, flags: {endFound?: true}): string {
+        if(node === range.endContainer) flags.endFound = true;
         if(node.bbcodeTag !== undefined)
             str = `[${node.bbcodeTag}${node.bbcodeParam !== undefined ? `=${node.bbcodeParam}` : ''}]${str}[/${node.bbcodeTag}]`;
         if(node.nextSibling !== null && !flags.endFound) {
-            if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\n';
+            if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\r\n';
             str += scanNode(node.nextSibling!, range, flags);
         }
-        if(node.parentElement === null) flags.rootFound = true;
-        if(flags.rootFound && flags.endFound) return str;
+        if(node.parentElement === null) return str;
         return copyNode(str, node.parentNode!, range, flags);
     }
 
-    function scanNode(node: BBCodeNode, range: Range, flags: {endFound?: true}): string {
-        if(node.bbcodeHide) return '';
-        if(node === range.endContainer) {
-            flags.endFound = true;
-            return node.nodeValue!.substr(0, range.endOffset);
-        }
+    function scanNode(node: BBCodeNode, range: Range, flags: {endFound?: true}, hide?: boolean): string {
         let str = '';
+        hide = hide || node.bbcodeHide;
+        if(node === range.endContainer) {
+            if(node instanceof HTMLElement && node.children.length === 1 && node.firstElementChild instanceof HTMLImageElement)
+                str += scanNode(node.firstElementChild, range, flags, hide);
+            flags.endFound = true;
+        }
         if(node.bbcodeTag !== undefined) str += `[${node.bbcodeTag}${node.bbcodeParam !== undefined ? `=${node.bbcodeParam}` : ''}]`;
-        if(node instanceof Text) str += node.nodeValue;
-        if(node.firstChild !== null) str += scanNode(node.firstChild, range, flags);
+        if(node instanceof Text) str += node === range.endContainer ? node.nodeValue!.substr(0, range.endOffset) : node.nodeValue;
+        else if(node instanceof HTMLImageElement) str += node.alt;
+        if(node.firstChild !== null && !flags.endFound) str += scanNode(node.firstChild, range, flags, hide);
         if(node.bbcodeTag !== undefined) str += `[/${node.bbcodeTag}]`;
-        if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\n';
-        if(node.nextSibling !== null && !flags.endFound) str += scanNode(node.nextSibling, range, flags);
-        return str;
+        if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\r\n';
+        if(node.nextSibling !== null && !flags.endFound) str += scanNode(node.nextSibling, range, flags, hide);
+        return hide ? '' : str;
     }
 
     @Component({
@@ -80,16 +83,36 @@
         connecting = false;
         connected = false;
         l = l;
+        copyPlain = false;
 
         mounted(): void {
+            window.addEventListener('beforeunload', (e) => {
+                if(!this.connected) return;
+                e.returnValue = l('chat.confirmLeave');
+                return l('chat.confirmLeave');
+            });
             document.addEventListener('copy', ((e: ClipboardEvent) => {
+                if(this.copyPlain) {
+                    this.copyPlain = false;
+                    return;
+                }
                 const selection = document.getSelection();
                 if(selection.isCollapsed) return;
                 const range = selection.getRangeAt(0);
-                e.clipboardData.setData('text/plain', copyNode(range.startContainer.nodeValue!.substr(range.startOffset),
-                    range.startContainer, range, {}));
+                const start = range.startContainer;
+                let startValue = start.nodeValue !== null ?
+                    start.nodeValue.substring(range.startOffset, start === range.endContainer ? range.endOffset : undefined) : '';
+                if(start instanceof HTMLElement && start.children.length === 1 && start.firstElementChild instanceof HTMLImageElement)
+                    startValue += scanNode(start.firstElementChild, range, {});
+                e.clipboardData.setData('text/plain', copyNode(startValue, start, range, {}));
                 e.preventDefault();
             }) as EventListener);
+            window.addEventListener('keydown', (e) => {
+                if(getKey(e) === Keys.KeyC && e.shiftKey && (e.ctrlKey || e.metaKey) && !e.altKey) {
+                    this.copyPlain = true;
+                    document.execCommand('copy');
+                }
+            });
             core.register('characters', Characters(core.connection));
             core.register('channels', Channels(core.connection, core.characters));
             core.register('conversations', Conversations());

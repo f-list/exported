@@ -23,6 +23,8 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         webView = WKWebView(frame: .zero, configuration: config)
         webView.uiDelegate = self
         view = webView
+        NotificationCenter.default.addObserver(self, selector: #selector(ViewController.keyboardWillShow), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(ViewController.keyboardWillHide), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
         UIApplication.shared.statusBarStyle = .lightContent
         (UIApplication.shared.value(forKey: "statusBar") as! UIView).backgroundColor = UIColor(white: 0, alpha: 0.5)
     }
@@ -38,6 +40,24 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
+    }
+
+    @objc func keyboardWillShow(notification: NSNotification) {
+        let info = notification.userInfo!
+        let frame = webView.frame
+        let newHeight = view.window!.frame.height - (info[UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue.height
+        UIView.animate(withDuration: (info[UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue, animations: {
+            self.webView.scrollView.bounds = CGRect(x: 0, y: 0, width: frame.width, height: newHeight)
+        }, completion: { (_: Bool) in self.webView.evaluateJavaScript("window.dispatchEvent(new Event('resize'))", completionHandler: nil) })
+    }
+
+    @objc func keyboardWillHide(notification: NSNotification) {
+        let info = notification.userInfo!
+        let frame = webView.scrollView.bounds
+        let newHeight = frame.height + (info[UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue.height
+        UIView.animate(withDuration: (info[UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue, animations: {
+            self.webView.scrollView.bounds = CGRect(x: 0, y: 0, width: frame.width, height: newHeight)
+        }, completion: { (_: Bool) in self.webView.evaluateJavaScript("window.dispatchEvent(new Event('resize'))", completionHandler: nil) })
     }
 
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo,
@@ -56,15 +76,27 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        let url = navigationAction.request.url!.absoluteString
-        let match = profileRegex.matches(in: url, range: NSRange(location: 0, length: url.count))
+        let url = navigationAction.request.url!
+        let str = url.absoluteString
+        if(url.scheme == "data") {
+            let start = str.index(of: ",")!
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent(str[str.index(str.startIndex, offsetBy: 5)..<start].removingPercentEncoding!)
+            try! str.suffix(from: str.index(after: start)).removingPercentEncoding!.write(to: file, atomically: false, encoding: .utf8)
+            self.present(UIActivityViewController(activityItems: [file], applicationActivities: nil), animated: true, completion: nil)
+            return nil
+        }
+        let match = profileRegex.matches(in: str, range: NSRange(location: 0, length: str.count))
         if(match.count == 1) {
-            let char = url[Range(match[0].range(at: 2), in: url)!].removingPercentEncoding!;
+            let char = str[Range(match[0].range(at: 2), in: str)!].removingPercentEncoding!;
             webView.evaluateJavaScript("document.dispatchEvent(new CustomEvent('open-profile',{detail:'\(char)'}))", completionHandler: nil)
             return nil
         }
-        UIApplication.shared.open( navigationAction.request.url!)
+        UIApplication.shared.open(navigationAction.request.url!)
         return nil
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        decisionHandler(.cancel)
     }
 }
 

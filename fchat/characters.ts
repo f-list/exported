@@ -62,6 +62,8 @@ export default function(this: void, connection: Connection): Interfaces.State {
         state.bookmarkList = (<{characters: string[]}>await connection.queryApi('bookmark-list.php')).characters;
         state.friendList = ((<{friends: {source: string, dest: string, last_online: number}[]}>await connection.queryApi('friend-list.php'))
             .friends).map((x) => x.dest);
+        if(isReconnect && (<Character | undefined>state.ownCharacter) !== undefined)
+            reconnectStatus = {status: state.ownCharacter.status, statusmsg: state.ownCharacter.statusText};
         for(const key in state.characters) {
             const character = state.characters[key]!;
             character.isFriend = state.friendList.indexOf(character.name) !== -1;
@@ -69,8 +71,6 @@ export default function(this: void, connection: Connection): Interfaces.State {
             character.status = 'offline';
             character.statusText = '';
         }
-        if(isReconnect && (<Character | undefined>state.ownCharacter) !== undefined)
-            reconnectStatus = {status: state.ownCharacter.status, statusmsg: state.ownCharacter.statusText};
     });
     connection.onEvent('connected', async(isReconnect) => {
         if(!isReconnect) return;

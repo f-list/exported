@@ -141,6 +141,9 @@
   min-height: initial !important;
   max-height: 250px;
   resize: none;
+  @media (max-height: 600px) {
+    max-height: 150px;
+  }
 }
 
 .ads-text-box, .ads-text-box:focus {
@@ -187,6 +190,10 @@
 
 .message-event {
   color: $gray-500;
+}
+
+.message-time {
+  color: $gray-700;
 }
 
 .message-highlight {

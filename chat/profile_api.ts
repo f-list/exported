@@ -17,17 +17,26 @@ import '../site/directives/vue-select'; //tslint:disable-line:no-import-side-eff
 import * as Utils from '../site/utils';
 import core from './core';
 
+const parserSettings = {
+    siteDomain: 'https://www.f-list.net/',
+    staticDomain: 'https://static.f-list.net/',
+    animatedIcons: true,
+    inlineDisplayMode: InlineDisplayMode.DISPLAY_ALL
+};
+
 async function characterData(name: string | undefined): Promise<Character> {
     const data = await core.connection.queryApi('character-data.php', {name}) as CharacterInfo & {
         badges: string[]
         customs_first: boolean
         character_list: {id: number, name: string}[]
+        current_user: {inline_mode: number, animated_icons: boolean}
         custom_kinks: {[key: number]: {choice: 'fave' | 'yes' | 'maybe' | 'no', name: string, description: string, children: number[]}}
         custom_title: string
         kinks: {[key: string]: string}
         infotags: {[key: string]: string}
-        memo: {id: number, memo: string}
-        settings: CharacterSettings
+        memo?: {id: number, memo: string}
+        settings: CharacterSettings,
+        timezone: number
     };
     const newKinks: {[key: string]: KinkChoiceFull} = {};
     for(const key in data.kinks)
@@ -52,6 +61,8 @@ async function characterData(name: string | undefined): Promise<Character> {
 
         newInfotags[key] = infotag.type === 'list' ? {list: parseInt(characterInfotag, 10)} : {string: characterInfotag};
     }
+    parserSettings.inlineDisplayMode = data.current_user.inline_mode;
+    parserSettings.animatedIcons = core.state.settings.animatedEicons;
     return {
         is_self: false,
         character: {
@@ -67,7 +78,8 @@ async function characterData(name: string | undefined): Promise<Character> {
             kinks: newKinks,
             customs: newCustoms,
             infotags: newInfotags,
-            online_chat: false
+            online_chat: false,
+            timezone: data.timezone
         },
         memo: data.memo,
         character_list: data.character_list,
@@ -166,13 +178,8 @@ async function kinksGet(id: number): Promise<CharacterKink[]> {
 }
 
 export function init(characters: {[key: string]: number}): void {
-    Utils.setDomains('https://www.f-list.net/', 'https://static.f-list.net/');
-    initParser({
-        siteDomain: Utils.siteDomain,
-        staticDomain: Utils.staticDomain,
-        animatedIcons: false,
-        inlineDisplayMode: InlineDisplayMode.DISPLAY_ALL
-    });
+    Utils.setDomains(parserSettings.siteDomain, parserSettings.staticDomain);
+    initParser(parserSettings);
 
     Vue.component('character-select', CharacterSelect);
     Vue.component('character-link', CharacterLink);

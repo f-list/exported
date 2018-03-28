@@ -4,7 +4,7 @@
         @touchend="$refs['userMenu'].handleEvent($event)">
         <sidebar id="sidebar" :label="l('chat.menu')" icon="fa-bars">
             <img :src="characterImage(ownCharacter.name)" v-if="showAvatars" style="float:left;margin-right:5px;width:60px"/>
-            {{ownCharacter.name}}
+            <a href="#" target="_blank" :href="ownCharacterLink" class="btn" style="margin-right:5px">{{ownCharacter.name}}</a>
             <a href="#" @click.prevent="logOut" class="btn"><i class="fa fa-sign-out-alt"></i>{{l('chat.logout')}}</a><br/>
             <div>
                 {{l('chat.status')}}
@@ -36,7 +36,7 @@
                         <span>{{conversation.character.name}}</span>
                         <div style="text-align:right;line-height:0">
                             <span class="fas"
-                                :class="{'fa-comment-alt': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
+                                :class="{'fa-comment-dots': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
                             ></span><span class="fa fa-reply" v-show="needsReply(conversation)"></span>
                             <span class="pin fa fa-thumbtack" :class="{'active': conversation.isPinned}" @mousedown.prevent
                             @click.stop="conversation.isPinned = !conversation.isPinned" :aria-label="l('chat.pinTab')"></span>
@@ -97,7 +97,7 @@
     import {Keys} from '../keys';
     import ChannelList from './ChannelList.vue';
     import CharacterSearch from './CharacterSearch.vue';
-    import {characterImage, getKey} from './common';
+    import {characterImage, getKey, profileLink} from './common';
     import ConversationView from './ConversationView.vue';
     import core from './core';
     import {Character, Connection, Conversation} from './interfaces';
@@ -269,6 +269,10 @@
             return core.characters.ownCharacter;
         }
 
+        get ownCharacterLink(): string {
+            return profileLink(core.characters.ownCharacter.name);
+        }
+
         getClasses(conversation: Conversation): string {
             return conversation === core.conversations.selectedConversation ? ' active' : unreadClasses[conversation.unread];
         }
@@ -285,7 +289,7 @@
     }
 
     .bbcode, .message, .profile-viewer {
-        user-select: initial;
+        user-select: text;
     }
 
     .list-group.conversation-nav {
@@ -342,7 +346,7 @@
         align-items: stretch;
         flex-direction: row;
 
-        @media (max-width: breakpoint-max(xs)) {
+        @media (max-width: breakpoint-max(sm)) {
             display: flex;
         }
 
@@ -387,7 +391,7 @@
         .body a.btn {
             padding: 2px 0;
         }
-        @media (min-width: breakpoint-min(sm)) {
+        @media (min-width: breakpoint-min(md)) {
             .sidebar {
                 position: static;
                 margin: 0;

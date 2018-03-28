@@ -1,5 +1,5 @@
 <template>
-    <modal :buttons="false" :action="l('chat.recentConversations')" dialogClass="w-100">
+    <modal :buttons="false" :action="l('chat.recentConversations')" dialogClass="w-100 modal-lg">
         <div style="display:flex; flex-direction:column; max-height:500px; flex-wrap:wrap;">
             <div v-for="recent in recentConversations" style="margin: 3px;">
                 <user-view v-if="recent.character" :character="getCharacter(recent.character)"></user-view>
