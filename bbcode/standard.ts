@@ -181,8 +181,8 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
                 el.href = '#';
                 el.dataset.inlineId = param;
                 el.onclick = () => {
-                    Array.from(document.getElementsByClassName('unloadedInline')).forEach((e) => {
-                        const showInline = parser.inlines![(<HTMLElement>e).dataset.inlineId!];
+                    (<HTMLElement[]>Array.prototype.slice.call(document.getElementsByClassName('unloadedInline'))).forEach((e) => {
+                        const showInline = parser.inlines![e.dataset.inlineId!];
                         if(typeof showInline !== 'object') return;
                         e.parentElement!.replaceChild(parser.createInline(showInline), e);
                     });

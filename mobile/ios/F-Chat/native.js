@@ -69,7 +69,13 @@ window.NativeLogs = {
     getBacklog: function(key) {
         return sendMessage('Logs', 'getBacklog', {key: key});
     },
-    getLogs: function(key, date) {
-        return sendMessage('Logs', 'getBacklog', {key: key, date: date});
+    getLogs: function(character, key, date) {
+        return sendMessage('Logs', 'getLogs', {character: character, key: key, date: date});
     },
+    loadIndex: function(character) {
+        return sendMessage('Logs', 'loadIndex', {character: character});
+    },
+    getCharacters: function() {
+        return sendMessage('Logs', 'getCharacters', {});
+    }
 };

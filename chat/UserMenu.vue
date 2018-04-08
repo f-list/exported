@@ -2,12 +2,13 @@
     <div>
         <div id="userMenu" class="list-group" v-show="showContextMenu" :style="position" v-if="character"
             style="position:fixed;padding:10px 10px 5px;display:block;width:220px;z-index:1100" ref="menu">
-            <div style="min-height: 65px;padding:5px" class="list-group-item" @click.stop>
+            <div style="min-height: 65px;padding:5px;overflow:auto" class="list-group-item" @click.stop>
                 <img :src="characterImage" style="width:60px;height:60px;margin-right:5px;float:left" v-if="showAvatars"/>
                 <h5 style="margin:0;line-height:1">{{character.name}}</h5>
                 {{l('status.' + character.status)}}
             </div>
-            <bbcode id="userMenuStatus" :text="character.statusText" v-show="character.statusText" class="list-group-item"></bbcode>
+            <bbcode id="userMenuStatus" :text="character.statusText" v-show="character.statusText" class="list-group-item"
+            style="max-height:200px;overflow:auto;clear:both"></bbcode>
             <a tabindex="-1" :href="profileLink" target="_blank" v-if="showProfileFirst" class="list-group-item list-group-item-action">
                 <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a>
             <a tabindex="-1" href="#" @click.prevent="openConversation(true)" class="list-group-item list-group-item-action">
@@ -149,7 +150,7 @@
         }
 
         handleEvent(e: MouseEvent | TouchEvent): void {
-            const touch = e instanceof TouchEvent ? e.changedTouches[0] : e;
+            const touch = e.type === 'touchstart' ? (<TouchEvent>e).changedTouches[0] : <MouseEvent>e;
             let node = <HTMLElement & {character?: Character, channel?: Channel, touched?: boolean}>touch.target;
             while(node !== document.body) {
                 if(e.type !== 'click' && node === this.$refs['menu'] || node.id === 'userMenuStatus') return;
@@ -213,10 +214,5 @@
     #userMenu .list-group-item-action {
         border-top: 0;
         z-index: -1;
-    }
-
-    .user-view {
-        cursor: pointer;
-        font-weight: 500;
     }
 </style>

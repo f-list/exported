@@ -11,10 +11,18 @@
                 <user :character="character" :showStatus="true"></user>
             </div>
         </div>
-        <div v-if="channel" class="users" style="padding:5px" v-show="tab == 1">
-            <h4>{{l('users.memberCount', channel.sortedMembers.length)}}</h4>
-            <div v-for="member in channel.sortedMembers" :key="member.character.name">
-                <user :character="member.character" :channel="channel" :showStatus="true"></user>
+        <div v-if="channel" style="padding-left:5px;flex:1;display:flex;flex-direction:column" v-show="tab == 1">
+            <div class="users" style="flex:1;padding-left:5px">
+                <h4>{{l('users.memberCount', channel.sortedMembers.length)}}</h4>
+                <div v-for="member in filteredMembers" :key="member.character.name">
+                    <user :character="member.character" :channel="channel" :showStatus="true"></user>
+                </div>
+            </div>
+            <div class="input-group" style="margin-top:5px;flex-shrink:0">
+                <div class="input-group-prepend">
+                    <div class="input-group-text"><span class="fas fa-search"></span></div>
+                </div>
+                <input class="form-control" v-model="filter" :placeholder="l('filter')" type="text"/>
             </div>
         </div>
     </sidebar>
@@ -36,6 +44,7 @@
     export default class UserList extends Vue {
         tab = '0';
         expanded = window.innerWidth >= 992;
+        filter = '';
         l = l;
         sorter = (x: Character, y: Character) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0));
 
@@ -49,6 +58,12 @@
 
         get channel(): Channel {
             return (<Conversation.ChannelConversation>core.conversations.selectedConversation).channel;
+        }
+
+        get filteredMembers(): ReadonlyArray<Channel.Member> {
+            if(this.filter.length === 0) return this.channel.sortedMembers;
+            const filter = new RegExp(this.filter.replace(/[^\w]/gi, '\\$&'), 'i');
+            return this.channel.sortedMembers.filter((member) => filter.test(member.character.name));
         }
     }
 </script>

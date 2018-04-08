@@ -69,10 +69,10 @@
   padding: 10px;
 
   .body {
+    height: 100%;
     display: none;
     width: 200px;
     flex-direction: column;
-    max-height: 100%;
     overflow: auto;
   }
 
@@ -155,7 +155,12 @@
 }
 
 .border-bottom {
-  border-bottom: solid 1px $card-border-color;
+  border-bottom: solid 2px $gray-300;
+}
+
+.user-view {
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .message {
@@ -189,11 +194,11 @@
 }
 
 .message-event {
-  color: $gray-500;
+  color: $text-muted;
 }
 
 .message-time {
-  color: $gray-700;
+  color: $text-dark;
 }
 
 .message-highlight {
@@ -211,40 +216,33 @@
   border-bottom: solid 2px theme-color-level("success", -2) !important;
 }
 
-.fa.active {
+.fas.active {
   color: theme-color("success");
 }
 
-.gender-shemale {
-  color: #CC66FF;
+$genders: (
+        "shemale": #CC66FF,
+        "herm": #9B30FF,
+        "none": $gray-500,
+        "female": #FF6699,
+        "male": #6699FF,
+        "male-herm": #007FFF,
+        "transgender": #EE8822,
+        "cunt-boy": #00CC66,
+);
+
+@each $gender, $color in $genders {
+  .gender-#{$gender} {
+    color: $color;
+  }
+
+  .message-event .gender-#{$gender} {
+    color: lighten($color, 5%)
+  }
 }
 
-.gender-herm {
-  color: #9B30FF;
-}
-
-.gender-none {
-  color: $gray-500;
-}
-
-.gender-female {
-  color: #FF6699;
-}
-
-.gender-male {
-  color: #6699FF;
-}
-
-.gender-male-herm {
-  color: #007FFF;
-}
-
-.gender-transgender {
-  color: #EE8822;
-}
-
-.gender-cunt-boy {
-  color: #00CC66;
+.user-bookmark {
+  color: #66CC33;
 }
 
 #character-page-sidebar {

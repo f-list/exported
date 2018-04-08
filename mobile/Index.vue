@@ -18,7 +18,12 @@
                     </div>
                     <div class="form-group" v-show="showAdvanced">
                         <label class="control-label" for="host">{{l('login.host')}}</label>
-                        <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login" :disabled="loggingIn"/>
+                        <div class="input-group">
+                            <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login" :disabled="loggingIn"/>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" @click="resetHost"><span class="fas fa-undo-alt"></span></button>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="theme">{{l('settings.theme')}}</label>
@@ -116,6 +121,10 @@
             }
             if(settings.account.length > 0) this.saveLogin = true;
             this.settings = settings;
+        }
+
+        resetHost(): void {
+            this.settings!.host = new GeneralSettings().host;
         }
 
         get styling(): string {

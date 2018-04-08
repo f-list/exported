@@ -134,6 +134,7 @@ export namespace Connection {
     export interface Connection {
         readonly character: string
         readonly vars: Vars
+        readonly isOpen: boolean
         connect(character: string): Promise<void>
         close(): void
         onMessage<K extends keyof ServerCommands>(type: K, handler: CommandHandler<K>): void

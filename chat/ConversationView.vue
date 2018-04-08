@@ -1,5 +1,5 @@
 <template>
-    <div style="height:100%; display:flex; flex-direction:column; flex:1; margin:0 5px; position:relative;" id="conversation">
+    <div style="height:100%;display:flex;flex-direction:column;flex:1;margin:0 5px;position:relative" id="conversation">
         <div style="display:flex" v-if="conversation.character" class="header">
             <img :src="characterImage" style="height:60px;width:60px;margin-right:10px" v-if="settings.showAvatars"/>
             <div style="flex:1;position:relative;display:flex;flex-direction:column">
@@ -58,7 +58,10 @@
                 <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
             </a>
         </div>
-        <div class="search" v-show="showSearch" style="position:relative">
+        <div class="search input-group" v-show="showSearch">
+            <div class="input-group-prepend">
+                <div class="input-group-text"><span class="fas fa-search"></span></div>
+            </div>
             <input v-model="searchInput" @keydown.esc="showSearch = false; searchInput = ''" @keypress="lastSearchInput = Date.now()"
                 :placeholder="l('chat.search')" ref="searchField" class="form-control"/>
             <a class="btn btn-sm btn-light" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:0"
@@ -72,7 +75,7 @@
                 </message-view>
                 <span v-if="message.sfc && message.sfc.action == 'report'" :key="message.id">
                     <a :href="'https://www.f-list.net/fchat/getLog.php?log=' + message.sfc.logid"
-                        v-if="message.sfc.logid">{{l('events.report.viewLog')}}</a>
+                        v-if="message.sfc.logid" target="_blank">{{l('events.report.viewLog')}}</a>
                     <span v-else>{{l('events.report.noLog')}}</span>
                     <span v-show="!message.sfc.confirmed">
                         | <a href="#" @click.prevent="acceptReport(message.sfc)">{{l('events.report.confirm')}}</a>
@@ -111,7 +114,7 @@
                                     class="nav-link" @click.prevent="setSendingAds(true)">{{adsMode}}</a>
                             </li>
                         </ul>
-                        <div class="btn btn-sm btn-primary" v-show="!settings.enterSend" @click="conversation.send()">{{l('chat.send')}}</div>
+                        <div class="btn btn-sm btn-primary" v-show="!settings.enterSend" @click="sendButton">{{l('chat.send')}}</div>
                     </div>
                 </bbcode-editor>
             </div>
@@ -205,8 +208,13 @@
         }
 
         get messages(): ReadonlyArray<Conversation.Message> {
-            return this.search !== '' ? this.conversation.messages.filter((x) => x.text.indexOf(this.search) !== -1)
-                : this.conversation.messages;
+            if(this.search === '') return this.conversation.messages;
+            const filter = new RegExp(this.search.replace(/[^\w]/gi, '\\$&'), 'i');
+            return this.conversation.messages.filter((x) => filter.test(x.text));
+        }
+
+        sendButton(): void {
+            setImmediate(async() => this.conversation.send());
         }
 
         @Watch('conversation')

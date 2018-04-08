@@ -1,19 +1,28 @@
 <template>
     <modal :buttons="false" ref="dialog" id="logs-dialog" :action="l('logs.title')"
-        dialogClass="modal-lg w-100 modal-dialog-centered" @open="onOpen">
+        dialogClass="modal-lg w-100 modal-dialog-centered" @open="onOpen" @close="onClose">
         <div class="form-group row" style="flex-shrink:0">
-            <label class="col-2 col-form-label">{{l('logs.conversation')}}</label>
-            <div class="col-10">
+            <label for="character" class="col-sm-2 col-form-label">{{l('logs.character')}}</label>
+            <div class="col-sm-10">
+                <select class="form-control" v-model="selectedCharacter" id="character" @change="loadCharacter">
+                    <option value="">{{l('logs.selectCharacter')}}</option>
+                    <option v-for="character in characters">{{character}}</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group row" style="flex-shrink:0">
+            <label class="col-sm-2 col-form-label">{{l('logs.conversation')}}</label>
+            <div class="col-sm-10">
                 <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
-                    :placeholder="l('filter')" @input="loadMessages">
+                    :placeholder="l('filter')">
                     <template slot-scope="s">
                         {{s.option && ((s.option.key[0] == '#' ? '#' : '') + s.option.name) || l('logs.selectConversation')}}</template>
                 </filterable-select>
             </div>
         </div>
         <div class="form-group row" style="flex-shrink:0">
-            <label for="date" class="col-2 col-form-label">{{l('logs.date')}}</label>
-            <div class="col-8">
+            <label for="date" class="col-sm-2 col-form-label">{{l('logs.date')}}</label>
+            <div class="col-sm-8 col-10">
                 <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
                     <option :value="null">{{l('logs.selectDate')}}</option>
                     <option v-for="date in dates" :value="date.getTime()">{{formatDate(date)}}</option>
@@ -24,10 +33,15 @@
                     class="fa fa-download"></span></button>
             </div>
         </div>
-        <div class="messages-both" style="overflow: auto">
+        <div class="messages-both" style="overflow: auto" ref="messages">
             <message-view v-for="message in filteredMessages" :message="message" :key="message.id"></message-view>
         </div>
-        <input class="form-control" v-model="filter" :placeholder="l('filter')" v-show="messages" type="text"/>
+        <div class="input-group" style="flex-shrink:0">
+            <div class="input-group-prepend">
+                <div class="input-group-text"><span class="fas fa-search"></span></div>
+            </div>
+            <input class="form-control" v-model="filter" :placeholder="l('filter')" v-show="messages" type="text"/>
+        </div>
     </modal>
 </template>
 
@@ -38,9 +52,10 @@
     import CustomDialog from '../components/custom_dialog';
     import FilterableSelect from '../components/FilterableSelect.vue';
     import Modal from '../components/Modal.vue';
-    import {messageToString} from './common';
+    import {Keys} from '../keys';
+    import {getKey, messageToString} from './common';
     import core from './core';
-    import {Conversation} from './interfaces';
+    import {Conversation, Logs as LogInterface} from './interfaces';
     import l from './localize';
     import MessageView from './message_view';
 
@@ -57,16 +72,19 @@
     })
     export default class Logs extends CustomDialog {
         //tslint:disable:no-null-keyword
-        @Prop({required: true})
-        readonly conversation!: Conversation;
-        selectedConversation: {key: string, name: string} | null = null;
+        @Prop()
+        readonly conversation?: Conversation;
+        selectedConversation: LogInterface.Conversation | null = null;
         dates: ReadonlyArray<Date> = [];
         selectedDate: string | null = null;
-        conversations = core.logs.conversations.slice();
+        conversations: LogInterface.Conversation[] = [];
         l = l;
         filter = '';
         messages: ReadonlyArray<Conversation.Message> = [];
         formatDate = formatDate;
+        keyDownListener?: (e: KeyboardEvent) => void;
+        characters: ReadonlyArray<string> = [];
+        selectedCharacter = core.connection.character;
 
         get filteredMessages(): ReadonlyArray<Conversation.Message> {
             if(this.filter.length === 0) return this.messages;
@@ -76,7 +94,16 @@
         }
 
         async mounted(): Promise<void> {
+            this.characters = await core.logs.getAvailableCharacters();
+            await this.loadCharacter();
             return this.conversationChanged();
+        }
+
+        async loadCharacter(): Promise<void> {
+            if(this.selectedCharacter === '') return;
+            this.conversations = (await core.logs.getConversations(this.selectedCharacter)).slice();
+            this.conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
+            this.selectedConversation = null;
         }
 
         filterConversation(filter: RegExp, conversation: {key: string, name: string}): boolean {
@@ -85,14 +112,17 @@
 
         @Watch('conversation')
         async conversationChanged(): Promise<void> {
+            if(this.conversation === undefined) return;
             //tslint:disable-next-line:strict-boolean-expressions
-            this.selectedConversation = this.conversations.filter((x) => x.key === this.conversation.key)[0] || null;
+            this.selectedConversation = this.conversations.filter((x) => x.key === this.conversation!.key)[0] || null;
         }
 
         @Watch('selectedConversation')
         async conversationSelected(): Promise<void> {
             this.dates = this.selectedConversation === null ? [] :
-                (await core.logs.getLogDates(this.selectedConversation.key)).slice().reverse();
+                (await core.logs.getLogDates(this.selectedCharacter, this.selectedConversation.key)).slice().reverse();
+            this.selectedDate = null;
+            await this.loadMessages();
         }
 
         download(file: string, logs: ReadonlyArray<Conversation.Message>): void {
@@ -114,16 +144,37 @@
         }
 
         async onOpen(): Promise<void> {
-            this.conversations = core.logs.conversations.slice();
-            this.conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
-            this.$forceUpdate();
-            await this.loadMessages();
+            if(this.selectedCharacter !== '') {
+                this.conversations = (await core.logs.getConversations(this.selectedCharacter)).slice();
+                this.conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
+                await this.loadMessages();
+            }
+            this.keyDownListener = (e) => {
+                if(getKey(e) === Keys.KeyA && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+                    e.preventDefault();
+                    const selection = document.getSelection();
+                    selection.removeAllRanges();
+                    if(this.messages.length > 0) {
+                        const range = document.createRange();
+                        const messages = this.$refs['messages'] as Node;
+                        range.setStartBefore(messages.firstChild!);
+                        range.setEndAfter(messages.lastChild!);
+                        selection.addRange(range);
+                    }
+                }
+            };
+            window.addEventListener('keydown', this.keyDownListener);
+        }
+
+        onClose(): void {
+            window.removeEventListener('keydown', this.keyDownListener!);
         }
 
         async loadMessages(): Promise<ReadonlyArray<Conversation.Message>> {
             if(this.selectedDate === null || this.selectedConversation === null)
                 return this.messages = [];
-            return this.messages = await core.logs.getLogs(this.selectedConversation.key, new Date(this.selectedDate));
+            return this.messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key,
+                new Date(this.selectedDate));
         }
     }
 </script>

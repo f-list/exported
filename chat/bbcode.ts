@@ -74,7 +74,7 @@ export default class BBCodeParser extends CoreBBCodeParser {
             const uregex = /^[a-zA-Z0-9_\-\s]+$/;
             if(!uregex.test(content))
                 return;
-            const extension = core.state.settings.animatedEicons ? 'gif' : 'png';
+            const extension = core.connection.isOpen && !core.state.settings.animatedEicons ? 'png' : 'gif';
             const img = parser.createElement('img');
             img.src = `https://static.f-list.net/images/eicon/${content.toLowerCase()}.${extension}`;
             img.title = img.alt = content;

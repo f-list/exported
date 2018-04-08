@@ -14,10 +14,12 @@ declare global {
     type NativeMessage = {time: number, type: number, sender: string, text: string};
     const NativeLogs: {
         init(character: string): Promise<Index>
+        getCharacters(): Promise<ReadonlyArray<string>>
+        loadIndex(character: string): Promise<Index>
         logMessage(key: string, conversation: string, time: number, type: Conversation.Message.Type, sender: string,
                    message: string): Promise<void>;
         getBacklog(key: string): Promise<ReadonlyArray<NativeMessage>>;
-        getLogs(key: string, date: number): Promise<ReadonlyArray<NativeMessage>>
+        getLogs(character: string, key: string, date: number): Promise<ReadonlyArray<NativeMessage>>
     };
 }
 
@@ -36,6 +38,8 @@ type Index = {[key: string]: {name: string, dates: number[]} | undefined};
 
 export class Logs implements Logging {
     private index: Index = {};
+    private loadedIndex?: Index;
+    private loadedCharacter?: string;
 
     constructor() {
         core.connection.onEvent('connecting', async() => {
@@ -58,21 +62,34 @@ export class Logs implements Logging {
             .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
     }
 
-    async getLogs(key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {
-        return (await NativeLogs.getLogs(key, date.getTime() / dayMs))
+    private async getIndex(name: string): Promise<Index> {
+        if(this.loadedCharacter === name) return this.loadedIndex!;
+        this.loadedCharacter = name;
+        return this.loadedIndex = await NativeLogs.loadIndex(name);
+    }
+
+    async getLogs(character: string, key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {
+        await NativeLogs.loadIndex(character);
+        return (await NativeLogs.getLogs(character, key, Math.floor(date.getTime() / dayMs - date.getTimezoneOffset() / 1440)))
             .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
     }
 
-    async getLogDates(key: string): Promise<ReadonlyArray<Date>> {
-        const entry = this.index[key];
+    async getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>> {
+        const entry = (await this.getIndex(character))[key];
         if(entry === undefined) return [];
-        return entry.dates.map((x) => new Date(x * dayMs));
+        const offset = new Date().getTimezoneOffset() * 60000;
+        return entry.dates.map((x) => new Date(x * dayMs + offset));
     }
 
-    get conversations(): ReadonlyArray<{key: string, name: string}> {
+    async getConversations(character: string): Promise<ReadonlyArray<{key: string, name: string}>> {
+        const index = await this.getIndex(character);
         const conversations: {key: string, name: string}[] = [];
-        for(const key in this.index) conversations.push({key, name: this.index[key]!.name});
+        for(const key in index) conversations.push({key, name: index[key]!.name});
         return conversations;
+    }
+
+    async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
+        return NativeLogs.getCharacters();
     }
 }
 

@@ -1,5 +1,5 @@
 <template>
-    <modal :action="l('conversationSettings.action', conversation.name)" @submit="submit" ref="dialog" @close="init()">
+    <modal :action="l('conversationSettings.action', conversation.name)" @submit="submit" ref="dialog" @close="init()" dialogClass="w-100">
         <div class="form-group">
             <label class="control-label" :for="'notify' + conversation.key">{{l('conversationSettings.notify')}}</label>
             <select class="form-control" :id="'notify' + conversation.key" v-model="notify">

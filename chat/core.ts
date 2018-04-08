@@ -55,7 +55,7 @@ const data = {
     logs: <Logs | undefined>undefined,
     settingsStore: <Settings.Store | undefined>undefined,
     state: vue.state,
-    bbCodeParser: <BBCodeParser | undefined>undefined,
+    bbCodeParser: new BBCodeParser(),
     conversations: <Conversation.State | undefined>undefined,
     channels: <Channel.State | undefined>undefined,
     characters: <Character.State | undefined>undefined,

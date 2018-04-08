@@ -31,8 +31,9 @@ abstract class Conversation implements Interfaces.Conversation {
     abstract readonly maxMessageLength: number | undefined;
     _settings: Interfaces.Settings | undefined;
     protected abstract context: CommandContext;
-    protected maxMessages = 100;
+    protected maxMessages = 50;
     protected allMessages: Interfaces.Message[] = [];
+    readonly reportMessages: Interfaces.Message[] = [];
     private lastSent = '';
 
     constructor(readonly key: string, public _isPinned: boolean) {
@@ -56,10 +57,6 @@ abstract class Conversation implements Interfaces.Conversation {
         if(value === this._isPinned) return;
         this._isPinned = value;
         state.savePinned(); //tslint:disable-line:no-floating-promises
-    }
-
-    get reportMessages(): ReadonlyArray<Interfaces.Message> {
-        return this.allMessages;
     }
 
     async send(): Promise<void> {
@@ -86,7 +83,7 @@ abstract class Conversation implements Interfaces.Conversation {
 
     loadMore(): void {
         if(this.messages.length >= this.allMessages.length) return;
-        this.maxMessages += 100;
+        this.maxMessages += 50;
         this.messages = this.allMessages.slice(-this.maxMessages);
     }
 
@@ -97,13 +94,19 @@ abstract class Conversation implements Interfaces.Conversation {
     onHide(): void {
         this.errorText = '';
         this.lastRead = this.messages[this.messages.length - 1];
-        this.maxMessages = 100;
+        this.maxMessages = 50;
         this.messages = this.allMessages.slice(-this.maxMessages);
+    }
+
+    clear(): void {
+        this.allMessages = [];
+        this.messages = [];
     }
 
     abstract close(): void;
 
     protected safeAddMessage(message: Interfaces.Message): void {
+        safeAddMessage(this.reportMessages, message, 500);
         safeAddMessage(this.allMessages, message, 500);
         safeAddMessage(this.messages, message, this.maxMessages);
     }
@@ -121,13 +124,13 @@ class PrivateConversation extends Conversation implements Interfaces.PrivateConv
     private timer: number | undefined;
     private logPromise = core.logs.getBacklog(this).then((messages) => {
         this.allMessages.unshift(...messages);
+        this.reportMessages.unshift(...messages);
         this.messages = this.allMessages.slice();
     });
 
     constructor(readonly character: Character) {
         super(character.name.toLowerCase(), state.pinned.private.indexOf(character.name) !== -1);
         this.lastRead = this.messages[this.messages.length - 1];
-        this.allMessages = [];
     }
 
     get enteredText(): string {
@@ -206,6 +209,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
         this.both.unshift(...messages);
         this.chat.unshift(...this.both.filter((x) => x.type !== MessageType.Ad));
         this.ads.unshift(...this.both.filter((x) => x.type === MessageType.Ad));
+        this.reportMessages.unshift(...messages);
         this.lastRead = this.messages[this.messages.length - 1];
         this.messages = this.allMessages.slice(-this.maxMessages);
     });
@@ -233,7 +237,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
 
     set mode(mode: Channel.Mode) {
         this._mode = mode;
-        this.maxMessages = 100;
+        this.maxMessages = 50;
         this.allMessages = this[mode];
         this.messages = this.allMessages.slice(-this.maxMessages);
         if(mode === this.channel.mode && this.channel.id in state.modes) delete state.modes[this.channel.id];
@@ -249,10 +253,6 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
     set enteredText(value: string) {
         if(this.isSendingAds) this.adEnteredText = value;
         else this.chatEnteredText = value;
-    }
-
-    get reportMessages(): ReadonlyArray<Interfaces.Message> {
-        return this.both;
     }
 
     addModeMessage(mode: Channel.Mode, message: Interfaces.Message): void {
@@ -525,7 +525,7 @@ export default function(this: void): Interfaces.State {
         const message = createMessage(MessageType.Message, char, decodeHTML(data.message), time);
         await conversation.addMessage(message);
 
-        const words = conversation.settings.highlightWords.slice();
+        const words = conversation.settings.highlightWords.map((w) => w.replace(/[^\w]/gi, '\\$&'));
         if(conversation.settings.defaultHighlights) words.push(...core.state.settings.highlightWords);
         if(conversation.settings.highlight === Interfaces.Setting.Default && core.state.settings.highlight ||
             conversation.settings.highlight === Interfaces.Setting.True) words.push(core.connection.character);

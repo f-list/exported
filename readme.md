@@ -26,6 +26,11 @@ See https://electron.atom.io/docs/tutorial/application-distribution/
  - For Android, change into the `android` directory and run `./gradlew assembleDebug`. The generated APK is placed into `app/build/outputs/apk`.
  - For iOS, change into the `ios` directory and open `F-Chat.xcodeproj` using XCode. From there, simply run the app using the play button.
 
+## Building for Web
+ - Change into the `webchat` directory.
+ - Run `yarn build`/`yarn watch` to build assets. They are placed into the `dist` directory.
+ - The compiled main.js file can be included by an HTML file that is expected to provide a global `const chatSettings: {account: string, theme: string, characters: ReadonlyArray<string>, defaultCharacter: string | null};`. It should also normalize the page to 100% height.
+
 ## Building a custom theme
 See [the wiki](https://wiki.f-list.net/F-Chat_3.0/Themes) for instructions on how to create a custom theme.
  - Change into the `scss` directory.

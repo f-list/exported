@@ -113,6 +113,7 @@ export namespace Conversation {
         readonly unread: UnreadState
         settings: Settings
         send(): Promise<void>
+        clear(): void
         loadLastSent(): void
         show(): void
         loadMore(): void
@@ -121,12 +122,17 @@ export namespace Conversation {
 
 export type Conversation = Conversation.Conversation;
 
+export namespace Logs {
+    export type Conversation = {readonly key: string, readonly name: string};
+}
+
 export interface Logs {
     logMessage(conversation: Conversation, message: Conversation.Message): Promise<void> | void
     getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>>
-    readonly conversations: ReadonlyArray<{readonly key: string, readonly name: string}>
-    getLogs(key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>>
-    getLogDates(key: string): Promise<ReadonlyArray<Date>>
+    getConversations(character: string): Promise<ReadonlyArray<Logs.Conversation>>
+    getLogs(character: string, key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>>
+    getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>>
+    getAvailableCharacters(): Promise<ReadonlyArray<string>>
 }
 
 export namespace Settings {
@@ -164,6 +170,7 @@ export namespace Settings {
         readonly fontSize: number;
         readonly showNeedsReply: boolean;
         readonly enterSend: boolean;
+        readonly colorBookmarks: boolean;
     }
 }
 

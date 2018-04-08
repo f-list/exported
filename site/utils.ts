@@ -36,7 +36,7 @@ export function groupObjectBy<K extends string, T extends {[k in K]: string}>(ob
         const realItem = <T>obj[objkey];
         const newKey = realItem[key];
         if(newObject[<string>newKey] === undefined) newObject[newKey] = [];
-        newObject[newKey]!.push(realItem);
+        newObject[<string>newKey]!.push(realItem);
     }
     return newObject;
 }

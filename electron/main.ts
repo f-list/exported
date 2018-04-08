@@ -2,7 +2,7 @@
  * @license
  * MIT License
  *
- * Copyright (c) 2017 F-List
+ * Copyright (c) 2018 F-List
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
  *
  * This license header applies to this file and all of the non-third-party assets it includes.
  * @file The entry point for the Electron main thread of F-Chat 3.0.
- * @copyright 2017 F-List
+ * @copyright 2018 F-List
  * @author Maya Wolf <maya@f-list.net>
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
@@ -232,6 +232,8 @@ function onReady(): void {
                         const dir = <string[] | undefined>electron.dialog.showOpenDialog(
                             {defaultPath: new GeneralSettings().logDirectory, properties: ['openDirectory']});
                         if(dir !== undefined) {
+                            if(dir[0].startsWith(path.dirname(app.getPath('exe'))))
+                                return electron.dialog.showErrorBox(l('settings.logDir'), l('settings.logDir.inAppDir'));
                             const button = electron.dialog.showMessageBox(window, {
                                 message: l('settings.logDir.confirm', dir[0], settings.logDirectory),
                                 buttons: [l('confirmYes'), l('confirmNo')],
@@ -285,14 +287,17 @@ function onReady(): void {
                 {
                     accelerator: process.platform === 'darwin' ? 'Cmd+Q' : undefined,
                     label: l('action.quit'),
-                    click(_: Electron.MenuItem, w: Electron.BrowserWindow): void {
+                    click(_: Electron.MenuItem, window: Electron.BrowserWindow): void {
                         if(characters.length === 0) return app.quit();
-                        const button = electron.dialog.showMessageBox(w, {
+                        const button = electron.dialog.showMessageBox(window, {
                             message: l('chat.confirmLeave'),
                             buttons: [l('confirmYes'), l('confirmNo')],
                             cancelId: 1
                         });
-                        if(button === 0) app.quit();
+                        if(button === 0) {
+                            for(const w of windows) w.webContents.send('quit');
+                            app.quit();
+                        }
                     }
                 }
             ]

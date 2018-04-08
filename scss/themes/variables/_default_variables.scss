@@ -15,13 +15,14 @@ $black: #fff;
 
 // Theme and brand colors
 $primary: #0447af;
-$secondary: $gray-300;
+$secondary: $gray-400;
 $success: darken(#009900, 5%);
 $info: #0447af;
 $warning: #f29c00;
 $danger: #930300;
 $light: $gray-200;
 $text-muted: $gray-500;
+$text-dark: $gray-600;
 $component-active-color: $gray-900;
 
 // Core page element colors
@@ -31,8 +32,7 @@ $link-hover-color: lighten($link-color, 15%);
 $dropdown-bg: $gray-200;
 
 // Modal Dialogs
-$modal-backdrop-opacity: .7;
-$modal-backdrop-bg: rgba($white, $modal-backdrop-opacity);
+$modal-backdrop-bg: $white;
 $modal-content-bg: $gray-100;
 $modal-header-border-color: $gray-300;
 

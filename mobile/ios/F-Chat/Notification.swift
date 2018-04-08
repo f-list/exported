@@ -21,7 +21,7 @@ class Notification: NSObject, WKScriptMessageHandler, UNUserNotificationCenterDe
         }
         switch(data["_type"] as! String) {
         case "notify":
-            notify(data["notify"] as! Bool, data["title"] as! String, data["text"] as! String, data["icon"] as! String, data["sound"] as! String?, data["data"] as! String, callback)
+            notify(data["notify"] as! Bool, data["title"] as! String, data["text"] as! String, data["icon"] as! String, data["sound"] as? String, data["data"] as! String, callback)
         case "requestPermission":
             requestPermission(callback)
         default:
@@ -39,8 +39,12 @@ class Notification: NSObject, WKScriptMessageHandler, UNUserNotificationCenterDe
     
     func notify(_ notify: Bool, _ title: String, _ text: String, _ icon: String, _ sound: String?, _ data: String, _ cb: (String?) -> Void) {
         if(!notify) {
-            let player = try! AVAudioPlayer(contentsOf: Bundle.main.url(forResource: "www/sounds/" + sound!, withExtension: "wav")!)
-            player.play()
+            if(sound != nil) {
+                let player = try! AVAudioPlayer(contentsOf: Bundle.main.url(forResource: "www/sounds/" + sound!, withExtension: "wav")!)
+                player.play()
+            }
+            cb(nil)
+            return
         }
         let content = UNMutableNotificationContent()
         content.title = title

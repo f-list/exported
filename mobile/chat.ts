@@ -2,7 +2,7 @@
  * @license
  * MIT License
  *
- * Copyright (c) 2017 F-List
+ * Copyright (c) 2018 F-List
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,25 @@
  *
  * This license header applies to this file and all of the non-third-party assets it includes.
  * @file The entry point for the mobile version of F-Chat 3.0.
- * @copyright 2017 F-List
+ * @copyright 2018 F-List
  * @author Maya Wolf <maya@f-list.net>
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
+import Axios from 'axios';
 import * as Raven from 'raven-js';
 import Vue from 'vue';
 import VueRaven from '../chat/vue-raven';
 import Index from './Index.vue';
 
+const version = (<{version: string}>require('./package.json')).version; //tslint:disable-line:no-require-imports
+(<any>window)['setupPlatform'] = (platform: string) => { //tslint:disable-line:no-any
+    Axios.defaults.params = { __fchat: `mobile-${platform}/${version}` };
+};
+
 if(process.env.NODE_ENV === 'production') {
     Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
-        release: `mobile-${require('./package.json').version}`, //tslint:disable-line:no-require-imports no-unsafe-any
+        release: `mobile-${version}`,
         dataCallback: (data: {culprit: string, exception: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
             data.culprit = `~${data.culprit.substr(data.culprit.lastIndexOf('/'))}`;
             for(const ex of data.exception.values)

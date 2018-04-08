@@ -3,9 +3,12 @@
         <div style="display:flex;flex-direction:column">
             <tabs style="flex-shrink:0" :tabs="[l('channelList.public'), l('channelList.private')]" v-model="tab"></tabs>
             <div style="display: flex; flex-direction: column">
-                <div style="display:flex; padding: 10px 0; flex-shrink: 0;">
+                <div class="input-group" style="padding:10px 0;flex-shrink:0">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text"><span class="fas fa-search"></span></div>
+                    </div>
                     <input class="form-control" style="flex:1; margin-right:10px;" v-model="filter" :placeholder="l('filter')"/>
-                    <a href="#" @click.prevent="sortCount = !sortCount">
+                    <a href="#" @click.prevent="sortCount = !sortCount" style="align-self:center">
                         <span class="fa fa-2x" :class="{'fa-sort-amount-down': sortCount, 'fa-sort-alpha-down': !sortCount}"></span>
                     </a>
                 </div>
@@ -25,8 +28,11 @@
                         </label>
                     </div>
                 </div>
-                <div style="display:flex; padding: 10px 0; flex-shrink: 0;">
-                    <input class="form-control" style="flex:1; margin-right:10px;" v-model="createName"
+                <div class="input-group" style="padding:10px 0;flex-shrink:0">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text"><span class="fas fa-plus"></span></div>
+                    </div>
+                    <input class="form-control" style="flex:1;margin-right:10px" v-model="createName"
                            :placeholder="l('channelList.createName')"/>
                     <button class="btn btn-primary" @click="create">{{l('channelList.create')}}</button>
                 </div>

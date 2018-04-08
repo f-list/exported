@@ -1,4 +1,3 @@
-import {addMinutes} from 'date-fns';
 import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -44,14 +43,14 @@ interface Index {
     [key: string]: IndexItem | undefined
 }
 
-export function getLogDir(this: void, character: string = core.connection.character): string {
+export function getLogDir(this: void, character: string): string {
     const dir = path.join(core.state.generalSettings!.logDirectory, character, 'logs');
     mkdir(dir);
     return dir;
 }
 
-function getLogFile(this: void, key: string): string {
-    return path.join(getLogDir(), key);
+function getLogFile(this: void, character: string, key: string): string {
+    return path.join(getLogDir(character), key);
 }
 
 export function checkIndex(this: void, index: Index, message: Message, key: string, name: string,
@@ -151,35 +150,42 @@ export function fixLogs(character: string): void {
         }
 }
 
+function loadIndex(name: string): Index {
+    const index: Index = {};
+    const dir = getLogDir(name);
+    const files = fs.readdirSync(dir);
+    for(const file of files)
+        if(file.substr(-4) === '.idx') {
+            const content = fs.readFileSync(path.join(dir, file));
+            let offset = content.readUInt8(0, noAssert) + 1;
+            const item: IndexItem = {
+                name: content.toString('utf8', 1, offset),
+                index: {},
+                offsets: new Array(content.length - offset)
+            };
+            for(; offset < content.length; offset += 7) {
+                const key = content.readUInt16LE(offset);
+                item.index[key] = item.offsets.length;
+                item.offsets.push(content.readUIntLE(offset + 2, 5, noAssert));
+            }
+            index[file.slice(0, -4).toLowerCase()] = item;
+        }
+    return index;
+}
+
 export class Logs implements Logging {
     private index: Index = {};
+    private loadedIndex?: Index;
+    private loadedCharacter?: string;
 
     constructor() {
         core.connection.onEvent('connecting', () => {
-            this.index = {};
-            const dir = getLogDir();
-            const files = fs.readdirSync(dir);
-            for(const file of files)
-                if(file.substr(-4) === '.idx') {
-                    const content = fs.readFileSync(path.join(dir, file));
-                    let offset = content.readUInt8(0, noAssert) + 1;
-                    const item: IndexItem = {
-                        name: content.toString('utf8', 1, offset),
-                        index: {},
-                        offsets: new Array(content.length - offset)
-                    };
-                    for(; offset < content.length; offset += 7) {
-                        const key = content.readUInt16LE(offset);
-                        item.index[key] = item.offsets.length;
-                        item.offsets.push(content.readUIntLE(offset + 2, 5, noAssert));
-                    }
-                    this.index[file.slice(0, -4).toLowerCase()] = item;
-                }
+            this.index = loadIndex(core.connection.character);
         });
     }
 
     async getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>> {
-        const file = getLogFile(conversation.key);
+        const file = getLogFile(core.connection.character, conversation.key);
         if(!fs.existsSync(file)) return [];
         let count = 20;
         let messages = new Array<Conversation.Message>(count);
@@ -198,25 +204,30 @@ export class Logs implements Logging {
         return messages;
     }
 
-    async getLogDates(key: string): Promise<ReadonlyArray<Date>> {
-        const entry = this.index[key];
+    private getIndex(name: string): Index {
+        if(this.loadedCharacter === name) return this.loadedIndex!;
+        this.loadedCharacter = name;
+        return this.loadedIndex = name === core.connection.character ? this.index : loadIndex(name);
+    }
+
+    async getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>> {
+        const entry = this.getIndex(character)[key];
         if(entry === undefined) return [];
         const dates = [];
-        for(const item in entry.index) {
-            const date = new Date(parseInt(item, 10) * dayMs);
-            dates.push(addMinutes(date, date.getTimezoneOffset()));
-        }
+        const offset = new Date().getTimezoneOffset() * 60000;
+        for(const item in entry.index)
+            dates.push(new Date(parseInt(item, 10) * dayMs + offset));
         return dates;
     }
 
-    async getLogs(key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {
-        const index = this.index[key];
+    async getLogs(character: string, key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {
+        const index = this.getIndex(character)[key];
         if(index === undefined) return [];
         const dateOffset = index.index[Math.floor(date.getTime() / dayMs - date.getTimezoneOffset() / 1440)];
         if(dateOffset === undefined) return [];
         const buffer = Buffer.allocUnsafe(50100);
         const messages: Conversation.Message[] = [];
-        const file = getLogFile(key);
+        const file = getLogFile(character, key);
         const fd = fs.openSync(file, 'r');
         let pos = index.offsets[dateOffset];
         const size = dateOffset + 1 < index.offsets.length ? index.offsets[dateOffset + 1] : (fs.fstatSync(fd)).size;
@@ -231,7 +242,7 @@ export class Logs implements Logging {
     }
 
     logMessage(conversation: {key: string, name: string}, message: Message): void {
-        const file = getLogFile(conversation.key);
+        const file = getLogFile(core.connection.character, conversation.key);
         const buffer = serializeMessage(message).serialized;
         const hasIndex = this.index[conversation.key] !== undefined;
         const indexBuffer = checkIndex(this.index, message, conversation.key, conversation.name,
@@ -240,10 +251,16 @@ export class Logs implements Logging {
         writeFile(file, buffer, {flag: 'a'});
     }
 
-    get conversations(): ReadonlyArray<{key: string, name: string}> {
+    async getConversations(character: string): Promise<ReadonlyArray<{key: string, name: string}>> {
+        const index = this.getIndex(character);
         const conversations: {key: string, name: string}[] = [];
-        for(const key in this.index) conversations.push({key, name: this.index[key]!.name});
+        for(const key in index) conversations.push({key, name: index[key]!.name});
         return conversations;
+    }
+
+    async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
+        const baseDir = core.state.generalSettings!.logDirectory;
+        return (fs.readdirSync(baseDir)).filter((x) => fs.lstatSync(path.join(baseDir, x)).isDirectory());
     }
 }
 

@@ -6,7 +6,7 @@
             <div class="btn" :class="'btn-' + (hasUpdate ? 'warning' : 'light')" @click="openMenu" id="settings">
                 <i class="fa fa-cog"></i>
             </div>
-            <ul class="nav nav-tabs" style="border-bottom:0" ref="tabs">
+            <ul class="nav nav-tabs" style="border-bottom:0;margin-bottom:-2px" ref="tabs">
                 <li v-for="tab in tabs" :key="tab.view.id" class="nav-item" @auxclick="remove(tab)">
                     <a href="#" @click.prevent="show(tab)" class="nav-link"
                         :class="{active: tab === activeTab, hasNew: tab.hasNew && tab !== activeTab}">
@@ -54,8 +54,9 @@
     }
 
     function destroyTab(tab: Tab): void {
+        if(tab.user !== undefined) electron.ipcRenderer.send('disconnect', tab.user);
         tab.tray.destroy();
-        tab.view.webContents.loadURL('about:blank');
+        tab.view.destroy();
         electron.ipcRenderer.send('tab-closed');
     }
 
@@ -88,10 +89,7 @@
             electron.ipcRenderer.on('open-tab', () => this.addTab());
             electron.ipcRenderer.on('update-available', (_: Event, available: boolean) => this.hasUpdate = available);
             electron.ipcRenderer.on('fix-logs', () => this.activeTab!.view.webContents.send('fix-logs'));
-            electron.ipcRenderer.on('quit', () => {
-                this.tabs.forEach(destroyTab);
-                this.tabs = [];
-            });
+            electron.ipcRenderer.on('quit', () => this.destroyAllTabs());
             electron.ipcRenderer.on('connect', (_: Event, id: number, name: string) => {
                 const tab = this.tabMap[id];
                 tab.user = name;
@@ -106,6 +104,7 @@
                     tab.hasNew = false;
                     electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
                 }
+                electron.ipcRenderer.send('disconnect', tab.user);
                 tab.user = undefined;
                 tab.tray.setToolTip(l('title'));
                 tab.tray.setContextMenu(electron.remote.Menu.buildFromTemplate(this.createTrayMenu(tab)));
@@ -122,6 +121,13 @@
             browserWindow.on('unmaximize', () => {
                 this.isMaximized = false;
                 this.activeTab!.view.setBounds(getWindowBounds());
+            });
+            electron.ipcRenderer.on('switch-tab', (_: Event) => {
+                const index = this.tabs.indexOf(this.activeTab!);
+                this.show(this.tabs[index + 1 === this.tabs.length ? 0 : index + 1]);
+            });
+            electron.ipcRenderer.on('show-tab', (_: Event, id: number) => {
+                this.show(this.tabMap[id]);
             });
             document.addEventListener('click', () => this.activeTab!.view.webContents.focus());
             window.addEventListener('focus', () => this.activeTab!.view.webContents.focus());
@@ -140,20 +146,25 @@
             window.onbeforeunload = () => {
                 const isConnected = this.tabs.reduce((cur, tab) => cur || tab.user !== undefined, false);
                 if(process.env.NODE_ENV !== 'production' || !isConnected) {
-                    this.tabs.forEach(destroyTab);
+                    this.destroyAllTabs();
                     return;
                 }
                 if(!this.settings.closeToTray)
                     return setImmediate(() => {
                         if(confirm(l('chat.confirmLeave'))) {
-                            this.tabs.forEach(destroyTab);
-                            this.tabs = [];
+                            this.destroyAllTabs();
                             browserWindow.close();
                         }
                     });
                 browserWindow.hide();
                 return false;
             };
+        }
+
+        destroyAllTabs(): void {
+            browserWindow.setBrowserView(null!);
+            this.tabs.forEach(destroyTab);
+            this.tabs = [];
         }
 
         get styling(): string {
@@ -205,6 +216,7 @@
             this.activeTab = tab;
             browserWindow.setBrowserView(tab.view);
             tab.view.setBounds(getWindowBounds());
+            tab.view.webContents.focus();
         }
 
         remove(tab: Tab, shouldConfirm: boolean = true): void {
@@ -212,10 +224,10 @@
             this.tabs.splice(this.tabs.indexOf(tab), 1);
             electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
             delete this.tabMap[tab.view.webContents.id];
-            destroyTab(tab);
             if(this.tabs.length === 0) {
                 if(process.env.NODE_ENV === 'production') browserWindow.close();
             } else if(this.activeTab === tab) this.show(this.tabs[0]);
+            destroyTab(tab);
         }
 
         minimize(): void {

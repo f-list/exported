@@ -43,6 +43,7 @@ export class Settings implements ISettings {
     fontSize = 14;
     showNeedsReply = false;
     enterSend = true;
+    colorBookmarks = false;
 }
 
 export class ConversationSettings implements Conversation.Settings {

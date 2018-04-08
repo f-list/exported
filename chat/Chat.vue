@@ -2,7 +2,12 @@
     <div style="display:flex; flex-direction: column; height:100%; justify-content: center">
         <div class="card bg-light" style="width:400px;max-width:100%;margin:0 auto" v-if="!connected">
             <div class="alert alert-danger" v-show="error">{{error}}</div>
-            <h3 class="card-header" style="margin-top:0">{{l('title')}}</h3>
+            <h3 class="card-header" style="margin-top:0;display:flex">
+                {{l('title')}}
+                <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn" style="flex:1;text-align:right">
+                    <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
+                </a>
+            </h3>
             <div class="card-body">
                 <h4 class="card-title">{{l('login.selectCharacter')}}</h4>
                 <select v-model="selectedCharacter" class="form-control custom-select">
@@ -21,6 +26,8 @@
             <div class="alert alert-danger" v-show="error">{{error}}</div>
             {{l('chat.disconnected')}}
         </modal>
+        <logs ref="logsDialog"></logs>
+        <div v-if="version && !connected" style="position:absolute;bottom:0;right:0">{{version}}</div>
     </div>
 </template>
 
@@ -37,6 +44,7 @@
     import Conversations from './conversations';
     import core from './core';
     import l from './localize';
+    import Logs from './Logs.vue';
 
     type BBCodeNode = Node & {bbcodeTag?: string, bbcodeParam?: string, bbcodeHide?: boolean};
 
@@ -71,7 +79,7 @@
     }
 
     @Component({
-        components: {chat: ChatView, modal: Modal}
+        components: {chat: ChatView, modal: Modal, logs: Logs}
     })
     export default class Chat extends Vue {
         @Prop({required: true})
@@ -79,6 +87,8 @@
         @Prop({required: true})
         readonly defaultCharacter!: string | undefined;
         selectedCharacter = this.defaultCharacter || this.ownCharacters[0]; //tslint:disable-line:strict-boolean-expressions
+        @Prop()
+        readonly version?: string;
         error = '';
         connecting = false;
         connected = false;
@@ -86,11 +96,7 @@
         copyPlain = false;
 
         mounted(): void {
-            window.addEventListener('beforeunload', (e) => {
-                if(!this.connected) return;
-                e.returnValue = l('chat.confirmLeave');
-                return l('chat.confirmLeave');
-            });
+            document.title = l('title', core.connection.character);
             document.addEventListener('copy', ((e: ClipboardEvent) => {
                 if(this.copyPlain) {
                     this.copyPlain = false;
@@ -111,6 +117,7 @@
                 if(getKey(e) === Keys.KeyC && e.shiftKey && (e.ctrlKey || e.metaKey) && !e.altKey) {
                     this.copyPlain = true;
                     document.execCommand('copy');
+                    e.preventDefault();
                 }
             });
             core.register('characters', Characters(core.connection));
@@ -121,6 +128,7 @@
                 if(this.connected) core.notifications.playSound('logout');
                 this.connected = false;
                 this.connecting = false;
+                document.title = l('title');
             });
             core.connection.onEvent('connecting', async() => {
                 this.connecting = true;
@@ -132,11 +140,14 @@
                 this.connecting = false;
                 this.connected = true;
                 core.notifications.playSound('login');
+                document.title = l('title.connected', core.connection.character);
+            });
+            core.watch(() => core.conversations.hasNew, (hasNew) => {
+                document.title = (hasNew ? '💬 ' : '') + l(core.connection.isOpen ? 'title.connected' : 'title', core.connection.character);
             });
             core.connection.onError((e) => {
                 this.error = errorToString(e);
                 this.connecting = false;
-                this.connected = false;
             });
         }
 
@@ -147,9 +158,11 @@
 
         connect(): void {
             this.connecting = true;
-            core.connection.connect(this.selectedCharacter).catch((e) => {
-                if((<Error & {request?: object}>e).request !== undefined) this.error = l('login.connectError'); //catch axios network errors
-                else throw e;
+            core.connection.connect(this.selectedCharacter).catch((e: Error) => {
+                if((<Error & {request?: object}>e).request !== undefined) {//catch axios network errors
+                    this.error = l('login.connectError', e.message);
+                    this.connecting = false;
+                } else throw e;
             });
         }
     }

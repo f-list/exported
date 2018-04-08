@@ -2,7 +2,7 @@
  * @license
  * MIT License
  *
- * Copyright (c) 2017 F-List
+ * Copyright (c) 2018 F-List
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,11 +24,12 @@
  *
  * This license header applies to this file and all of the non-third-party assets it includes.
  * @file The entry point for the Electron renderer of F-Chat 3.0.
- * @copyright 2017 F-List
+ * @copyright 2018 F-List
  * @author Maya Wolf <maya@f-list.net>
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
+import Axios from 'axios';
 import {exec} from 'child_process';
 import * as electron from 'electron';
 import * as fs from 'fs';
@@ -62,6 +63,8 @@ const sc = nativeRequire<{
     }
 }>('spellchecker/build/Release/spellchecker.node');
 const spellchecker = new sc.Spellchecker();
+
+Axios.defaults.params = { __fchat: `desktop/${electron.remote.app.getVersion()}` };
 
 if(process.env.NODE_ENV === 'production') {
     Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {

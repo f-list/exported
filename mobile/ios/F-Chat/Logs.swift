@@ -20,7 +20,9 @@ class Logs: NSObject, WKScriptMessageHandler {
     let baseDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
     var buffer = UnsafeMutableRawPointer.allocate(bytes: 51000, alignedTo: 1)
     var logDir: URL!
+    var character: String?
     var index: [String: IndexItem]!
+    var loadedIndex: [String: IndexItem]!
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         let data = message.body as! [String: AnyObject]
@@ -30,12 +32,16 @@ class Logs: NSObject, WKScriptMessageHandler {
             switch(data["_type"] as! String) {
             case "init":
                 result = try initCharacter(data["character"] as! String)
+            case "loadIndex":
+                result = try loadIndex(data["character"] as! String)
+            case "getCharacters":
+                result = try getCharacters()
             case "logMessage":
                 try logMessage(data["key"] as! String, data["conversation"] as! NSString, (data["time"] as! NSNumber).uint32Value, (data["type"] as! NSNumber).uint8Value, data["sender"] as! NSString, data["message"] as! NSString)
             case "getBacklog":
                 result = try getBacklog(data["key"] as! String)
-            case "readString":
-                result = try getLogs(data["key"] as! String, (data["date"] as! NSNumber).uint16Value)
+            case "getLogs":
+                result = try getLogs(data["character"] as! String, data["key"] as! String, (data["date"] as! NSNumber).uint16Value)
             default:
                 message.webView!.evaluateJavaScript("nativeError('\(key)',new Error('Unknown message type'))")
                 return
@@ -43,15 +49,13 @@ class Logs: NSObject, WKScriptMessageHandler {
             let output = result == nil ? "undefined" : result!;
             message.webView!.evaluateJavaScript("nativeMessage('\(key)',\(output))")
         } catch(let error) {
-            message.webView!.evaluateJavaScript("nativeError('\(key)',new Error('File-\(data["_type"]!): \(error.localizedDescription)'))")
+            message.webView!.evaluateJavaScript("nativeError('\(key)',new Error('Logs-\(data["_type"]!): \(error.localizedDescription)'))")
         }
     }
 
-    func initCharacter(_ name: String) throws -> String {
-        logDir = baseDir.appendingPathComponent("\(name)/logs", isDirectory: true)
-        index = [String: IndexItem]()
-        try fm.createDirectory(at: logDir, withIntermediateDirectories: true, attributes: nil)
-        let files = try fm.contentsOfDirectory(at: logDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+    func getIndex(_ character: String) throws -> [String: IndexItem] {
+        var index = [String: IndexItem]()
+        let files = try fm.contentsOfDirectory(at: baseDir.appendingPathComponent("\(character)/logs", isDirectory: true), includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
         for file in files {
             if(!file.lastPathComponent.hasSuffix(".idx")) { continue }
             let data = NSData(contentsOf: file)!
@@ -71,7 +75,22 @@ class Logs: NSObject, WKScriptMessageHandler {
             }
             index[file.deletingPathExtension().lastPathComponent] = indexItem
         }
+        return index
+    }
+
+    func initCharacter(_ name: String) throws -> String {
+        logDir = baseDir.appendingPathComponent("\(name)/logs", isDirectory: true)
+        try fm.createDirectory(at: logDir, withIntermediateDirectories: true, attributes: nil)
+        index = try getIndex(name)
+        loadedIndex = index
         return String(data: try JSONEncoder().encode(index), encoding: .utf8)!
+    }
+
+    func getCharacters() throws -> String {
+        let entries = try fm.contentsOfDirectory(at: baseDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]).filter {
+            try $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
+        }.map { $0.lastPathComponent }
+        return String(data: try JSONSerialization.data(withJSONObject: entries), encoding: .utf8)!;
     }
 
     func logMessage(_ key: String, _ conversation: NSString, _ time: UInt32, _ type: UInt8, _ sender: NSString, _ text: NSString) throws {
@@ -79,7 +98,7 @@ class Logs: NSObject, WKScriptMessageHandler {
         var type = type
         var day = UInt16(time / 86400)
         let url = logDir.appendingPathComponent(key, isDirectory: false);
-        var indexItem = index[key]
+        var indexItem = index![key]
         if(indexItem == nil) { fm.createFile(atPath: url.path, contents: nil) }
         let fd = try FileHandle(forWritingTo: url)
         fd.seekToEndOfFile()
@@ -90,7 +109,7 @@ class Logs: NSObject, WKScriptMessageHandler {
             indexFd.seekToEndOfFile()
             if(indexItem == nil) {
                 indexItem = IndexItem(conversation as String)
-                index[key] = indexItem
+                index![key] = indexItem
                 let cstring = conversation.utf8String
                 var length = strlen(cstring)
                 write(indexFd.fileDescriptor, &length, 1)
@@ -137,9 +156,9 @@ class Logs: NSObject, WKScriptMessageHandler {
         return "[" + strings.reversed().joined(separator: ",") + "]"
     }
 
-    func getLogs(_ key: String, _ date: UInt16) throws -> String {
-        guard let offset = index[key]?.index[date] else { return "[]" }
-        let url = logDir.appendingPathComponent(key, isDirectory: false)
+    func getLogs(_ character: String, _ key: String, _ date: UInt16) throws -> String {
+        guard let offset = loadedIndex![key]?.index[date] else { return "[]" }
+        let url = baseDir.appendingPathComponent("\(character)/logs/\(key)", isDirectory: false)
         let file = try FileHandle(forReadingFrom: url)
         let size = file.seekToEndOfFile()
         file.seek(toFileOffset: offset)
@@ -152,6 +171,11 @@ class Logs: NSObject, WKScriptMessageHandler {
             file.seek(toFileOffset: file.offsetInFile + UInt64(deserialized.1 + 2))
         }
         return json + "]"
+    }
+
+    func loadIndex(_ name: String) throws -> String {
+        loadedIndex = name == character ? index : try getIndex(name)
+        return String(data: try JSONEncoder().encode(loadedIndex), encoding: .utf8)!
     }
 
     func deserializeMessage(_ checkDate: UInt16 = 0) -> (String, Int) {

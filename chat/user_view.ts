@@ -5,6 +5,7 @@
 
 import Vue, {CreateElement, RenderContext, VNode} from 'vue';
 import {Channel, Character} from '../fchat';
+import core from './core';
 
 export function getStatusIcon(status: Character.Status): string {
     switch(status) {
@@ -44,8 +45,10 @@ const UserView = Vue.extend({
         if(rankIcon !== '') children.unshift(createElement('span', {staticClass: rankIcon}));
         if(props.showStatus !== undefined || character.status === 'crown')
             children.unshift(createElement('span', {staticClass: `fa-fw ${getStatusIcon(character.status)}`}));
+        const gender = character.gender !== undefined ? character.gender.toLowerCase() : 'none';
+        const isBookmark = core.connection.isOpen && core.state.settings.colorBookmarks && (character.isFriend || character.isBookmarked);
         return createElement('span', {
-            attrs: {class: `user-view gender-${character.gender !== undefined ? character.gender.toLowerCase() : 'none'}`},
+            attrs: {class: `user-view gender-${gender}${isBookmark ? ' user-bookmark' : ''}`},
             domProps: {character, channel: props.channel, bbcodeTag: 'user'}
         }, children);
     }

@@ -18,7 +18,12 @@
                     </div>
                     <div class="form-group" v-show="showAdvanced">
                         <label class="control-label" for="host">{{l('login.host')}}</label>
-                        <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login" :disabled="loggingIn"/>
+                        <div class="input-group">
+                            <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login" :disabled="loggingIn"/>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" @click="resetHost"><span class="fas fa-undo-alt"></span></button>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="advanced"><input type="checkbox" id="advanced" v-model="showAdvanced"/> {{l('login.advanced')}}</label>
@@ -71,15 +76,16 @@
     import Vue from 'vue';
     import Component from 'vue-class-component';
     import Chat from '../chat/Chat.vue';
-    import {Settings} from '../chat/common';
+    import {getKey, Settings} from '../chat/common';
     import core, {init as initCore} from '../chat/core';
     import l from '../chat/localize';
     import {init as profileApiInit} from '../chat/profile_api';
     import Socket from '../chat/WebSocket';
     import Modal from '../components/Modal.vue';
     import Connection from '../fchat/connection';
+    import {Keys} from '../keys';
     import CharacterPage from '../site/character_page/character_page.vue';
-    import {GeneralSettings, nativeRequire} from './common';
+    import {defaultHost, GeneralSettings, nativeRequire} from './common';
     import {fixLogs, Logs, SettingsStore} from './filesystem';
     import * as SlimcatImporter from './importer';
     import Notifications from './notifications';
@@ -138,9 +144,9 @@
                 this.fixCharacter = this.fixCharacters[0];
                 (<Modal>this.$refs['fixLogsModal']).show();
             });
-
-            window.addEventListener('beforeunload', () => {
-                if(this.character !== undefined) electron.ipcRenderer.send('disconnect', this.character);
+            window.addEventListener('keydown', (e) => {
+                if(getKey(e) === Keys.Tab && e.ctrlKey && !e.altKey && !e.shiftKey)
+                    parent.send('switch-tab', this.character);
             });
         }
 
@@ -185,6 +191,7 @@
                     Raven.setUserContext({username: core.connection.character});
                 });
                 connection.onEvent('closed', () => {
+                    if(this.character === undefined) return;
                     this.character = undefined;
                     electron.ipcRenderer.send('disconnect', connection.character);
                     parent.send('disconnect', webContents.id);
@@ -214,6 +221,10 @@
             } finally {
                 electron.ipcRenderer.send('disconnect', this.fixCharacter);
             }
+        }
+
+        resetHost(): void {
+            this.settings.host = defaultHost;
         }
 
         onMouseOver(e: MouseEvent): void {

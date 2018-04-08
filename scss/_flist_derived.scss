@@ -13,7 +13,7 @@ $gray-color: #ccc !default;
 $orange-color: #f60 !default;
 $collapse-header-bg: $card-bg !default;
 $collapse-border: darken($card-border-color, 25%) !default;
-
+$text-dark: $text-muted !default;
 
 // Character page quick kink comparison
 $quick-compare-active-border: $black-color !default;
@@ -53,4 +53,5 @@ $text-background-color-disabled: $gray-800 !default;
 select {
   @extend .custom-select;
   -webkit-appearance: none;
+  -moz-appearance: none;
 }

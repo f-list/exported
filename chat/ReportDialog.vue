@@ -1,5 +1,5 @@
 <template>
-    <modal :action="l('chat.report')" @submit.prevent="submit">
+    <modal :action="l('chat.report')" @submit.prevent="submit" :disabled="submitting">
         <div class="alert alert-danger" v-show="error">{{error}}</div>
         <h4>{{reporting}}</h4>
         <span v-show="!character">{{l('chat.report.channel.description')}}</span>
@@ -31,6 +31,7 @@
         text = '';
         l = l;
         error = '';
+        submitting = false;
 
         mounted(): void {
             (<Element>this.$refs['caption']).appendChild(new BBCodeParser().parseEverything(l('chat.report.description')));
@@ -74,6 +75,7 @@
             };
             if(this.character !== null) data.reportUser = this.character.name;
             try {
+                this.submitting = true;
                 const report = <{log_id?: number}>(await core.connection.queryApi('report-submit.php', data));
                 //tslint:disable-next-line:strict-boolean-expressions
                 if(!report.log_id) return;
@@ -81,7 +83,8 @@
                 this.hide();
             } catch(e) {
                 this.error = errorToString(e);
-                return;
+            } finally {
+                this.submitting = false;
             }
         }
     }

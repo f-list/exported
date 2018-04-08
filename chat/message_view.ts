@@ -26,9 +26,9 @@ const MessageView: Component = {
         const message = context.props.message;
         const children: VNodeChildrenArrayContents =
             [createElement('span', {staticClass: 'message-time'}, `[${formatTime(message.time)}] `)];
+        const separators = core.connection.isOpen ? core.state.settings.messageSeparators : false;
         /*tslint:disable-next-line:prefer-template*///unreasonable here
-        let classes = `message message-${Conversation.Message.Type[message.type].toLowerCase()}` +
-            (core.state.settings.messageSeparators ? ' message-block' : '') +
+        let classes = `message message-${Conversation.Message.Type[message.type].toLowerCase()}` + (separators ? ' message-block' : '') +
             (message.type !== Conversation.Message.Type.Event && message.sender.name === core.connection.character ? ' message-own' : '') +
             ((context.props.classes !== undefined) ? ` ${context.props.classes}` : '');
         if(message.type !== Conversation.Message.Type.Event) {

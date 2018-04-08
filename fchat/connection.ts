@@ -19,7 +19,7 @@ export default class Connection implements Interfaces.Connection {
     private ticket = '';
     private cleanClose = false;
     private reconnectTimer: NodeJS.Timer | undefined;
-    private ticketProvider: Interfaces.TicketProvider;
+    private readonly ticketProvider: Interfaces.TicketProvider;
     private reconnectDelay = 0;
     private isReconnect = false;
 
@@ -31,15 +31,13 @@ export default class Connection implements Interfaces.Connection {
 
     async connect(character: string): Promise<void> {
         this.cleanClose = false;
-        this.isReconnect = this.character === character;
+        if(this.character !== character) this.isReconnect = false;
         this.character = character;
         try {
             this.ticket = await this.ticketProvider();
         } catch(e) {
-            for(const handler of this.errorHandlers) handler(<Error>e);
-            await this.invokeHandlers('closed', true);
-            this.reconnect();
-            return;
+            (<Error & {request: true}>e).request = true;
+            throw e;
         }
         await this.invokeHandlers('connecting', this.isReconnect);
         if(this.cleanClose) {
@@ -71,17 +69,26 @@ export default class Connection implements Interfaces.Connection {
         socket.onError((error: Error) => {
             for(const handler of this.errorHandlers) handler(error);
         });
-        return new Promise<void>((resolve) => {
+        return new Promise<void>((resolve, reject) => {
             const handler = () => {
                 resolve();
                 this.offEvent('connected', handler);
             };
             this.onEvent('connected', handler);
+            this.onError(reject);
         });
     }
 
     private reconnect(): void {
-        this.reconnectTimer = setTimeout(async() => this.connect(this.character), this.reconnectDelay);
+        this.reconnectTimer = setTimeout(async() => {
+            try {
+                await this.connect(this.character);
+            } catch(e) {
+                for(const handler of this.errorHandlers) handler(<Error>e);
+                await this.invokeHandlers('closed', true);
+                this.reconnect();
+            }
+        }, this.reconnectDelay);
         this.reconnectDelay = this.reconnectDelay >= 30000 ? 60000 : this.reconnectDelay >= 10000 ? 30000 : 10000;
     }
 
@@ -89,6 +96,10 @@ export default class Connection implements Interfaces.Connection {
         if(this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer);
         this.cleanClose = true;
         if(this.socket !== undefined) this.socket.close();
+    }
+
+    get isOpen(): boolean {
+        return this.socket !== undefined;
     }
 
     async queryApi<T = object>(endpoint: string, data?: {account?: string, ticket?: string}): Promise<T> {
@@ -168,6 +179,7 @@ export default class Connection implements Interfaces.Connection {
                 if(data.identity === this.character) {
                     await this.invokeHandlers('connected', this.isReconnect);
                     this.reconnectDelay = 0;
+                    this.isReconnect = true;
                 }
         }
     }

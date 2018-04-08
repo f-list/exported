@@ -11,7 +11,7 @@
         <div v-if="!loading && !images.length" class="alert alert-info">No images.</div>
         <div class="image-preview" v-show="previewImage" @click="previewImage = ''">
             <img :src="previewImage" />
-            <div class="modal-backdrop in"></div>
+            <div class="modal-backdrop show"></div>
         </div>
     </div>
 </template>

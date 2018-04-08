@@ -2,7 +2,7 @@
  * @license
  * MIT License
  *
- * Copyright (c) 2017 F-List
+ * Copyright (c) 2018 F-List
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
  *
  * This license header applies to this file and all of the non-third-party assets it includes.
  * @file The entry point for the web version of F-Chat 3.0.
- * @copyright 2017 F-List
+ * @copyright 2018 F-List
  * @author Maya Wolf <maya@f-list.net>
  * @version 3.0
  * @see {@link https://github.com/f-list/exported|GitHub repo}
@@ -34,6 +34,7 @@ import * as Raven from 'raven-js';
 import Vue from 'vue';
 import Chat from '../chat/Chat.vue';
 import {init as initCore} from '../chat/core';
+import l from '../chat/localize';
 import Notifications from '../chat/notifications';
 import VueRaven from '../chat/vue-raven';
 import Socket from '../chat/WebSocket';
@@ -41,17 +42,23 @@ import Connection from '../fchat/connection';
 import '../scss/fa.scss'; //tslint:disable-line:no-import-side-effect
 import {Logs, SettingsStore} from './logs';
 
-declare const chatSettings: {account: string, theme: string, characters: ReadonlyArray<string>, defaultCharacter: string | null};
+if(typeof Promise !== 'function' || typeof Notification !== 'function') //tslint:disable-line:strict-type-predicates
+    alert('Your browser is too old to be supported by F-Chat 3.0. Please update to a newer version.');
+
+const version = (<{version: string}>require('./package.json')).version; //tslint:disable-line:no-require-imports
+Axios.defaults.params = { __fchat: `web/${version}` };
 
 if(process.env.NODE_ENV === 'production') {
     Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
-        release: `web-${require('./package.json').version}`, //tslint:disable-line:no-require-imports no-unsafe-any
+        release: `web-${version}`,
         dataCallback: (data: {culprit: string, exception: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
-            data.culprit = `~${data.culprit.substr(data.culprit.lastIndexOf('/'))}`;
+            const end = data.culprit.lastIndexOf('?');
+            data.culprit = `~${data.culprit.substring(data.culprit.lastIndexOf('/'), end === -1 ? undefined : end)}`;
             for(const ex of data.exception.values)
                 for(const frame of ex.stacktrace.frames) {
                     const index = frame.filename.lastIndexOf('/');
-                    frame.filename = index !== -1 ? `~${frame.filename.substr(index)}` : frame.filename;
+                    const endIndex = frame.filename.lastIndexOf('?');
+                    frame.filename = `~${frame.filename.substring(index !== -1 ? index : 0, endIndex === -1 ? undefined : endIndex)}`;
                 }
         }
     }).addPlugin(VueRaven, Vue).install();
@@ -60,6 +67,8 @@ if(process.env.NODE_ENV === 'production') {
     };
 }
 
+declare const chatSettings: {account: string, theme: string, characters: ReadonlyArray<string>, defaultCharacter: string | null};
+
 const ticketProvider = async() => {
     const data = (await Axios.post<{ticket?: string, error: string}>(
         '/json/getApiTicket.php?no_friends=true&no_bookmarks=true&no_characters=true')).data;
@@ -67,14 +76,18 @@ const ticketProvider = async() => {
     throw new Error(data.error);
 };
 
-initCore(new Connection('F-Chat 3.0 (Web)', '3.0', Socket, chatSettings.account, ticketProvider), Logs, SettingsStore, Notifications);
+const connection = new Connection('F-Chat 3.0 (Web)', '3.0', Socket, chatSettings.account, ticketProvider);
+initCore(connection, Logs, SettingsStore, Notifications);
+
+window.addEventListener('beforeunload', (e) => {
+    if(!connection.isOpen) return;
+    e.returnValue = l('chat.confirmLeave');
+    return l('chat.confirmLeave');
+});
 
 require(`../scss/themes/chat/${chatSettings.theme}.scss`);
 
 new Chat({ //tslint:disable-line:no-unused-expression
     el: '#app',
-    propsData: {
-        ownCharacters: chatSettings.characters,
-        defaultCharacter: chatSettings.defaultCharacter
-    }
+    propsData: {ownCharacters: chatSettings.characters, defaultCharacter: chatSettings.defaultCharacter, version}
 });

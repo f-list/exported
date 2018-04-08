@@ -15,18 +15,17 @@ import java.util.*
 class Logs(private val ctx: Context) {
 	data class IndexItem(val name: String, val index: MutableMap<Int, Long> = HashMap(), val dates: MutableList<Int> = LinkedList())
 
-	private lateinit var index: MutableMap<String, IndexItem>
+	private var index: MutableMap<String, IndexItem>? = null
+	private var loadedIndex: MutableMap<String, IndexItem>? = null
 	private lateinit var baseDir: File
+	private var character: String? = null
 	private val encoder = Charsets.UTF_8.newEncoder()
 	private val decoder = Charsets.UTF_8.newDecoder()
 	private val buffer = ByteBuffer.allocateDirect(51000).order(ByteOrder.LITTLE_ENDIAN)
 
-	@JavascriptInterface
-	fun initN(character: String): String {
-		baseDir = File(ctx.filesDir, "$character/logs")
-		baseDir.mkdirs()
-		val files = baseDir.listFiles({ _, name -> name.endsWith(".idx") })
-		index = HashMap(files.size)
+	private fun loadIndex(character: String): MutableMap<String, IndexItem> {
+		val files = File(ctx.filesDir, "$character/logs").listFiles({ _, name -> name.endsWith(".idx") })
+		val index = HashMap<String, IndexItem>(files.size)
 		for(file in files) {
 			FileInputStream(file).use { stream ->
 				buffer.clear()
@@ -49,8 +48,19 @@ class Logs(private val ctx: Context) {
 				index[file.nameWithoutExtension] = indexItem
 			}
 		}
+		return index
+	}
+
+	@JavascriptInterface
+	fun initN(character: String): String {
+		baseDir = File(ctx.filesDir, "$character/logs")
+		baseDir.mkdirs()
+		this.character = character
+		index = loadIndex(character)
+		loadedIndex = index
 		val json = JSONStringer().`object`()
-		for(item in index) json.key(item.key).`object`().key("name").value(item.value.name).key("dates").value(JSONArray(item.value.dates)).endObject()
+		for(item in index!!)
+			json.key(item.key).`object`().key("name").value(item.value.name).key("dates").value(JSONArray(item.value.dates)).endObject()
 		return json.endObject().toString()
 	}
 
@@ -59,13 +69,13 @@ class Logs(private val ctx: Context) {
 		val day = time / 86400
 		val file = File(baseDir, key)
 		buffer.clear()
-		if(!index.containsKey(key)) {
-			index[key] = IndexItem(conversation, HashMap())
+		if(!index!!.containsKey(key)) {
+			index!![key] = IndexItem(conversation, HashMap())
 			buffer.position(1)
 			encoder.encode(CharBuffer.wrap(conversation), buffer, true)
 			buffer.put(0, (buffer.position() - 1).toByte())
 		}
-		val item = index[key]!!
+		val item = index!![key]!!
 		if(!item.index.containsKey(day)) {
 			buffer.putShort(day.toShort())
 			val size = file.length()
@@ -130,11 +140,11 @@ class Logs(private val ctx: Context) {
 	}
 
 	@JavascriptInterface
-	fun getLogsN(key: String, date: Int): String {
-		val offset = index[key]?.index?.get(date) ?: return "[]"
+	fun getLogsN(character: String, key: String, date: Int): String {
+		val offset = loadedIndex!![key]?.index?.get(date) ?: return "[]"
 		val json = JSONStringer()
 		json.array()
-		FileInputStream(File(baseDir, key)).use { stream ->
+		FileInputStream(File(ctx.filesDir, "$character/logs/$key")).use { stream ->
 			val channel = stream.channel
 			channel.position(offset)
 			while(channel.position() < channel.size()) {
@@ -148,6 +158,20 @@ class Logs(private val ctx: Context) {
 			}
 		}
 		return json.endArray().toString()
+	}
+
+	@JavascriptInterface
+	fun loadIndexN(character: String): String {
+		loadedIndex = if(character == this.character) this.index else this.loadIndex(character)
+		val json = JSONStringer().`object`()
+		for(item in loadedIndex!!)
+			json.key(item.key).`object`().key("name").value(item.value.name).key("dates").value(JSONArray(item.value.dates)).endObject()
+		return json.endObject().toString()
+	}
+
+	@JavascriptInterface
+	fun getCharactersN(): String {
+		return JSONArray(ctx.filesDir.listFiles().filter { it.isDirectory }.map { it.name }).toString()
 	}
 
 	private fun deserializeMessage(buffer: ByteBuffer, json: JSONStringer, checkDate: Int = -1) {

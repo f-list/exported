@@ -19,6 +19,7 @@ export default class Notifications extends BaseNotifications {
                 silent: true
             });
             notification.onclick = () => {
+                browserWindow.webContents.send('show-tab', remote.getCurrentWebContents().id);
                 conversation.show();
                 browserWindow.focus();
                 notification.close();

@@ -1,16 +1,16 @@
 <template>
     <div class="bbcode-editor">
         <slot></slot>
-        <a tabindex="0" class="btn btn-secondary bbcode-btn btn-sm" role="button" @click="showToolbar = true" @blur="showToolbar = false"
+        <a tabindex="0" class="btn btn-light bbcode-btn btn-sm" role="button" @click="showToolbar = true" @blur="showToolbar = false"
             style="border-bottom-left-radius:0;border-bottom-right-radius:0">
             <i class="fa fa-code"></i>
         </a>
         <div class="bbcode-toolbar btn-toolbar" role="toolbar" :style="showToolbar ? 'display:flex' : ''" @mousedown.stop.prevent>
             <div class="btn-group" style="flex-wrap:wrap">
-                <div class="btn btn-secondary btn-sm" v-for="button in buttons" :title="button.title" @click.prevent.stop="apply(button)">
+                <div class="btn btn-light btn-sm" v-for="button in buttons" :title="button.title" @click.prevent.stop="apply(button)">
                     <i :class="(button.class ? button.class : 'fa ') + button.icon"></i>
                 </div>
-                <div @click="previewBBCode" class="btn btn-secondary btn-sm" :class="preview ? 'active' : ''"
+                <div @click="previewBBCode" class="btn btn-light btn-sm" :class="preview ? 'active' : ''"
                     :title="preview ? 'Close Preview' : 'Preview'">
                     <i class="fa fa-eye"></i>
                 </div>

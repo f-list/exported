@@ -25,6 +25,12 @@
                 </label>
             </div>
             <div class="form-group">
+                <label class="control-label" for="colorBookmarks">
+                    <input type="checkbox" id="colorBookmarks" v-model="colorBookmarks"/>
+                    {{l('settings.colorBookmarks')}}
+                </label>
+            </div>
+            <div class="form-group">
                 <label class="control-label" for="animatedEicons">
                     <input type="checkbox" id="animatedEicons" v-model="animatedEicons"/>
                     {{l('settings.animatedEicons')}}
@@ -124,9 +130,9 @@
     import {Settings as SettingsInterface} from './interfaces';
     import l from './localize';
 
-    @Component(
-        {components: {modal: Modal, tabs: Tabs}}
-    )
+    @Component({
+        components: {modal: Modal, tabs: Tabs}
+    })
     export default class SettingsView extends CustomDialog {
         l = l;
         availableImports: ReadonlyArray<string> = [];
@@ -150,6 +156,7 @@
         fontSize!: number;
         showNeedsReply!: boolean;
         enterSend!: boolean;
+        colorBookmarks!: boolean;
 
         constructor() {
             super();
@@ -180,6 +187,7 @@
             this.fontSize = settings.fontSize;
             this.showNeedsReply = settings.showNeedsReply;
             this.enterSend = settings.enterSend;
+            this.colorBookmarks = settings.colorBookmarks;
         };
 
         async doImport(): Promise<void> {
@@ -223,7 +231,8 @@
                 logAds: this.logAds,
                 fontSize: isNaN(this.fontSize) ? 14 : this.fontSize < 10 ? 10 : this.fontSize > 24 ? 24 : this.fontSize,
                 showNeedsReply: this.showNeedsReply,
-                enterSend: this.enterSend
+                enterSend: this.enterSend,
+                colorBookmarks: this.colorBookmarks
             };
             if(this.notifications) await core.notifications.requestPermission();
         }

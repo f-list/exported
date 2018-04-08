@@ -48,7 +48,7 @@
                                 </div>
                                 <div v-if="character.settings.guestbook" role="tabpanel" class="tab-pane" :class="{active: tab == 4}"
                                     id="guestbook">
-                                    <character-guestbook :character="character" ref="tab4"></character-guestbook>
+                                    <character-guestbook :character="character" :oldApi="oldApi" ref="tab4"></character-guestbook>
                                 </div>
                                 <div v-if="character.is_self || character.settings.show_friends" role="tabpanel" class="tab-pane"
                                     :class="{active: tab == 5}" id="friends">

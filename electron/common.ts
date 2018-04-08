@@ -2,11 +2,13 @@ import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export const defaultHost = 'wss://chat.f-list.net:9799';
+
 export class GeneralSettings {
     account = '';
     closeToTray = true;
     profileViewer = true;
-    host = 'wss://chat.f-list.net:9799';
+    host = defaultHost;
     logDirectory = path.join(electron.app.getPath('userData'), 'data');
     spellcheckLang: string | undefined = 'en_GB';
     theme = 'default';

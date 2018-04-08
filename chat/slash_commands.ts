@@ -72,11 +72,9 @@ export function parse(this: void | never, input: string, context: CommandContext
             }
             index = endIndex === -1 ? args.length : endIndex + 1;
         }
-    if(command.context !== undefined)
-        return function(this: Conversation): void {
-            command.exec(this, ...values);
-        };
-    else return () => command.exec(...values);
+    return function(this: Conversation): void {
+        command.exec(this, ...values);
+    };
 }
 
 export const enum CommandContext {
@@ -104,7 +102,7 @@ export interface Command {
         readonly delimiter?: string,                            //default ' ' (',' for type: Character)
         validator?(data: string | number): boolean              //default undefined
     }[]
-    exec(context?: Conversation | string | number, ...params: (string | number | undefined)[]): void
+    exec(context: Conversation, ...params: (string | number | undefined)[]): void
 }
 
 const commands: {readonly [key: string]: Command | undefined} = {
@@ -114,7 +112,7 @@ const commands: {readonly [key: string]: Command | undefined} = {
         params: [{type: ParamType.String}]
     },
     reward: {
-        exec: (character: string) => core.connection.send('RWD', {character}),
+        exec: (_, character: string) => core.connection.send('RWD', {character}),
         permission: Permission.Admin,
         params: [{type: ParamType.Character}]
     },
@@ -123,7 +121,7 @@ const commands: {readonly [key: string]: Command | undefined} = {
         exec: () => core.connection.send('PCR')
     },
     join: {
-        exec: (channel: string) => core.connection.send('JCH', {channel}),
+        exec: (_, channel: string) => core.connection.send('JCH', {channel}),
         params: [{type: ParamType.String}]
     },
     close: {
@@ -131,15 +129,17 @@ const commands: {readonly [key: string]: Command | undefined} = {
         context: CommandContext.Private | CommandContext.Channel
     },
     priv: {
-        exec: (character: string) => core.conversations.getPrivate(core.characters.get(character)).show(),
+        exec: (_, character: string) => core.conversations.getPrivate(core.characters.get(character)).show(),
         params: [{type: ParamType.Character}]
     },
     uptime: {
         exec: () => core.connection.send('UPT')
     },
+    clear: {
+        exec: (conv: Conversation) => conv.clear()
+    },
     status: {
-        //tslint:disable-next-line:no-inferrable-types
-        exec: (status: Character.Status, statusmsg: string = '') => core.connection.send('STA', {status, statusmsg}),
+        exec: (_, status: Character.Status, statusmsg: string = '') => core.connection.send('STA', {status, statusmsg}),
         params: [{type: ParamType.Enum, options: userStatuses}, {type: ParamType.String, optional: true}]
     },
     ad: {
@@ -203,22 +203,22 @@ const commands: {readonly [key: string]: Command | undefined} = {
         params: [{type: ParamType.Character, delimiter: ','}, {type: ParamType.Number, validator: (x) => x >= 1}]
     },
     gkick: {
-        exec: (character: string) => core.connection.send('KIK', {character}),
+        exec: (_, character: string) => core.connection.send('KIK', {character}),
         permission: Permission.ChatOp,
         params: [{type: ParamType.Character}]
     },
     gban: {
-        exec: (character: string) => core.connection.send('ACB', {character}),
+        exec: (_, character: string) => core.connection.send('ACB', {character}),
         permission: Permission.ChatOp,
         params: [{type: ParamType.Character}]
     },
     gunban: {
-        exec: (character: string) => core.connection.send('UNB', {character}),
+        exec: (_, character: string) => core.connection.send('UNB', {character}),
         permission: Permission.ChatOp,
         params: [{type: ParamType.Character}]
     },
     gtimeout: {
-        exec: (character: string, time: number, reason: string) =>
+        exec: (_, character: string, time: number, reason: string) =>
             core.connection.send('TMO', {character, time, reason}),
         permission: Permission.ChatOp,
         params: [{type: ParamType.Character, delimiter: ','}, {type: ParamType.Number, validator: (x) => x >= 1}, {type: ParamType.String}]
@@ -231,27 +231,27 @@ const commands: {readonly [key: string]: Command | undefined} = {
         params: [{type: ParamType.Character}]
     },
     ignore: {
-        exec: (character: string) => core.connection.send('IGN', {action: 'add', character}),
+        exec: (_, character: string) => core.connection.send('IGN', {action: 'add', character}),
         params: [{type: ParamType.Character}]
     },
     unignore: {
-        exec: (character: string) => core.connection.send('IGN', {action: 'delete', character}),
+        exec: (_, character: string) => core.connection.send('IGN', {action: 'delete', character}),
         params: [{type: ParamType.Character}]
     },
     ignorelist: {
-        exec: () => core.conversations.selectedConversation.infoText = l('chat.ignoreList', core.characters.ignoreList.join(', '))
+        exec: (conv: Conversation) => conv.infoText = l('chat.ignoreList', core.characters.ignoreList.join(', '))
     },
     makeroom: {
-        exec: (channel: string) => core.connection.send('CCR', {channel}),
+        exec: (_, channel: string) => core.connection.send('CCR', {channel}),
         params: [{type: ParamType.String}]
     },
     gop: {
-        exec: (character: string) => core.connection.send('AOP', {character}),
+        exec: (_, character: string) => core.connection.send('AOP', {character}),
         permission: Permission.Admin,
         params: [{type: ParamType.Character}]
     },
     gdeop: {
-        exec: (character: string) => core.connection.send('DOP', {character}),
+        exec: (_, character: string) => core.connection.send('DOP', {character}),
         permission: Permission.Admin,
         params: [{type: ParamType.Character}]
     },
@@ -331,27 +331,27 @@ const commands: {readonly [key: string]: Command | undefined} = {
         context: CommandContext.Channel
     },
     createchannel: {
-        exec: (channel: string) => core.connection.send('CRC', {channel}),
+        exec: (_, channel: string) => core.connection.send('CRC', {channel}),
         permission: Permission.ChatOp,
         params: [{type: ParamType.String}]
     },
     broadcast: {
-        exec: (message: string) => core.connection.send('BRO', {message}),
+        exec: (_, message: string) => core.connection.send('BRO', {message}),
         permission: Permission.Admin,
         params: [{type: ParamType.String}]
     },
     reloadconfig: {
-        exec: (save?: 'save') => core.connection.send('RLD', save !== undefined ? {save} : undefined),
+        exec: (_, save?: 'save') => core.connection.send('RLD', save !== undefined ? {save} : undefined),
         permission: Permission.Admin,
         params: [{type: ParamType.Enum, options: ['save'], optional: true}]
     },
     xyzzy: {
-        exec: (command: string, arg: string) => core.connection.send('ZZZ', {command, arg}),
+        exec: (_, command: string, arg: string) => core.connection.send('ZZZ', {command, arg}),
         permission: Permission.Admin,
         params: [{type: ParamType.String, delimiter: ' '}, {type: ParamType.String}]
     },
     elf: {
-        exec: () => core.conversations.selectedConversation.infoText =
+        exec: (conv: Conversation) => conv.infoText =
             'Now no one can say there\'s "not enough Elf." It\'s a well-kept secret, but elves love headpets. You should try it sometime.',
         documented: false
     }

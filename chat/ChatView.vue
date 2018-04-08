@@ -5,20 +5,20 @@
         <sidebar id="sidebar" :label="l('chat.menu')" icon="fa-bars">
             <img :src="characterImage(ownCharacter.name)" v-if="showAvatars" style="float:left;margin-right:5px;width:60px"/>
             <a href="#" target="_blank" :href="ownCharacterLink" class="btn" style="margin-right:5px">{{ownCharacter.name}}</a>
-            <a href="#" @click.prevent="logOut" class="btn"><i class="fa fa-sign-out-alt"></i>{{l('chat.logout')}}</a><br/>
+            <a href="#" @click.prevent="logOut" class="btn"><i class="fas fa-sign-out-alt"></i>{{l('chat.logout')}}</a><br/>
             <div>
                 {{l('chat.status')}}
                 <a href="#" @click.prevent="$refs['statusDialog'].show()" class="btn">
-                    <span class="fa fa-fw" :class="getStatusIcon(ownCharacter.status)"></span>{{l('status.' + ownCharacter.status)}}
+                    <span class="fas fa-fw" :class="getStatusIcon(ownCharacter.status)"></span>{{l('status.' + ownCharacter.status)}}
                 </a>
             </div>
             <div style="clear:both">
-                <a href="#" @click.prevent="$refs['searchDialog'].show()" class="btn"><span class="fa fa-search"></span>
+                <a href="#" @click.prevent="$refs['searchDialog'].show()" class="btn"><span class="fas fa-search"></span>
                     {{l('characterSearch.open')}}</a>
             </div>
-            <div><a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn"><span class="fa fa-cog"></span>
+            <div><a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn"><span class="fas fa-cog"></span>
                 {{l('settings.open')}}</a></div>
-            <div><a href="#" @click.prevent="$refs['recentDialog'].show()" class="btn"><span class="fa fa-history"></span>
+            <div><a href="#" @click.prevent="$refs['recentDialog'].show()" class="btn"><span class="fas fa-history"></span>
                 {{l('chat.recentConversations')}}</a></div>
             <div class="list-group conversation-nav">
                 <a :class="getClasses(conversations.consoleTab)" href="#" @click.prevent="conversations.consoleTab.show()"
@@ -34,25 +34,25 @@
                     <img :src="characterImage(conversation.character.name)" v-if="showAvatars"/>
                     <div class="name">
                         <span>{{conversation.character.name}}</span>
-                        <div style="text-align:right;line-height:0">
-                            <span class="fas"
+                        <div style="line-height:0;display:flex">
+                            <span class="fas fa-reply" v-show="needsReply(conversation)"></span><span class="fas"
                                 :class="{'fa-comment-dots': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
-                            ></span><span class="fa fa-reply" v-show="needsReply(conversation)"></span>
-                            <span class="pin fa fa-thumbtack" :class="{'active': conversation.isPinned}" @mousedown.prevent
+                            ></span><span style="flex:1"></span>
+                            <span class="pin fas fa-thumbtack" :class="{'active': conversation.isPinned}" @mousedown.prevent
                             @click.stop="conversation.isPinned = !conversation.isPinned" :aria-label="l('chat.pinTab')"></span>
-                            <span class="fa fa-times leave" @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span>
+                            <span class="fas fa-times leave" @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span>
                         </div>
                     </div>
                 </a>
             </div>
-            <a href="#" @click.prevent="$refs['channelsDialog'].show()" class="btn"><span class="fa fa-list"></span>
+            <a href="#" @click.prevent="$refs['channelsDialog'].show()" class="btn"><span class="fas fa-list"></span>
                 {{l('chat.channels')}}</a>
             <div class="list-group conversation-nav" ref="channelConversations">
                 <a v-for="conversation in conversations.channelConversations" href="#" @click.prevent="conversation.show()"
                     :class="getClasses(conversation)" class="list-group-item list-group-item-action item-channel"
-                    :key="conversation.key"><span class="name">{{conversation.name}}</span><span><span class="pin fa fa-thumbtack"
+                    :key="conversation.key"><span class="name">{{conversation.name}}</span><span><span class="pin fas fa-thumbtack"
                     :class="{'active': conversation.isPinned}" @click.stop="conversation.isPinned = !conversation.isPinned"
-                    :aria-label="l('chat.pinTab')" @mousedown.prevent></span><span class="fa fa-times leave"
+                    :aria-label="l('chat.pinTab')" @mousedown.prevent></span><span class="fas fa-times leave"
                     @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span></span>
                 </a>
             </div>
@@ -61,7 +61,7 @@
             <div id="quick-switcher" class="list-group">
                 <a :class="getClasses(conversations.consoleTab)" href="#" @click.prevent="conversations.consoleTab.show()"
                     class="list-group-item list-group-item-action">
-                    <span class="fa fa-home conversation-icon"></span>
+                    <span class="fas fa-home conversation-icon"></span>
                     {{conversations.consoleTab.name}}
                 </a>
                 <a v-for="conversation in conversations.privateConversations" href="#" @click.prevent="conversation.show()"
@@ -72,7 +72,7 @@
                 </a>
                 <a v-for="conversation in conversations.channelConversations" href="#" @click.prevent="conversation.show()"
                     :class="getClasses(conversation)" class="list-group-item list-group-item-action" :key="conversation.key">
-                    <span class="fa fa-hashtag conversation-icon"></span>
+                    <span class="fas fa-hashtag conversation-icon"></span>
                     <div class="name">{{conversation.name}}</div>
                 </a>
             </div>
@@ -250,11 +250,9 @@
             for(const selector of selectorList)
                 sheet.insertRule(`${selector} { font-size: ${fontSize}px; }`, sheet.cssRules.length);
 
-            const lineHeightBase = 1.428571429;
-            const lineHeight = Math.floor(fontSize * 1.428571429);
-            const formHeight = (lineHeight + (6 * 2) + 2);
-            sheet.insertRule(`.form-control { line-height: ${lineHeightBase}; height: ${formHeight}px; }`, sheet.cssRules.length);
-            sheet.insertRule(`select.form-control { line-height: ${lineHeightBase}; height: ${formHeight}px; }`, sheet.cssRules.length);
+            const lineHeight = 1.428571429;
+            sheet.insertRule(`.form-control { line-height: ${lineHeight} }`, sheet.cssRules.length);
+            sheet.insertRule(`select.form-control { line-height: ${lineHeight} }`, sheet.cssRules.length);
         }
 
         logOut(): void {
@@ -307,12 +305,9 @@
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-            .fa {
+            .fas {
                 font-size: 16px;
                 padding: 0 3px;
-                &:first-child {
-                    padding-left: 0;
-                }
                 &:last-child {
                     padding-right: 0;
                 }

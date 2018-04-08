@@ -10,7 +10,7 @@
         <template v-if="!loading">
             <div class="alert alert-info" v-show="posts.length === 0">No guestbook posts.</div>
             <guestbook-post :post="post" :can-edit="canEdit" v-for="post in posts" :key="post.id" @reload="getPage"></guestbook-post>
-            <div v-if="authenticated" class="form-horizontal">
+            <div v-if="authenticated && !oldApi" class="form-horizontal">
                 <bbcode-editor v-model="newPost.message" :maxlength="5000" classes="form-control"></bbcode-editor>
                 <input type="checkbox" id="guestbookPostPrivate" v-model="newPost.privatePost"/>
                 <label class="control-label" for="guestbookPostPrivate">Private(only visible to owner)</label><br/>
@@ -43,7 +43,8 @@
     export default class GuestbookView extends Vue {
         @Prop({required: true})
         private readonly character!: Character;
-
+        @Prop()
+        readonly oldApi?: true;
         loading = true;
         error = '';
         authenticated = Store.authenticated;

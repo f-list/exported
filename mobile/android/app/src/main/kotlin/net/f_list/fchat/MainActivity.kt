@@ -82,8 +82,12 @@ class MainActivity : Activity() {
 
 			override fun onPageFinished(view: WebView?, url: String?) {
 				super.onPageFinished(view, url)
-				webView.evaluateJavascript("(function(n){n.listFiles=function(p){return JSON.parse(n.listFilesN(p))};n.listDirectories=function(p){return JSON.parse(n.listDirectoriesN(p))}})(NativeFile)", null)
-				webView.evaluateJavascript("(function(n){n.init=function(c){return JSON.parse(n.initN(c))};n.getBacklog=function(k){return JSON.parse(n.getBacklogN(k))};n.getLogs=function(k,d){return JSON.parse(n.getLogsN(k,d))}})(NativeLogs)", null)
+				webView.evaluateJavascript("window.setupPlatform('android')", null)
+				webView.evaluateJavascript("(function(n){n.listFiles=function(p){return JSON.parse(n.listFilesN(p))};" +
+						"n.listDirectories=function(p){return JSON.parse(n.listDirectoriesN(p))}})(NativeFile)", null)
+				webView.evaluateJavascript("(function(n){n.init=function(c){return JSON.parse(n.initN(c))};n.getBacklog=function(k){return JSON.parse(n.getBacklogN(k))};" +
+						"n.getLogs=function(c,k,d){return JSON.parse(n.getLogsN(c,k,d))};n.loadIndex=function(c){return JSON.parse(n.loadIndexN(c))};" +
+						"n.getCharacters=function(){return JSON.parse(n.getCharactersN())}})(NativeLogs)", null)
 			}
 		}
 

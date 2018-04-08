@@ -10,7 +10,7 @@
                 <slot></slot>
             </div>
         </div>
-        <div class="modal-backdrop in" @click="expanded = false"></div>
+        <div class="modal-backdrop show" @click="expanded = false"></div>
     </div>
 </template>
 
