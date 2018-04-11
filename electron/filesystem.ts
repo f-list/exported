@@ -214,9 +214,10 @@ export class Logs implements Logging {
         const entry = this.getIndex(character)[key];
         if(entry === undefined) return [];
         const dates = [];
-        const offset = new Date().getTimezoneOffset() * 60000;
-        for(const item in entry.index)
-            dates.push(new Date(parseInt(item, 10) * dayMs + offset));
+        for(const item in entry.index) {
+            const date = new Date(parseInt(item, 10) * dayMs);
+            dates.push(new Date(date.getTime() + date.getTimezoneOffset() * 60000));
+        }
         return dates;
     }
 

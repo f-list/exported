@@ -15,7 +15,12 @@
                 <div v-if="command.permission"><i>{{command.permission}}</i></div>
             </div>
         </div>
-        <input class="form-control" v-model="filter" :placeholder="l('filter')"/>
+        <div class="input-group" style="padding:10px 0;flex-shrink:0">
+            <div class="input-group-prepend">
+                <div class="input-group-text"><span class="fas fa-search"></span></div>
+            </div>
+            <input class="form-control" v-model="filter" :placeholder="l('filter')"/>
+        </div>
     </modal>
 </template>
 

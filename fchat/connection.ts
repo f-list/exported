@@ -36,17 +36,26 @@ export default class Connection implements Interfaces.Connection {
         try {
             this.ticket = await this.ticketProvider();
         } catch(e) {
-            (<Error & {request: true}>e).request = true;
-            throw e;
+            return this.invokeErrorHandlers(<Error>e, true);
         }
-        await this.invokeHandlers('connecting', this.isReconnect);
+        try {
+            await this.invokeHandlers('connecting', this.isReconnect);
+        } catch(e) {
+            await this.invokeHandlers('closed', false);
+            return this.invokeErrorHandlers(<Error>e);
+        }
         if(this.cleanClose) {
             this.cleanClose = false;
             await this.invokeHandlers('closed', false);
             return;
         }
-        const socket = this.socket = new this.socketProvider();
-        socket.onOpen(() => {
+        try {
+            this.socket = new this.socketProvider();
+        } catch(e) {
+            await this.invokeHandlers('closed', false);
+            return this.invokeErrorHandlers(<Error>e, true);
+        }
+        this.socket.onOpen(() => {
             this.send('IDN', {
                 account: this.account,
                 character: this.character,
@@ -56,39 +65,21 @@ export default class Connection implements Interfaces.Connection {
                 ticket: this.ticket
             });
         });
-        socket.onMessage(async(msg: string) => {
+        this.socket.onMessage(async(msg: string) => {
             const type = <keyof Interfaces.ServerCommands>msg.substr(0, 3);
             const data = msg.length > 6 ? <object>JSON.parse(msg.substr(4)) : undefined;
             return this.handleMessage(type, data);
         });
-        socket.onClose(async() => {
+        this.socket.onClose(async() => {
             if(!this.cleanClose) this.reconnect();
             this.socket = undefined;
             await this.invokeHandlers('closed', !this.cleanClose);
         });
-        socket.onError((error: Error) => {
-            for(const handler of this.errorHandlers) handler(error);
-        });
-        return new Promise<void>((resolve, reject) => {
-            const handler = () => {
-                resolve();
-                this.offEvent('connected', handler);
-            };
-            this.onEvent('connected', handler);
-            this.onError(reject);
-        });
+        this.socket.onError((error: Error) => this.invokeErrorHandlers(error, true));
     }
 
     private reconnect(): void {
-        this.reconnectTimer = setTimeout(async() => {
-            try {
-                await this.connect(this.character);
-            } catch(e) {
-                for(const handler of this.errorHandlers) handler(<Error>e);
-                await this.invokeHandlers('closed', true);
-                this.reconnect();
-            }
-        }, this.reconnectDelay);
+        this.reconnectTimer = setTimeout(async() => this.connect(this.character), this.reconnectDelay);
         this.reconnectDelay = this.reconnectDelay >= 30000 ? 60000 : this.reconnectDelay >= 10000 ? 30000 : 10000;
     }
 
@@ -167,8 +158,7 @@ export default class Connection implements Interfaces.Connection {
                 break;
             case 'ERR':
                 if(fatalErrors.indexOf(data.number) !== -1) {
-                    const error = new Error(data.message);
-                    for(const handler of this.errorHandlers) handler(error);
+                    this.invokeErrorHandlers(new Error(data.message), true);
                     if(dieErrors.indexOf(data.number) !== -1) {
                         this.close();
                         this.character = '';
@@ -197,5 +187,10 @@ export default class Connection implements Interfaces.Connection {
         const handlers = this.connectionHandlers[type];
         if(handlers === undefined) return;
         for(const handler of handlers) await handler(isReconnect);
+    }
+
+    private invokeErrorHandlers(error: Error, request: boolean = false): void {
+        if(request) (<Error & {request: true}>error).request = true;
+        for(const handler of this.errorHandlers) handler(error);
     }
 }

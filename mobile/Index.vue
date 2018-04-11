@@ -115,7 +115,6 @@
             let settings = await getGeneralSettings();
             if(settings === undefined) settings = new GeneralSettings();
             if(settings.version !== appVersion) {
-                alert('Your beta version of F-Chat 3.0 has been updated. If you are experiencing any issues after this update, please perform a full reinstall of the application. If the issue persists, please report it.');
                 settings.version = appVersion;
                 await setGeneralSettings(settings);
             }

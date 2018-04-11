@@ -4,11 +4,11 @@
         <div class="users" style="padding-left:10px" v-show="tab == 0">
             <h4>{{l('users.friends')}}</h4>
             <div v-for="character in friends" :key="character.name">
-                <user :character="character" :showStatus="true"></user>
+                <user :character="character" :showStatus="true" :bookmark="false"></user>
             </div>
             <h4>{{l('users.bookmarks')}}</h4>
             <div v-for="character in bookmarks" :key="character.name">
-                <user :character="character" :showStatus="true"></user>
+                <user :character="character" :showStatus="true" :bookmark="false"></user>
             </div>
         </div>
         <div v-if="channel" style="padding-left:5px;flex:1;display:flex;flex-direction:column" v-show="tab == 1">

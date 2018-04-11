@@ -1,7 +1,12 @@
 <template>
-    <modal :buttons="false" ref="dialog" id="logs-dialog" :action="l('logs.title')"
-        dialogClass="modal-lg w-100 modal-dialog-centered" @open="onOpen" @close="onClose">
-        <div class="form-group row" style="flex-shrink:0">
+    <modal :buttons="false" ref="dialog" @open="onOpen" @close="onClose" style="width:98%" dialogClass="logs-dialog">
+        <template slot="title">
+            {{l('logs.title')}}
+            <div class="logs-fab btn btn-secondary" slot="title" @click="showFilters = !showFilters">
+                <span class="fas" :class="'fa-chevron-' + (showFilters ? 'up' : 'down')"></span>
+            </div>
+        </template>
+        <div class="form-group row" style="flex-shrink:0" v-show="showFilters">
             <label for="character" class="col-sm-2 col-form-label">{{l('logs.character')}}</label>
             <div class="col-sm-10">
                 <select class="form-control" v-model="selectedCharacter" id="character" @change="loadCharacter">
@@ -10,7 +15,7 @@
                 </select>
             </div>
         </div>
-        <div class="form-group row" style="flex-shrink:0">
+        <div class="form-group row" style="flex-shrink:0" v-show="showFilters">
             <label class="col-sm-2 col-form-label">{{l('logs.conversation')}}</label>
             <div class="col-sm-10">
                 <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
@@ -20,7 +25,7 @@
                 </filterable-select>
             </div>
         </div>
-        <div class="form-group row" style="flex-shrink:0">
+        <div class="form-group row" style="flex-shrink:0" v-show="showFilters">
             <label for="date" class="col-sm-2 col-form-label">{{l('logs.date')}}</label>
             <div class="col-sm-8 col-10">
                 <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
@@ -33,7 +38,7 @@
                     class="fa fa-download"></span></button>
             </div>
         </div>
-        <div class="messages-both" style="overflow: auto" ref="messages">
+        <div class="messages-both" style="overflow: auto" ref="messages" tabindex="-1">
             <message-view v-for="message in filteredMessages" :message="message" :key="message.id"></message-view>
         </div>
         <div class="input-group" style="flex-shrink:0">
@@ -85,6 +90,7 @@
         keyDownListener?: (e: KeyboardEvent) => void;
         characters: ReadonlyArray<string> = [];
         selectedCharacter = core.connection.character;
+        showFilters = true;
 
         get filteredMessages(): ReadonlyArray<Conversation.Message> {
             if(this.filter.length === 0) return this.messages;
@@ -180,7 +186,12 @@
 </script>
 
 <style>
-    #logs-dialog .modal-body {
+    .logs-dialog {
+        max-width: 98% !important;
+        width: 98% !important;
+    }
+
+    .logs-dialog .modal-body {
         display: flex;
         flex-direction: column;
     }

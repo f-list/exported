@@ -77,8 +77,10 @@ export class Logs implements Logging {
     async getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>> {
         const entry = (await this.getIndex(character))[key];
         if(entry === undefined) return [];
-        const offset = new Date().getTimezoneOffset() * 60000;
-        return entry.dates.map((x) => new Date(x * dayMs + offset));
+        return entry.dates.map((x) => {
+            const date = new Date(x * dayMs);
+            return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+        });
     }
 
     async getConversations(character: string): Promise<ReadonlyArray<{key: string, name: string}>> {

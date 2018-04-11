@@ -16,8 +16,7 @@ document.addEventListener('notification-clicked', (e: Event) => {
 
 export default class Notifications extends BaseNotifications {
     notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void {
-        if(!this.isInBackground && conversation === core.conversations.selectedConversation && !core.state.settings.alwaysNotify) return;
-        if(core.characters.ownCharacter.status === 'dnd') return;
+        if(!this.shouldNotify(conversation)) return;
         NativeNotification.notify(core.state.settings.notifications && this.isInBackground, title, body, icon,
             core.state.settings.playSound ? sound : null, conversation.key); //tslint:disable-line:no-null-keyword
     }

@@ -269,3 +269,15 @@ $genders: (
     display: none;
   }
 }
+
+.logs-fab {
+  position: absolute;
+  top: 47px;
+  z-index: 10;
+  padding: 12px;
+  left: 50%;
+  margin-left: -20px;
+  border-radius: 100%;
+  line-height: 0;
+  box-shadow: 0 1px 4px #000;
+}

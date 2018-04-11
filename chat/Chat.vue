@@ -146,8 +146,10 @@
                 document.title = (hasNew ? '💬 ' : '') + l(core.connection.isOpen ? 'title.connected' : 'title', core.connection.character);
             });
             core.connection.onError((e) => {
-                this.error = errorToString(e);
-                this.connecting = false;
+                if((<Error & {request?: object}>e).request !== undefined) {//catch axios network errors
+                    this.error = l('login.connectError', errorToString(e));
+                    this.connecting = false;
+                } else throw e;
             });
         }
 
@@ -158,12 +160,7 @@
 
         connect(): void {
             this.connecting = true;
-            core.connection.connect(this.selectedCharacter).catch((e: Error) => {
-                if((<Error & {request?: object}>e).request !== undefined) {//catch axios network errors
-                    this.error = l('login.connectError', e.message);
-                    this.connecting = false;
-                } else throw e;
-            });
+            core.connection.connect(this.selectedCharacter);
         }
     }
 </script>

@@ -48,7 +48,7 @@
                 </ul>
             </div>
             <div style="z-index:5;position:absolute;left:0;right:0;max-height:60%;overflow:auto"
-                :style="'display:' + (descriptionExpanded ? 'block' : 'none')" class="bg-solid-text">
+                :style="'display:' + (descriptionExpanded ? 'block' : 'none')" class="bg-solid-text border-bottom">
                 <bbcode :text="conversation.channel.description"></bbcode>
             </div>
         </div>
@@ -64,7 +64,7 @@
             </div>
             <input v-model="searchInput" @keydown.esc="showSearch = false; searchInput = ''" @keypress="lastSearchInput = Date.now()"
                 :placeholder="l('chat.search')" ref="searchField" class="form-control"/>
-            <a class="btn btn-sm btn-light" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:0"
+            <a class="btn btn-sm btn-light" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:0;z-index:10"
                 @click="showSearch = false"><i class="fas fa-times"></i></a>
         </div>
         <div class="border-top messages" :class="'messages-' + conversation.mode" style="flex:1;overflow:auto;margin-top:2px"
@@ -258,6 +258,7 @@
         async onKeyDown(e: KeyboardEvent): Promise<void> {
             const editor = <Editor>this.$refs['textBox'];
             if(getKey(e) === Keys.Tab) {
+                if(e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
                 e.preventDefault();
                 if(this.conversation.enteredText.length === 0 || this.isConsoleTab) return;
                 if(this.tabOptions === undefined) {

@@ -225,6 +225,7 @@
             electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
             delete this.tabMap[tab.view.webContents.id];
             if(this.tabs.length === 0) {
+                browserWindow.setBrowserView(null!);
                 if(process.env.NODE_ENV === 'production') browserWindow.close();
             } else if(this.activeTab === tab) this.show(this.tabs[0]);
             destroyTab(tab);

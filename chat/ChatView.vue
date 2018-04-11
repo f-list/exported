@@ -158,17 +158,17 @@
                     clearTimeout(idleTimer);
                     idleTimer = undefined;
                 }
-                window.setTimeout(() => {
-                    if(idleStatus !== undefined) {
-                        core.connection.send('STA', idleStatus);
-                        idleStatus = undefined;
-                    }
-                }, Math.max(lastUpdate + 5 /*core.connection.vars.sta_flood*/ * 1000 + 1000 - Date.now(), 0));
+                if(idleStatus !== undefined) {
+                    const status = idleStatus;
+                    window.setTimeout(() => core.connection.send('STA', status),
+                        Math.max(lastUpdate + 5 /*core.connection.vars.sta_flood*/ * 1000 + 1000 - Date.now(), 0));
+                    idleStatus = undefined;
+                }
             });
             window.addEventListener('blur', () => {
                 core.notifications.isInBackground = true;
                 if(idleTimer !== undefined) clearTimeout(idleTimer);
-                if(core.state.settings.idleTimer !== 0)
+                if(core.state.settings.idleTimer > 0)
                     idleTimer = window.setTimeout(() => {
                         lastUpdate = Date.now();
                         idleStatus = {status: ownCharacter.status, statusmsg: ownCharacter.statusText};

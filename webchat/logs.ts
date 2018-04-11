@@ -1,4 +1,4 @@
-import {EventMessage, Message} from '../chat/common';
+import {EventMessage, Message, Settings as SettingsImpl} from '../chat/common';
 import core from '../chat/core';
 import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
 
@@ -30,7 +30,7 @@ async function iterate<S, T>(request: IDBRequest, map: (stored: S) => T, count: 
 const dayMs = 86400000;
 const charactersKey = 'fchat.characters';
 let hasComposite = true;
-let getComposite: (conv: number, day: number) => string | number[]  = (conv, day) => [conv, day];
+let getComposite: (conv: number, day: number) => string | number[] = (conv, day) => [conv, day];
 const decode = (str: string) => (str.charCodeAt(0) << 16) + str.charCodeAt(1);
 try {
     IDBKeyRange.only([]);
@@ -133,10 +133,11 @@ export class Logs implements Logging {
     async getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>> {
         const id = (await this.loadIndex(character))[key]!.id;
         const trans = this.loadedDb!.transaction(['logs']);
-        const offset = new Date().getTimezoneOffset() * 60000;
         const bound = IDBKeyRange.bound(getComposite(id, 0), getComposite(id, 1000000));
-        return iterate(trans.objectStore('logs').index('conversation-day').openCursor(bound, 'nextunique'),  (value: StoredMessage) =>
-            new Date((hasComposite ? <number>value.day : decode((<string>value.day).substr(2))) * dayMs + offset));
+        return iterate(trans.objectStore('logs').index('conversation-day').openCursor(bound, 'nextunique'), (value: StoredMessage) => {
+            const date = new Date((hasComposite ? <number>value.day : decode((<string>value.day).substr(2))) * dayMs);
+            return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+        });
     }
 
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
@@ -148,7 +149,47 @@ export class Logs implements Logging {
 export class SettingsStore implements Settings.Store {
     async get<K extends keyof Settings.Keys>(key: K): Promise<Settings.Keys[K] | undefined> {
         const stored = window.localStorage.getItem(`${core.connection.character}.settings.${key}`);
-        return stored !== null ? JSON.parse(stored) as Settings.Keys[K] : undefined;
+        if(stored === null) {
+            if(key === 'pinned') {
+                const tabs20 = window.localStorage.getItem(`tabs_${core.connection.character.toLowerCase()}`);
+                if(tabs20 !== null)
+                    try {
+                        const tabs = JSON.parse(tabs20) as {type: string, id: string, title: string}[];
+                        const pinned: Settings.Keys['pinned'] = {channels: [], private: []};
+                        pinned.channels = tabs.filter((x) => x.type === 'channel').map((x) => x.id.toLowerCase());
+                        pinned.private = tabs.filter((x) => x.type === 'user').map((x) => x.title);
+                        return pinned;
+                    } catch {
+                        return undefined;
+                    }
+            } else if(key === 'settings') {
+                const settings20 = window.localStorage.getItem(`chat_settings`);
+                if(settings20 !== null)
+                    try {
+                        const old = JSON.parse(settings20) as {
+                            animatedIcons: boolean, autoIdle: boolean, autoIdleTime: number, delimit: boolean, disableIconTag: boolean,
+                            enableLogging: boolean, highlightMentions: boolean, highlightWords: string[],
+                            html5Audio: boolean, joinLeaveAlerts: boolean, leftClickOpensFlist: boolean
+                        };
+                        const settings = new SettingsImpl();
+                        settings.animatedEicons = old.animatedIcons;
+                        if(old.autoIdle) settings.idleTimer = old.autoIdleTime / 60000;
+                        settings.messageSeparators = old.delimit;
+                        if(old.disableIconTag) settings.disallowedTags.push('icon');
+                        settings.logMessages = old.enableLogging;
+                        settings.highlight = old.highlightMentions;
+                        settings.highlightWords = old.highlightWords;
+                        settings.playSound = old.html5Audio;
+                        settings.joinMessages = old.joinLeaveAlerts;
+                        settings.clickOpensMessage = !old.leftClickOpensFlist;
+                        return settings;
+                    } catch {
+                        return undefined;
+                    }
+            }
+            return undefined;
+        }
+        return JSON.parse(stored) as Settings.Keys[K];
     }
 
     async set<K extends keyof Settings.Keys>(key: K, value: Settings.Keys[K]): Promise<void> {

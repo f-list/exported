@@ -6,12 +6,13 @@ const codecs: {[key: string]: string} = {mpeg: 'mp3', wav: 'wav', ogg: 'ogg'};
 export default class Notifications implements Interface {
     isInBackground = false;
 
+    protected shouldNotify(conversation: Conversation): boolean {
+        return core.characters.ownCharacter.status !== 'dnd' && (this.isInBackground ||
+            conversation !== core.conversations.selectedConversation || core.state.settings.alwaysNotify);
+    }
+
     notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void {
-        if(core.characters.ownCharacter.status === 'dnd') return;
-        if(!this.isInBackground && conversation === core.conversations.selectedConversation) {
-            if(core.state.settings.alwaysNotify) this.playSound(sound);
-            return;
-        }
+        if(!this.shouldNotify(conversation)) return;
         this.playSound(sound);
         if(core.state.settings.notifications) {
             /*tslint:disable-next-line:no-object-literal-type-assertion*///false positive

@@ -21,7 +21,7 @@
             <textarea ref="input" v-model="text" @input="onInput" v-show="!preview" :maxlength="maxlength"
                 :class="finalClasses" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste" style="border-top-left-radius:0"
                 :placeholder="placeholder" @keypress="$emit('keypress', $event)" @keydown="onKeyDown"></textarea>
-            <div ref="sizer"></div>
+            <textarea ref="sizer"></textarea>
             <div class="bbcode-preview" v-show="preview">
                 <div class="bbcode-preview-warnings">
                     <div class="alert alert-danger" v-show="previewWarnings.length">
@@ -66,7 +66,7 @@
         previewResult = '';
         text = this.value !== undefined ? this.value : '';
         element!: HTMLTextAreaElement;
-        sizer!: HTMLElement;
+        sizer!: HTMLTextAreaElement;
         maxHeight!: number;
         minHeight!: number;
         showToolbar = false;
@@ -99,7 +99,7 @@
                     this.undoStack.unshift(this.text);
                 }
             }, 500);
-            this.sizer = <HTMLElement>this.$refs['sizer'];
+            this.sizer = <HTMLTextAreaElement>this.$refs['sizer'];
             this.sizer.style.cssText = styles.cssText;
             this.sizer.style.height = '0';
             this.sizer.style.overflow = 'hidden';
@@ -240,7 +240,7 @@
             this.sizer.style.fontSize = this.element.style.fontSize;
             this.sizer.style.lineHeight = this.element.style.lineHeight;
             this.sizer.style.width = `${this.element.offsetWidth}px`;
-            this.sizer.textContent = this.element.value;
+            this.sizer.value = this.element.value;
             this.element.style.height = `${Math.max(Math.min(this.sizer.scrollHeight, this.maxHeight), this.minHeight)}px`;
             this.sizer.style.width = '0';
         }

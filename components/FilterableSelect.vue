@@ -60,7 +60,10 @@
                 const index = selected.indexOf(item);
                 if(index === -1) selected.push(item);
                 else selected.splice(index, 1);
-            } else this.selected = item;
+            } else {
+                this.keepOpen = false;
+                this.selected = item;
+            }
             this.$emit('input', this.selected);
         }
 

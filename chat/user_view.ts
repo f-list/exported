@@ -32,7 +32,7 @@ export function getStatusIcon(status: Character.Status): string {
 const UserView = Vue.extend({
     functional: true,
     render(this: void | Vue, createElement: CreateElement, context?: RenderContext): VNode {
-        const props = <{character: Character, channel?: Channel, showStatus?: true}>(
+        const props = <{character: Character, channel?: Channel, showStatus?: true, bookmark?: false}>(
             context !== undefined ? context.props : (<Vue>this).$options.propsData);
         const character = props.character;
         let rankIcon;
@@ -46,7 +46,8 @@ const UserView = Vue.extend({
         if(props.showStatus !== undefined || character.status === 'crown')
             children.unshift(createElement('span', {staticClass: `fa-fw ${getStatusIcon(character.status)}`}));
         const gender = character.gender !== undefined ? character.gender.toLowerCase() : 'none';
-        const isBookmark = core.connection.isOpen && core.state.settings.colorBookmarks && (character.isFriend || character.isBookmarked);
+        const isBookmark = props.bookmark !== false && core.connection.isOpen && core.state.settings.colorBookmarks &&
+            (character.isFriend || character.isBookmarked);
         return createElement('span', {
             attrs: {class: `user-view gender-${gender}${isBookmark ? ' user-bookmark' : ''}`},
             domProps: {character, channel: props.channel, bbcodeTag: 'user'}

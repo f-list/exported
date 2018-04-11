@@ -1,5 +1,4 @@
 import {WebSocketConnection} from '../fchat';
-import l from './localize';
 
 export default class Socket implements WebSocketConnection {
     static host = 'wss://chat.f-list.net:9799';
@@ -31,7 +30,7 @@ export default class Socket implements WebSocketConnection {
 
     onError(handler: (error: Error) => void): void {
         this.errorHandler = handler;
-        this.socket.addEventListener('error', () => handler(new Error(l('login.connectError'))));
+        this.socket.addEventListener('error', () => handler(new Error()));
     }
 
     send(message: string): void {

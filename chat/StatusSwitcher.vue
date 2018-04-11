@@ -2,7 +2,7 @@
     <modal :action="l('chat.setStatus')" @submit="setStatus" @close="reset" dialogClass="w-100 modal-lg">
         <div class="form-group" id="statusSelector">
             <label class="control-label">{{l('chat.setStatus.status')}}</label>
-            <dropdown class="dropdown form-control" style="padding:0">
+            <dropdown>
                 <span slot="title"><span class="fa fa-fw" :class="getStatusIcon(status)"></span>{{l('status.' + status)}}</span>
                 <a href="#" class="dropdown-item" v-for="item in statuses" @click.prevent="status = item">
                     <span class="fa fa-fw" :class="getStatusIcon(item)"></span>{{l('status.' + item)}}

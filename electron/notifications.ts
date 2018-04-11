@@ -8,7 +8,7 @@ const browserWindow = remote.getCurrentWindow();
 
 export default class Notifications extends BaseNotifications {
     notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void {
-        if(!this.isInBackground && conversation === core.conversations.selectedConversation && !core.state.settings.alwaysNotify) return;
+        if(!this.shouldNotify(conversation)) return;
         this.playSound(sound);
         browserWindow.flashFrame(true);
         if(core.state.settings.notifications) {

@@ -176,6 +176,7 @@
                         alert(l('login.alreadyLoggedIn'));
                         return core.connection.close();
                     }
+                    parent.send('connect', webContents.id, core.connection.character);
                     this.character = connection.character;
                     if((await core.settingsStore.get('settings')) === undefined &&
                         SlimcatImporter.canImportCharacter(core.connection.character)) {
@@ -187,7 +188,6 @@
                 });
                 connection.onEvent('connected', () => {
                     core.watch(() => core.conversations.hasNew, (newValue) => parent.send('has-new', webContents.id, newValue));
-                    parent.send('connect', webContents.id, core.connection.character);
                     Raven.setUserContext({username: core.connection.character});
                 });
                 connection.onEvent('closed', () => {
