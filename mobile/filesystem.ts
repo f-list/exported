@@ -37,6 +37,7 @@ export class GeneralSettings {
 type Index = {[key: string]: {name: string, dates: number[]} | undefined};
 
 export class Logs implements Logging {
+    canZip = false;
     private index: Index = {};
     private loadedIndex?: Index;
     private loadedCharacter?: string;

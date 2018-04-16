@@ -30,7 +30,7 @@
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
 import Axios from 'axios';
-import {exec} from 'child_process';
+import {exec, execSync} from 'child_process';
 import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -87,6 +87,26 @@ if(process.env.NODE_ENV === 'production') {
         console.log(`%c${l('consoleWarning.body')}`, 'font-size: 16pt; color:red');
     });
 }
+let browser: string | undefined;
+function openIncognito(url: string): void {
+    if(browser === undefined)
+        try { //tslint:disable-next-line:max-line-length
+            browser = execSync(`FOR /F "skip=2 tokens=3" %A IN ('REG QUERY HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice /v ProgId') DO @(echo %A)`)
+                .toString().trim();
+        } catch(e) {
+            console.error(e);
+        }
+    switch(browser) {
+        case 'FirefoxURL':
+            exec(`start firefox.exe -private-window ${url}`);
+            break;
+        case 'ChromeHTML':
+            exec(`start chrome.exe -incognito ${url}`);
+            break;
+        default:
+            exec(`start iexplore.exe -private ${url}`);
+    }
+}
 
 const webContents = electron.remote.getCurrentWebContents();
 webContents.on('context-menu', (_, props) => {
@@ -116,7 +136,7 @@ webContents.on('context-menu', (_, props) => {
             accelerator: 'CmdOrCtrl+V',
             enabled: props.editFlags.canPaste
         });
-    else if(props.linkURL.length > 0 && props.mediaType === 'none' && props.linkURL.substr(0, props.pageURL.length) !== props.pageURL)
+    else if(props.linkURL.length > 0 && props.mediaType === 'none' && props.linkURL.substr(0, props.pageURL.length) !== props.pageURL) {
         menuTemplate.push({
             id: 'copyLink',
             label: l('action.copyLink'),
@@ -127,7 +147,13 @@ webContents.on('context-menu', (_, props) => {
                     electron.clipboard.writeText(props.linkURL);
             }
         });
-    else if(hasText)
+        if(process.platform === 'win32')
+            menuTemplate.push({
+                id: 'incognito',
+                label: l('action.incognito'),
+                click: () => openIncognito(props.linkURL)
+            });
+    } else if(hasText)
         menuTemplate.push({
             label: l('action.copyWithoutBBCode'),
             enabled: can('Copy'),

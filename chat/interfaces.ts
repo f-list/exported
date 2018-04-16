@@ -133,6 +133,7 @@ export interface Logs {
     getLogs(character: string, key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>>
     getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>>
     getAvailableCharacters(): Promise<ReadonlyArray<string>>
+    canZip: boolean;
 }
 
 export namespace Settings {

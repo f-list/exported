@@ -1,4 +1,4 @@
-import {format, isToday} from 'date-fns';
+import {isToday} from 'date-fns';
 import {Keys} from '../keys';
 import {Character, Conversation, Settings as ISettings} from './interfaces';
 
@@ -13,13 +13,10 @@ export function characterImage(this: void | never, character: string): string {
 export function getByteLength(this: void | never, str: string): number {
     let byteLen = 0;
     for(let i = 0; i < str.length; i++) {
-        const c = str.charCodeAt(i);
-        byteLen += c < (1 << 7) ? 1 :
-            c < (1 << 11) ? 2 :
-                c < (1 << 16) ? 3 :
-                    c < (1 << 21) ? 4 :
-                        c < (1 << 26) ? 5 :
-                            c < (1 << 31) ? 6 : Number.NaN;
+        let c = str.charCodeAt(i);
+        if(c > 0xD800 && c < 0xD8FF) //surrogate pairs
+            c = (c - 0xD800) * 0x400 + str.charCodeAt(++i) - 0xDC00 + 0x10000;
+        byteLen += c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : c < 0x200000 ? 4 : c < 0x4000000 ? 5 : 6;
     }
     return byteLen;
 }
@@ -54,9 +51,13 @@ export class ConversationSettings implements Conversation.Settings {
     defaultHighlights = true;
 }
 
-export function formatTime(this: void | never, date: Date): string {
-    if(isToday(date)) return format(date, 'HH:mm');
-    return format(date, 'YYYY-MM-DD HH:mm');
+function pad(num: number): string | number {
+    return num < 10 ? `0${num}` : num;
+}
+
+export function formatTime(this: void | never, date: Date, noDate: boolean = false): string {
+    if(!noDate && isToday(date)) return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 export function messageToString(this: void | never, msg: Conversation.Message, timeFormatter: (date: Date) => string = formatTime): string {
@@ -75,6 +76,7 @@ export function getKey(e: KeyboardEvent): Keys {
 export function errorToString(e: any): string {
     return e instanceof Error ? e.message : e !== undefined ? e.toString() : '';
 }
+
 //tslint:enable
 
 let messageId = 0;

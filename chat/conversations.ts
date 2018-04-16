@@ -727,7 +727,8 @@ export default function(this: void): Interfaces.State {
         const message = new EventMessage(l(key, `[user]${data.character}[/user]`, status, decodeHTML(data.statusmsg)), time);
         await addEventMessage(message);
         const conv = state.privateMap[data.character.toLowerCase()];
-        if(conv !== undefined && core.state.settings.eventMessages && conv !== state.selectedConversation) await conv.addMessage(message);
+        if(conv !== undefined && (!core.state.settings.eventMessages || conv !== state.selectedConversation))
+            await conv.addMessage(message);
     });
     connection.onMessage('SYS', async(data, time) => {
         state.selectedConversation.infoText = data.message;

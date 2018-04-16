@@ -8,32 +8,41 @@
         </template>
         <div class="form-group row" style="flex-shrink:0" v-show="showFilters">
             <label for="character" class="col-sm-2 col-form-label">{{l('logs.character')}}</label>
-            <div class="col-sm-10">
+            <div :class="canZip ? 'col-sm-8 col-10 col-xl-9' : 'col-sm-10'">
                 <select class="form-control" v-model="selectedCharacter" id="character" @change="loadCharacter">
                     <option value="">{{l('logs.selectCharacter')}}</option>
                     <option v-for="character in characters">{{character}}</option>
                 </select>
             </div>
+            <div class="col-2 col-xl-1" v-if="canZip">
+                <button @click="downloadCharacter" class="btn btn-secondary form-control" :disabled="!selectedCharacter"><span
+                    class="fa fa-download"></span></button>
+            </div>
         </div>
         <div class="form-group row" style="flex-shrink:0" v-show="showFilters">
             <label class="col-sm-2 col-form-label">{{l('logs.conversation')}}</label>
-            <div class="col-sm-10">
+            <div :class="canZip ? 'col-sm-8 col-10 col-xl-9' : 'col-sm-10'">
                 <filterable-select v-model="selectedConversation" :options="conversations" :filterFunc="filterConversation"
                     :placeholder="l('filter')">
                     <template slot-scope="s">
-                        {{s.option && ((s.option.key[0] == '#' ? '#' : '') + s.option.name) || l('logs.selectConversation')}}</template>
+                        {{s.option && ((s.option.key[0] == '#' ? '#' : '') + s.option.name) || l('logs.selectConversation')}}
+                    </template>
                 </filterable-select>
+            </div>
+            <div class="col-2 col-xl-1" v-if="canZip">
+                <button @click="downloadConversation" class="btn btn-secondary form-control" :disabled="!selectedConversation"><span
+                    class="fa fa-download"></span></button>
             </div>
         </div>
         <div class="form-group row" style="flex-shrink:0" v-show="showFilters">
             <label for="date" class="col-sm-2 col-form-label">{{l('logs.date')}}</label>
-            <div class="col-sm-8 col-10">
+            <div class="col-sm-8 col-10 col-xl-9">
                 <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
                     <option :value="null">{{l('logs.selectDate')}}</option>
                     <option v-for="date in dates" :value="date.getTime()">{{formatDate(date)}}</option>
                 </select>
             </div>
-            <div class="col-2">
+            <div class="col-2 col-xl-1">
                 <button @click="downloadDay" class="btn btn-secondary form-control" :disabled="!selectedDate"><span
                     class="fa fa-download"></span></button>
             </div>
@@ -58,18 +67,19 @@
     import FilterableSelect from '../components/FilterableSelect.vue';
     import Modal from '../components/Modal.vue';
     import {Keys} from '../keys';
-    import {getKey, messageToString} from './common';
+    import {formatTime, getKey, messageToString} from './common';
     import core from './core';
     import {Conversation, Logs as LogInterface} from './interfaces';
     import l from './localize';
     import MessageView from './message_view';
+    import Zip from './zip';
 
     function formatDate(this: void, date: Date): string {
         return format(date, 'YYYY-MM-DD');
     }
 
-    function formatTime(this: void, date: Date): string {
-        return format(date, 'YYYY-MM-DD HH:mm');
+    function getLogs(messages: ReadonlyArray<Conversation.Message>): string {
+        return messages.reduce((acc, x) => acc + messageToString(x, (date) => formatTime(date, true)), '');
     }
 
     @Component({
@@ -91,6 +101,7 @@
         characters: ReadonlyArray<string> = [];
         selectedCharacter = core.connection.character;
         showFilters = true;
+        canZip = core.logs.canZip;
 
         get filteredMessages(): ReadonlyArray<Conversation.Message> {
             if(this.filter.length === 0) return this.messages;
@@ -131,22 +142,47 @@
             await this.loadMessages();
         }
 
-        download(file: string, logs: ReadonlyArray<Conversation.Message>): void {
+        download(file: string, logs: string): void {
             const a = document.createElement('a');
-            a.target = '_blank';
-            a.href = `data:${encodeURIComponent(file)},${encodeURIComponent(logs.map((x) => messageToString(x, formatTime)).join(''))}`;
+            a.href = logs;
             a.setAttribute('download', file);
             a.style.display = 'none';
             document.body.appendChild(a);
             setTimeout(() => {
                 a.click();
                 document.body.removeChild(a);
+                URL.revokeObjectURL(logs);
             });
         }
 
         downloadDay(): void {
             if(this.selectedConversation === null || this.selectedDate === null || this.messages.length === 0) return;
-            this.download(`${this.selectedConversation.name}-${formatDate(new Date(this.selectedDate))}.txt`, this.messages);
+            const name = `${this.selectedConversation.name}-${formatDate(new Date(this.selectedDate))}.txt`;
+            this.download(name, `data:${encodeURIComponent(name)},${encodeURIComponent(getLogs(this.messages))}`);
+        }
+
+        async downloadConversation(): Promise<void> {
+            if(this.selectedConversation === null) return;
+            const zip = new Zip();
+            for(const date of this.dates) {
+                const messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key, date);
+                zip.addFile(`${formatDate(date)}.txt`, getLogs(messages));
+            }
+            this.download(`${this.selectedConversation.name}.zip`, URL.createObjectURL(zip.build()));
+        }
+
+        async downloadCharacter(): Promise<void> {
+            if(this.selectedCharacter === '' || !confirm(l('logs.confirmExport', this.selectedCharacter))) return;
+            const zip = new Zip();
+            for(const conv of this.conversations) {
+                zip.addFile(`${conv.name}/`, '');
+                const dates = await core.logs.getLogDates(this.selectedCharacter, conv.key);
+                for(const date of dates) {
+                    const messages = await core.logs.getLogs(this.selectedCharacter, conv.key, date);
+                    zip.addFile(`${conv.name}/${formatDate(date)}.txt`, getLogs(messages));
+                }
+            }
+            this.download(`${this.selectedCharacter}.zip`, URL.createObjectURL(zip.build()));
         }
 
         async onOpen(): Promise<void> {

@@ -102,6 +102,7 @@
             this.sizer = <HTMLTextAreaElement>this.$refs['sizer'];
             this.sizer.style.cssText = styles.cssText;
             this.sizer.style.height = '0';
+            this.sizer.style.minHeight = '0';
             this.sizer.style.overflow = 'hidden';
             this.sizer.style.position = 'absolute';
             this.sizer.style.top = '0';

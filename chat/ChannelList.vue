@@ -1,5 +1,5 @@
 <template>
-    <modal :buttons="false" :action="l('chat.channels')" @close="closed" dialog-class="w-100 channel-list">
+    <modal :buttons="false" :action="l('chat.channels')" @open="opened" @close="closed" dialog-class="w-100 channel-list">
         <div style="display:flex;flex-direction:column">
             <tabs style="flex-shrink:0" :tabs="[l('channelList.public'), l('channelList.private')]" v-model="tab"></tabs>
             <div style="display: flex; flex-direction: column">
@@ -86,6 +86,10 @@
         create(): void {
             core.connection.send('CCR', {channel: this.createName});
             this.hide();
+        }
+
+        opened(): void {
+            core.channels.requestChannelsIfNeeded(30000);
         }
 
         closed(): void {

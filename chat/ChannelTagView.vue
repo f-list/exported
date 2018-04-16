@@ -16,6 +16,10 @@
         @Prop({required: true})
         readonly text!: string;
 
+        mounted(): void {
+            core.channels.requestChannelsIfNeeded(300000);
+        }
+
         joinChannel(): void {
             if(this.channel === undefined || !this.channel.isJoined)
                 core.channels.join(this.id);

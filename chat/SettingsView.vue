@@ -1,7 +1,8 @@
 <template>
     <modal :action="l('settings.action')" @submit="submit" @close="init()" id="settings" dialogClass="w-100">
-        <tabs style="flex-shrink:0;margin-bottom:10px" :tabs="tabs" v-model="selectedTab"></tabs>
-        <div v-show="selectedTab == 'general'">
+        <tabs style="flex-shrink:0;margin-bottom:10px" v-model="selectedTab"
+            :tabs="[l('settings.tabs.general'), l('settings.tabs.notifications'), l('settings.tabs.import')]"></tabs>
+        <div v-show="selectedTab == 0">
             <div class="form-group">
                 <label class="control-label" for="disallowedTags">{{l('settings.disallowedTags')}}</label>
                 <input id="disallowedTags" class="form-control" v-model="disallowedTags"/>
@@ -63,7 +64,7 @@
                 <input id="fontSize" type="number" min="10" max="24" class="form-control" v-model="fontSize"/>
             </div>
         </div>
-        <div v-show="selectedTab == 'notifications'">
+        <div v-show="selectedTab == 1">
             <div class="form-group">
                 <label class="control-label" for="playSound">
                     <input type="checkbox" id="playSound" v-model="playSound"/>
@@ -111,8 +112,8 @@
                 </label>
             </div>
         </div>
-        <div v-show="selectedTab == 'import'" style="display:flex;padding-top:10px">
-            <select id="import" class="form-control" v-model="importCharacter" style="flex:1;">
+        <div v-show="selectedTab == 2" style="display:flex;padding-top:10px">
+            <select id="import" class="form-control" v-model="importCharacter" style="flex:1;margin-right:10px">
                 <option value="">{{l('settings.import.selectCharacter')}}</option>
                 <option v-for="character in availableImports" :value="character">{{character}}</option>
             </select>
@@ -136,7 +137,7 @@
     export default class SettingsView extends CustomDialog {
         l = l;
         availableImports: ReadonlyArray<string> = [];
-        selectedTab = 'general';
+        selectedTab = '0';
         importCharacter = '';
         playSound!: boolean;
         clickOpensMessage!: boolean;
@@ -203,13 +204,6 @@
             this.init();
             core.reloadSettings();
             core.conversations.reloadSettings();
-        }
-
-        get tabs(): {readonly [key: string]: string} {
-            const tabs: {[key: string]: string} = {};
-            (this.availableImports.length > 0 ? ['general', 'notifications', 'import'] : ['general', 'notifications'])
-                .forEach((item) => tabs[item] = l(`settings.tabs.${item}`));
-            return tabs;
         }
 
         async submit(): Promise<void> {

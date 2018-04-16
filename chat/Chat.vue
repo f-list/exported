@@ -48,33 +48,29 @@
 
     type BBCodeNode = Node & {bbcodeTag?: string, bbcodeParam?: string, bbcodeHide?: boolean};
 
-    function copyNode(str: string, node: BBCodeNode, range: Range, flags: {endFound?: true}): string {
-        if(node === range.endContainer) flags.endFound = true;
+    function copyNode(str: string, node: BBCodeNode, end: Node, range: Range, flags: {endFound?: true}): string {
+        if(node === end) flags.endFound = true;
         if(node.bbcodeTag !== undefined)
             str = `[${node.bbcodeTag}${node.bbcodeParam !== undefined ? `=${node.bbcodeParam}` : ''}]${str}[/${node.bbcodeTag}]`;
         if(node.nextSibling !== null && !flags.endFound) {
             if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\r\n';
-            str += scanNode(node.nextSibling!, range, flags);
+            str += scanNode(node.nextSibling!, end, range, flags);
         }
         if(node.parentElement === null) return str;
-        return copyNode(str, node.parentNode!, range, flags);
+        return copyNode(str, node.parentNode!, end, range, flags);
     }
 
-    function scanNode(node: BBCodeNode, range: Range, flags: {endFound?: true}, hide?: boolean): string {
+    function scanNode(node: BBCodeNode, end: Node, range: Range, flags: {endFound?: true}, hide?: boolean): string {
         let str = '';
         hide = hide || node.bbcodeHide;
-        if(node === range.endContainer) {
-            if(node instanceof HTMLElement && node.children.length === 1 && node.firstElementChild instanceof HTMLImageElement)
-                str += scanNode(node.firstElementChild, range, flags, hide);
-            flags.endFound = true;
-        }
+        if(node === end) flags.endFound = true;
         if(node.bbcodeTag !== undefined) str += `[${node.bbcodeTag}${node.bbcodeParam !== undefined ? `=${node.bbcodeParam}` : ''}]`;
         if(node instanceof Text) str += node === range.endContainer ? node.nodeValue!.substr(0, range.endOffset) : node.nodeValue;
         else if(node instanceof HTMLImageElement) str += node.alt;
-        if(node.firstChild !== null && !flags.endFound) str += scanNode(node.firstChild, range, flags, hide);
+        if(node.firstChild !== null && !flags.endFound) str += scanNode(node.firstChild, end, range, flags, hide);
         if(node.bbcodeTag !== undefined) str += `[/${node.bbcodeTag}]`;
         if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\r\n';
-        if(node.nextSibling !== null && !flags.endFound) str += scanNode(node.nextSibling, range, flags, hide);
+        if(node.nextSibling !== null && !flags.endFound) str += scanNode(node.nextSibling, end, range, flags, hide);
         return hide ? '' : str;
     }
 
@@ -105,12 +101,15 @@
                 const selection = document.getSelection();
                 if(selection.isCollapsed) return;
                 const range = selection.getRangeAt(0);
-                const start = range.startContainer;
-                let startValue = start.nodeValue !== null ?
-                    start.nodeValue.substring(range.startOffset, start === range.endContainer ? range.endOffset : undefined) : '';
-                if(start instanceof HTMLElement && start.children.length === 1 && start.firstElementChild instanceof HTMLImageElement)
-                    startValue += scanNode(start.firstElementChild, range, {});
-                e.clipboardData.setData('text/plain', copyNode(startValue, start, range, {}));
+                let start = range.startContainer, end = range.endContainer;
+                let startValue: string;
+                if(start instanceof HTMLElement) {
+                    start = start.childNodes[range.startOffset];
+                    startValue = start instanceof HTMLImageElement ? start.alt : scanNode(start.firstChild!, end, range, {});
+                } else
+                    startValue = start.nodeValue!.substring(range.startOffset, start === range.endContainer ? range.endOffset : undefined);
+                if(end instanceof HTMLElement) end = end.childNodes[range.endOffset - 1];
+                e.clipboardData.setData('text/plain', copyNode(startValue, start, end, range, {}));
                 e.preventDefault();
             }) as EventListener);
             window.addEventListener('keydown', (e) => {

@@ -36,6 +36,7 @@ export default class Connection implements Interfaces.Connection {
         try {
             this.ticket = await this.ticketProvider();
         } catch(e) {
+            if(this.reconnectTimer !== undefined) this.reconnect();
             return this.invokeErrorHandlers(<Error>e, true);
         }
         try {
@@ -85,6 +86,7 @@ export default class Connection implements Interfaces.Connection {
 
     close(): void {
         if(this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = undefined;
         this.cleanClose = true;
         if(this.socket !== undefined) this.socket.close();
     }

@@ -62,10 +62,10 @@
             <div class="input-group-prepend">
                 <div class="input-group-text"><span class="fas fa-search"></span></div>
             </div>
-            <input v-model="searchInput" @keydown.esc="showSearch = false; searchInput = ''" @keypress="lastSearchInput = Date.now()"
+            <input v-model="searchInput" @keydown.esc="hideSearch" @keypress="lastSearchInput = Date.now()"
                 :placeholder="l('chat.search')" ref="searchField" class="form-control"/>
             <a class="btn btn-sm btn-light" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:0;z-index:10"
-                @click="showSearch = false"><i class="fas fa-times"></i></a>
+                @click="hideSearch"><i class="fas fa-times"></i></a>
         </div>
         <div class="border-top messages" :class="'messages-' + conversation.mode" style="flex:1;overflow:auto;margin-top:2px"
             ref="messages" @scroll="onMessagesScroll">
@@ -201,6 +201,11 @@
             window.removeEventListener('resize', this.resizeHandler);
             window.removeEventListener('keydown', this.keydownHandler);
             clearInterval(this.searchTimer);
+        }
+
+        hideSearch(): void {
+            this.showSearch = false;
+            this.searchInput = '';
         }
 
         get conversation(): Conversation {

@@ -62,23 +62,29 @@ async function getIndex(db: IDBDatabase): Promise<Index> {
 }
 
 export class Logs implements Logging {
+    canZip = true;
     index?: Index;
     loadedDb?: IDBDatabase;
     loadedCharacter?: string;
     loadedIndex?: Index;
-    db!: IDBDatabase;
+    db?: IDBDatabase;
 
     constructor() {
         core.connection.onEvent('connecting', async() => {
             const characters = (await this.getAvailableCharacters());
             if(characters.indexOf(core.connection.character) === -1)
                 window.localStorage.setItem(charactersKey, JSON.stringify(characters.concat(core.connection.character)));
-            this.db = await openDatabase(core.connection.character);
-            this.index = await getIndex(this.db);
+            try {
+                this.db = await openDatabase(core.connection.character);
+                this.index = await getIndex(this.db);
+            } catch(e) {
+                console.error(e);
+            }
         });
     }
 
     async logMessage(conversation: Conversation, message: Conversation.Message): Promise<void> {
+        if(this.db === undefined) return;
         let conv = this.index![conversation.key];
         if(conv === undefined) {
             const cTrans = this.db.transaction(['conversations'], 'readwrite');
@@ -95,6 +101,7 @@ export class Logs implements Logging {
     }
 
     async getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>> {
+        if(this.db === undefined) return [];
         const trans = this.db.transaction(['logs']);
         const conv = this.index![conversation.key];
         if(conv === undefined) return [];
@@ -105,14 +112,18 @@ export class Logs implements Logging {
 
     private async loadIndex(character: string): Promise<Index> {
         if(character === this.loadedCharacter) return this.loadedIndex!;
-        this.loadedCharacter = character;
         if(character === core.connection.character) {
             this.loadedDb = this.db;
             this.loadedIndex = this.index;
-        } else {
-            this.loadedDb = await openDatabase(character);
-            this.loadedIndex = await getIndex(this.loadedDb);
-        }
+        } else
+            try {
+                this.loadedDb = await openDatabase(character);
+                this.loadedIndex = await getIndex(this.loadedDb);
+            } catch(e) {
+                console.error(e);
+                return {};
+            }
+        this.loadedCharacter = character;
         return this.loadedIndex!;
     }
 
@@ -122,8 +133,10 @@ export class Logs implements Logging {
     }
 
     async getLogs(character: string, key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {
-        const id = (await this.loadIndex(character))[key]!.id;
-        const trans = this.loadedDb!.transaction(['logs']);
+        await this.loadIndex(character);
+        if(this.loadedDb === undefined) return [];
+        const id = this.loadedIndex![key]!.id;
+        const trans = this.loadedDb.transaction(['logs']);
         const day = Math.floor(date.getTime() / dayMs - date.getTimezoneOffset() / 1440);
         return iterate(trans.objectStore('logs').index('conversation-day').openCursor(getComposite(id, day)),
             (value: StoredMessage) => value.type === Conversation.Message.Type.Event ? new EventMessage(value.text, value.time) :
@@ -131,8 +144,10 @@ export class Logs implements Logging {
     }
 
     async getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>> {
-        const id = (await this.loadIndex(character))[key]!.id;
-        const trans = this.loadedDb!.transaction(['logs']);
+        await this.loadIndex(character);
+        if(this.loadedDb === undefined) return [];
+        const id = this.loadedIndex![key]!.id;
+        const trans = this.loadedDb.transaction(['logs']);
         const bound = IDBKeyRange.bound(getComposite(id, 0), getComposite(id, 1000000));
         return iterate(trans.objectStore('logs').index('conversation-day').openCursor(bound, 'nextunique'), (value: StoredMessage) => {
             const date = new Date((hasComposite ? <number>value.day : decode((<string>value.day).substr(2))) * dayMs);
@@ -147,11 +162,11 @@ export class Logs implements Logging {
 }
 
 export class SettingsStore implements Settings.Store {
-    async get<K extends keyof Settings.Keys>(key: K): Promise<Settings.Keys[K] | undefined> {
-        const stored = window.localStorage.getItem(`${core.connection.character}.settings.${key}`);
+    async get<K extends keyof Settings.Keys>(key: K, character: string = core.connection.character): Promise<Settings.Keys[K] | undefined> {
+        const stored = window.localStorage.getItem(`${character}.settings.${key}`);
         if(stored === null) {
             if(key === 'pinned') {
-                const tabs20 = window.localStorage.getItem(`tabs_${core.connection.character.toLowerCase()}`);
+                const tabs20 = window.localStorage.getItem(`tabs_${character.toLowerCase().replace(' ', '_')}`);
                 if(tabs20 !== null)
                     try {
                         const tabs = JSON.parse(tabs20) as {type: string, id: string, title: string}[];

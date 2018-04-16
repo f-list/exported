@@ -9,7 +9,7 @@
                         </h4>
                         <button type="button" class="close" @click="hide" aria-label="Close" v-show="!keepOpen">&times;</button>
                     </div>
-                    <div class="modal-body" style="overflow:auto">
+                    <div class="modal-body" style="overflow:auto" tabindex="-1">
                         <slot></slot>
                     </div>
                     <div class="modal-footer" v-if="buttons">

@@ -13,7 +13,7 @@
     import Component from 'vue-class-component';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
-    import ChannelView from './ChannelView.vue';
+    import ChannelView from './ChannelTagView.vue';
     import core from './core';
     import {Character, Conversation} from './interfaces';
     import l from './localize';

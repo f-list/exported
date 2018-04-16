@@ -5,11 +5,11 @@
     "description": "F-List Exported",
     "license": "MIT",
     "devDependencies": {
-        "@fortawesome/fontawesome-free-webfonts": "^1.0.5",
-        "@types/node": "^9.6.0",
+        "@fortawesome/fontawesome-free-webfonts": "^1.0.6",
+        "@types/node": "^9.6.5",
         "@types/sortablejs": "^1.3.31",
         "axios": "^0.18.0",
-        "bootstrap": "^4.0.0",
+        "bootstrap": "^4.1.0",
         "css-loader": "^0.28.11",
         "date-fns": "^1.28.5",
         "electron": "^1.8.4",
@@ -23,10 +23,10 @@
         "node-sass": "^4.8.3",
         "optimize-css-assets-webpack-plugin": "^4.0.0",
         "qs": "^6.5.1",
-        "raven-js": "^3.24.0",
-        "sass-loader": "^6.0.7",
+        "raven-js": "^3.24.1",
+        "sass-loader": "^7.0.1",
         "sortablejs": "^1.6.0",
-        "ts-loader": "^4.1.0",
+        "ts-loader": "^4.2.0",
         "tslib": "^1.7.1",
         "tslint": "^5.7.0",
         "typescript": "^2.8.1",
@@ -35,11 +35,12 @@
         "vue-loader": "^14.2.2",
         "vue-property-decorator": "^6.0.0",
         "vue-template-compiler": "^2.5.16",
-        "webpack": "^4.3.0"
+        "webpack": "^4.5.0"
     },
     "dependencies": {
-        "@types/lodash": "^4.14.106",
+        "@types/lodash": "^4.14.107",
         "keytar": "^4.2.1",
-        "spellchecker": "^3.4.3"
+        "spellchecker": "^3.4.3",
+        "style-loader": "^0.20.3"
     }
 }

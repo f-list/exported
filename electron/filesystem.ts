@@ -93,18 +93,17 @@ export function serializeMessage(message: Message): {serialized: Buffer, size: n
     return {serialized: buffer, size: offset + 2};
 }
 
-function deserializeMessage(buffer: Buffer, characterGetter: (name: string) => Character = (name) => core.characters.get(name),
-                            unsafe: boolean = noAssert): {end: number, message: Conversation.Message} {
-    const time = buffer.readUInt32LE(0, unsafe);
-    const type = buffer.readUInt8(4, unsafe);
-    const senderLength = buffer.readUInt8(5, unsafe);
-    let offset = senderLength + 6;
-    const sender = buffer.toString('utf8', 6, offset);
+function deserializeMessage(buffer: Buffer, offset: number = 0,
+                            characterGetter: (name: string) => Character = (name) => core.characters.get(name),
+                            unsafe: boolean = noAssert): {size: number, message: Conversation.Message} {
+    const time = buffer.readUInt32LE(offset, unsafe);
+    const type = buffer.readUInt8(offset += 4, unsafe);
+    const senderLength = buffer.readUInt8(offset += 1, unsafe);
+    const sender = buffer.toString('utf8', offset += 1, offset += senderLength);
     const messageLength = buffer.readUInt16LE(offset, unsafe);
-    offset += 2;
-    const text = buffer.toString('utf8', offset, offset += messageLength);
+    const text = buffer.toString('utf8', offset += 2, offset + messageLength);
     const message = new MessageImpl(type, characterGetter(sender), text, new Date(time * 1000));
-    return {message, end: offset + 2};
+    return {message, size: senderLength + messageLength + 10};
 }
 
 export function fixLogs(character: string): void {
@@ -126,7 +125,7 @@ export function fixLogs(character: string): void {
                 while(pos < size) {
                     buffer.fill(-1);
                     fs.readSync(fd, buffer, 0, 50100, pos);
-                    const deserialized = deserializeMessage(buffer, (name) => ({
+                    const deserialized = deserializeMessage(buffer, 0, (name) => ({
                         gender: 'None', status: 'online', statusText: '', isFriend: false, isBookmarked: false, isChatOp: false,
                         isIgnored: false, name
                     }), false);
@@ -138,8 +137,8 @@ export function fixLogs(character: string): void {
                         fs.writeSync(indexFd, buffer, 0, 7);
                         lastDay = day;
                     }
-                    if(buffer.readUInt16LE(deserialized.end - 2) !== deserialized.end - 2) throw new Error();
-                    pos += deserialized.end;
+                    if(buffer.readUInt16LE(deserialized.size - 2) !== deserialized.size - 2) throw new Error();
+                    pos += deserialized.size;
                 }
             } catch {
                 fs.ftruncateSync(fd, pos);
@@ -174,6 +173,7 @@ function loadIndex(name: string): Index {
 }
 
 export class Logs implements Logging {
+    canZip = true;
     private index: Index = {};
     private loadedIndex?: Index;
     private loadedCharacter?: string;
@@ -226,19 +226,20 @@ export class Logs implements Logging {
         if(index === undefined) return [];
         const dateOffset = index.index[Math.floor(date.getTime() / dayMs - date.getTimezoneOffset() / 1440)];
         if(dateOffset === undefined) return [];
-        const buffer = Buffer.allocUnsafe(50100);
         const messages: Conversation.Message[] = [];
-        const file = getLogFile(character, key);
-        const fd = fs.openSync(file, 'r');
-        let pos = index.offsets[dateOffset];
-        const size = dateOffset + 1 < index.offsets.length ? index.offsets[dateOffset + 1] : (fs.fstatSync(fd)).size;
-        while(pos < size) {
-            fs.readSync(fd, buffer, 0, 50100, pos);
-            const deserialized = deserializeMessage(buffer);
-            messages.push(deserialized.message);
-            pos += deserialized.end;
-        }
+        const pos = index.offsets[dateOffset];
+        const fd = fs.openSync(getLogFile(character, key), 'r');
+        const end = dateOffset + 1 < index.offsets.length ? index.offsets[dateOffset + 1] : (fs.fstatSync(fd)).size;
+        const length = end - pos;
+        const buffer = Buffer.allocUnsafe(length);
+        fs.readSync(fd, buffer, 0, length, pos);
         fs.closeSync(fd);
+        let offset = 0;
+        while(offset < length) {
+            const deserialized = deserializeMessage(buffer, offset);
+            messages.push(deserialized.message);
+            offset += deserialized.size;
+        }
         return messages;
     }
 

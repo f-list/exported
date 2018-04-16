@@ -86,6 +86,7 @@ class State implements Interfaces.State {
     joinedChannels: Channel[] = [];
     joinedMap: {[key: string]: Channel | undefined} = {};
     handlers: Interfaces.EventHandler[] = [];
+    lastRequest = 0;
 
     constructor(private connection: Connection) {
     }
@@ -110,13 +111,19 @@ class State implements Interfaces.State {
     getChannel(id: string): Channel | undefined {
         return this.joinedMap[id.toLowerCase()];
     }
+
+    requestChannelsIfNeeded(maxAge: number): void {
+        if(this.lastRequest + maxAge > Date.now()) return;
+        this.lastRequest = Date.now();
+        this.connection.send('CHA');
+        this.connection.send('ORS');
+    }
 }
 
 let state: State;
 
 export default function(this: void, connection: Connection, characters: Character.State): Interfaces.State {
     state = new State(connection);
-    let getChannelTimer: NodeJS.Timer | undefined;
     let rejoin: string[] | undefined;
     connection.onEvent('connecting', (isReconnect) => {
         if(isReconnect && rejoin === undefined) rejoin = Object.keys(state.joinedMap);
@@ -128,16 +135,6 @@ export default function(this: void, connection: Connection, characters: Characte
             queuedJoin(rejoin);
             rejoin = undefined;
         }
-        const getChannels = () => {
-            connection.send('CHA');
-            connection.send('ORS');
-        };
-        getChannels();
-        if(getChannelTimer !== undefined) clearInterval(getChannelTimer);
-        getChannelTimer = setInterval(getChannels, 60000);
-    });
-    connection.onEvent('closed', () => {
-        if(getChannelTimer !== undefined) clearInterval(getChannelTimer);
     });
 
     connection.onMessage('CHA', (data) => {
@@ -269,5 +266,13 @@ export default function(this: void, connection: Connection, characters: Characte
     };
     connection.onMessage('AOP', globalHandler);
     connection.onMessage('DOP', globalHandler);
+    connection.onMessage('RTB', (data) => {
+        if(data.type !== 'trackadd' && data.type !== 'trackrem' && data.type !== 'friendadd' && data.type !== 'friendremove') return;
+        for(const key in state.joinedMap) {
+            const channel = state.joinedMap[key]!;
+            const member = channel.members[data.name];
+            if(member !== undefined) channel.reSortMember(member);
+        }
+    });
     return state;
 }

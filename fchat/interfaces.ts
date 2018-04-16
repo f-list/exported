@@ -193,6 +193,7 @@ export namespace Channel {
         onEvent(handler: EventHandler): void
         getChannelItem(id: string): ListItem | undefined
         getChannel(id: string): Channel | undefined
+        requestChannelsIfNeeded(maxAge: number): void;
     }
 
     export const enum Rank {
