@@ -2,11 +2,15 @@ import Vue from 'vue';
 import Modal from './Modal.vue';
 
 export default class CustomDialog extends Vue {
+    protected get dialog(): Modal {
+        return <Modal>this.$children[0];
+    }
+
     show(): void {
-        (<Modal>this.$children[0]).show();
+        this.dialog.show();
     }
 
     hide(): void {
-        (<Modal>this.$children[0]).hide();
+        this.dialog.hide();
     }
 }

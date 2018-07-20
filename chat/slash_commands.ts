@@ -281,18 +281,12 @@ const commands: {readonly [key: string]: Command | undefined} = {
         params: [{type: ParamType.Character}]
     },
     closeroom: {
-        exec: (conv: ChannelConversation) => {
-            core.connection.send('RST', {channel: conv.channel.id, status: 'private'});
-            core.connection.send('ORS');
-        },
+        exec: (conv: ChannelConversation) => core.connection.send('RST', {channel: conv.channel.id, status: 'private'}),
         permission: Permission.RoomOwner,
         context: CommandContext.Channel
     },
     openroom: {
-        exec: (conv: ChannelConversation) => {
-            core.connection.send('RST', {channel: conv.channel.id, status: 'public'});
-            core.connection.send('ORS');
-        },
+        exec: (conv: ChannelConversation) => core.connection.send('RST', {channel: conv.channel.id, status: 'public'}),
         permission: Permission.RoomOwner,
         context: CommandContext.Channel
     },

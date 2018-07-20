@@ -41,3 +41,14 @@
     display: none;
   }
 }
+
+.bbcode-editor-controls {
+  display: flex;
+  align-items: center;
+  float: right;
+  order: 1;
+  justify-content: flex-end;
+  @media (max-width: breakpoint-max(xs)) {
+    flex: 1 49%;
+  }
+}

@@ -3,8 +3,9 @@ import WebKit
 
 class IndexItem: Encodable {
     let name: String
-    var index = [UInt16: UInt64]()
+    var index = NSMutableOrderedSet()
     var dates = [UInt16]()
+    var offsets = [UInt64]()
     init(_ name: String) {
         self.name = name
     }
@@ -70,7 +71,8 @@ class Logs: NSObject, WKScriptMessageHandler {
                 indexItem.dates.append(date)
                 var o: UInt64 = 0
                 data.getBytes(&o, range: NSMakeRange(offset + 2, 5))
-                indexItem.index[date] = o
+                indexItem.index.add(date)
+                indexItem.offsets.append(o)
                 offset += 7
             }
             index[file.deletingPathExtension().lastPathComponent] = indexItem
@@ -102,7 +104,7 @@ class Logs: NSObject, WKScriptMessageHandler {
         if(indexItem == nil) { fm.createFile(atPath: url.path, contents: nil) }
         let fd = try FileHandle(forWritingTo: url)
         fd.seekToEndOfFile()
-        if(indexItem?.index[day] == nil) {
+        if(!(indexItem?.index.contains(day) ?? false)) {
             let indexFile = url.appendingPathExtension("idx")
             if(indexItem == nil) { fm.createFile(atPath: indexFile.path, contents: nil) }
             let indexFd = try FileHandle(forWritingTo: indexFile)
@@ -118,7 +120,8 @@ class Logs: NSObject, WKScriptMessageHandler {
             write(indexFd.fileDescriptor, &day, 2)
             var offset = fd.offsetInFile
             write(indexFd.fileDescriptor, &offset, 5)
-            indexItem!.index[day] = offset
+            indexItem!.index.add(indexItem!.offsets.count)
+            indexItem!.offsets.append(offset)
             indexItem!.dates.append(day)
         }
         let start = fd.offsetInFile
@@ -150,25 +153,29 @@ class Logs: NSObject, WKScriptMessageHandler {
             let newOffset = file.offsetInFile - UInt64(length + 2)
             file.seek(toFileOffset: newOffset)
             read(file.fileDescriptor, buffer, Int(length))
-            strings.append(deserializeMessage().0)
+            strings.append(try deserializeMessage(buffer, 0).0)
             file.seek(toFileOffset: newOffset)
         }
         return "[" + strings.reversed().joined(separator: ",") + "]"
     }
 
     func getLogs(_ character: String, _ key: String, _ date: UInt16) throws -> String {
-        guard let offset = loadedIndex![key]?.index[date] else { return "[]" }
+        let index = loadedIndex![key]
+        guard let indexKey = index?.index.index(of: date) else { return "[]" }
         let url = baseDir.appendingPathComponent("\(character)/logs/\(key)", isDirectory: false)
         let file = try FileHandle(forReadingFrom: url)
-        let size = file.seekToEndOfFile()
-        file.seek(toFileOffset: offset)
+        let start = index!.offsets[indexKey]
+        let end = indexKey >= index!.offsets.count - 1 ? file.seekToEndOfFile() : index!.offsets[indexKey + 1]
+        file.seek(toFileOffset: start)
+        let length = Int(end - start)
+        let buffer = UnsafeMutableRawPointer.allocate(bytes: length, alignedTo: 1)
+        read(file.fileDescriptor, buffer, length)
         var json = "["
-        while file.offsetInFile < size {
-            read(file.fileDescriptor, buffer, 51000)
-            let deserialized = deserializeMessage(date)
-            if(deserialized.1 == 0) { break }
+        var offset = 0
+        while offset < length {
+            let deserialized = try deserializeMessage(buffer, offset)
+            offset = deserialized.1 + 2
             json += deserialized.0 + ","
-            file.seek(toFileOffset: file.offsetInFile + UInt64(deserialized.1 + 2))
         }
         return json + "]"
     }
@@ -178,14 +185,19 @@ class Logs: NSObject, WKScriptMessageHandler {
         return String(data: try JSONEncoder().encode(loadedIndex), encoding: .utf8)!
     }
 
-    func deserializeMessage(_ checkDate: UInt16 = 0) -> (String, Int) {
-        let date = buffer.load(as: UInt32.self)
-        if(checkDate != 0 && date / 86400 != checkDate) { return ("", 0) }
-        let type = buffer.load(fromByteOffset: 4, as: UInt8.self)
-        let senderLength = Int(buffer.load(fromByteOffset: 5, as: UInt8.self))
-        let sender = String(bytesNoCopy: buffer.advanced(by: 6), length: senderLength, encoding: .utf8, freeWhenDone: false)!
-        let textLength = Int(buffer.advanced(by: 6 + senderLength).bindMemory(to: UInt16.self, capacity: 1).pointee)
-        let text = String(bytesNoCopy: buffer.advanced(by: 6 + senderLength + 2), length: textLength, encoding: .utf8, freeWhenDone: false)!
-        return ("{\"time\":\(date),\"type\":\(type),\"sender\":\(File.escape(sender)),\"text\":\(File.escape(text))}", senderLength + textLength + 8)
+    func deserializeMessage(_ buffer: UnsafeMutableRawPointer, _ o: Int) throws -> (String, Int) {
+        var offset = o
+        let date = buffer.advanced(by: offset).bindMemory(to: UInt32.self, capacity: 1).pointee
+        let type = buffer.load(fromByteOffset: offset + 4, as: UInt8.self)
+        let senderLength = Int(buffer.load(fromByteOffset: offset + 5, as: UInt8.self))
+        guard let sender = String(bytesNoCopy: buffer.advanced(by: offset + 6), length: senderLength, encoding: .utf8, freeWhenDone: false) else {
+            throw NSError(domain: "Log corruption", code: 0)
+        }
+        offset += senderLength + 6
+        let textLength = Int(buffer.advanced(by: offset).bindMemory(to: UInt16.self, capacity: 1).pointee)
+        guard let text = String(bytesNoCopy: buffer.advanced(by: offset + 2), length: textLength, encoding: .utf8, freeWhenDone: false) else {
+            throw NSError(domain: "Log corruption", code: 0)
+        }
+        return ("{\"time\":\(date),\"type\":\(type),\"sender\":\(File.escape(sender)),\"text\":\(File.escape(text))}", offset + textLength + 2)
     }
 }

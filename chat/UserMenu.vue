@@ -30,7 +30,7 @@
             <a tabindex="-1" href="#" @click.prevent="channelKick" class="list-group-item list-group-item-action" v-show="isChannelMod">
                 <span class="fa fa-fw fa-ban"></span>{{l('user.channelKick')}}</a>
             <a tabindex="-1" href="#" @click.prevent="chatKick" style="color:#f00" class="list-group-item list-group-item-action"
-                v-show="isChatOp"><span class="far fa-fw fa-trash"></span>{{l('user.chatKick')}}</a>
+                v-show="isChatOp"><span class="fas fa-fw fa-trash"></span>{{l('user.chatKick')}}</a>
         </div>
         <modal :action="l('user.memo.action')" ref="memo" :disabled="memoLoading" @submit="updateMemo" dialogClass="w-100">
             <div style="float:right;text-align:right;">{{getByteLength(memo)}} / 1000</div>

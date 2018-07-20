@@ -1,5 +1,6 @@
 <template>
-    <modal :action="l('conversationSettings.action', conversation.name)" @submit="submit" ref="dialog" @close="init()" dialogClass="w-100">
+    <modal :action="l('conversationSettings.action', conversation.name)" @submit="submit" ref="dialog" @close="init()" dialogClass="w-100"
+        :buttonText="l('conversationSettings.save')">
         <div class="form-group">
             <label class="control-label" :for="'notify' + conversation.key">{{l('conversationSettings.notify')}}</label>
             <select class="form-control" :id="'notify' + conversation.key" v-model="notify">
@@ -82,7 +83,7 @@
             this.conversation.settings = {
                 notify: this.notify,
                 highlight: this.highlight,
-                highlightWords: this.highlightWords.split(',').filter((x) => x.length),
+                highlightWords: this.highlightWords.split(',').map((x) => x.trim()).filter((x) => x.length),
                 joinMessages: this.joinMessages,
                 defaultHighlights: this.defaultHighlights
             };

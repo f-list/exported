@@ -1,11 +1,11 @@
 <template>
     <div class="dropdown">
-        <button class="form-control custom-select" aria-haspopup="true" :aria-expanded="isOpen" @click="isOpen = true"
+        <a class="form-control custom-select" aria-haspopup="true" :aria-expanded="isOpen" @click="isOpen = true"
             @blur="isOpen = false" style="width:100%;text-align:left;display:flex;align-items:center" role="button" tabindex="-1">
             <div style="flex:1">
                 <slot name="title" style="flex:1"></slot>
             </div>
-        </button>
+        </a>
         <div class="dropdown-menu" :style="open ? 'display:block' : ''" @mousedown.stop.prevent @click="isOpen = false"
             ref="menu">
             <slot></slot>

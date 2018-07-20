@@ -41,6 +41,7 @@ export class Settings implements ISettings {
     showNeedsReply = false;
     enterSend = true;
     colorBookmarks = false;
+    bbCodeBar = true;
 }
 
 export class ConversationSettings implements Conversation.Settings {

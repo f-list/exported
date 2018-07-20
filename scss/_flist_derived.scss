@@ -50,6 +50,11 @@ $text-background-color-disabled: $gray-800 !default;
   cursor: default;
 }
 
+.custom-select:hover {
+  text-decoration: none;
+  cursor: default;
+}
+
 select {
   @extend .custom-select;
   -webkit-appearance: none;

@@ -24,7 +24,7 @@ import java.util.*
 
 class MainActivity : Activity() {
 	private lateinit var webView: WebView
-	private val profileRegex = Regex("^https?://(www\\.)?f-list.net/c/(.+)/?#?")
+	private val profileRegex = Regex("^https?://(www\\.)?f-list.net/c/([^/#]+)/?#?")
 	private val backgroundPlugin = Background(this)
 
 	override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,5 +1,6 @@
 const path = require('path');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const VueLoaderPlugin = require('vue-loader/lib/plugin');
 
 const config = {
     entry: {
@@ -25,8 +26,9 @@ const config = {
                 test: /\.vue$/,
                 loader: 'vue-loader',
                 options: {
-                    preserveWhitespace: false,
-                    cssSourceMap: false
+                    compilerOptions: {
+                        preserveWhitespace: false
+                    }
                 }
             },
             {test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
@@ -35,11 +37,14 @@ const config = {
             {test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
             {test: /\.(wav|mp3|ogg)$/, loader: 'file-loader?name=sounds/[name].[ext]'},
             {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'},
-            {test: /\.scss/, use: ['css-loader', 'sass-loader']}
+            {test: /(?<!\.vue)\.scss/, use: ['css-loader', 'sass-loader']},
+            {test: /\.vue\.scss/, loader: ['vue-style-loader','css-loader','sass-loader']},
+            {test: /\.vue\.css/, loader: ['vue-style-loader','css-loader']},
         ]
     },
     plugins: [
-        new ForkTsCheckerWebpackPlugin({workers: 2, async: false, vue: true, tslint: path.join(__dirname, '../tslint.json')})
+        new ForkTsCheckerWebpackPlugin({workers: 2, async: false, vue: true, tslint: path.join(__dirname, '../tslint.json')}),
+        new VueLoaderPlugin()
     ],
     resolve: {
         'extensions': ['.ts', '.js', '.vue', '.scss']

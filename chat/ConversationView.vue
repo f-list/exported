@@ -30,7 +30,9 @@
                         <span class="fa" :class="{'fa-chevron-down': !descriptionExpanded, 'fa-chevron-up': descriptionExpanded}"></span>
                         <span class="btn-text">{{l('channel.description')}}</span>
                     </a>
-                    <manage-channel :channel="conversation.channel" v-if="isChannelMod"></manage-channel>
+                    <a href="#" @click.prevent="$refs['manageDialog'].show()" v-show="isChannelMod" class="btn">
+                        <span class="fa fa-edit"></span> <span class="btn-text">{{l('manageChannel.open')}}</span>
+                    </a>
                     <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn">
                         <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
                     </a>
@@ -83,45 +85,42 @@
                 </span>
             </template>
         </div>
-        <div>
-            <span v-if="conversation.typingStatus && conversation.typingStatus !== 'clear'">
+        <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="keepScroll"
+            :classes="'form-control chat-text-box' + (conversation.isSendingAds ? ' ads-text-box' : '')" :hasToolbar="settings.bbCodeBar"
+            ref="textBox" style="position:relative;margin-top:5px" :maxlength="conversation.maxMessageLength">
+            <span v-if="conversation.typingStatus && conversation.typingStatus !== 'clear'" class="chat-info-text">
                 {{l('chat.typing.' + conversation.typingStatus, conversation.name)}}
             </span>
-            <div v-show="conversation.infoText" style="display:flex;align-items:center">
+            <div v-show="conversation.infoText" class="chat-info-text">
                 <span class="fa fa-times" style="cursor:pointer" @click.stop="conversation.infoText = ''"></span>
                 <span style="flex:1;margin-left:5px">{{conversation.infoText}}</span>
             </div>
-            <div v-show="conversation.errorText" style="display:flex;align-items:center">
+            <div v-show="conversation.errorText" class="chat-info-text">
                 <span class="fa fa-times" style="cursor:pointer" @click.stop="conversation.errorText = ''"></span>
                 <span class="redText" style="flex:1;margin-left:5px">{{conversation.errorText}}</span>
             </div>
-            <div style="position:relative;margin-top:5px">
-                <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="keepScroll"
-                    :classes="'form-control chat-text-box' + (conversation.isSendingAds ? ' ads-text-box' : '')"
-                    ref="textBox" style="position:relative" :maxlength="conversation.maxMessageLength">
-                    <div style="float:right;text-align:right;display:flex;align-items:center">
-                        <div v-show="conversation.maxMessageLength" style="margin-right:5px">
-                            {{getByteLength(conversation.enteredText)}} / {{conversation.maxMessageLength}}
-                        </div>
-                        <ul class="nav nav-pills send-ads-switcher" v-if="conversation.channel"
-                            style="position:relative;z-index:10;margin-right:5px">
-                            <li class="nav-item">
-                                <a href="#" :class="{active: !conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
-                                    class="nav-link" @click.prevent="setSendingAds(false)">{{l('channel.mode.chat')}}</a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="#" :class="{active: conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
-                                    class="nav-link" @click.prevent="setSendingAds(true)">{{adsMode}}</a>
-                            </li>
-                        </ul>
-                        <div class="btn btn-sm btn-primary" v-show="!settings.enterSend" @click="sendButton">{{l('chat.send')}}</div>
-                    </div>
-                </bbcode-editor>
+            <div class="bbcode-editor-controls">
+                <div v-show="conversation.maxMessageLength" style="margin-right:5px">
+                    {{getByteLength(conversation.enteredText)}} / {{conversation.maxMessageLength}}
+                </div>
+                <ul class="nav nav-pills send-ads-switcher" v-if="conversation.channel"
+                    style="position:relative;z-index:10;margin-right:5px">
+                    <li class="nav-item">
+                        <a href="#" :class="{active: !conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
+                            class="nav-link" @click.prevent="setSendingAds(false)">{{l('channel.mode.chat')}}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" :class="{active: conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
+                            class="nav-link" @click.prevent="setSendingAds(true)">{{adsMode}}</a>
+                    </li>
+                </ul>
+                <div class="btn btn-sm btn-primary" v-show="!settings.enterSend" @click="sendButton">{{l('chat.send')}}</div>
             </div>
-        </div>
+        </bbcode-editor>
         <command-help ref="helpDialog"></command-help>
         <settings ref="settingsDialog" :conversation="conversation"></settings>
         <logs ref="logsDialog" :conversation="conversation"></logs>
+        <manage-channel ref="manageDialog" :channel="conversation.channel" v-if="conversation.channel"></manage-channel>
     </div>
 </template>
 
@@ -130,6 +129,7 @@
     import Component from 'vue-class-component';
     import {Prop, Watch} from 'vue-property-decorator';
     import {EditorButton, EditorSelection} from '../bbcode/editor';
+    import {isShowing as anyDialogsShown} from '../components/Modal.vue';
     import {Keys} from '../keys';
     import {BBCodeView, Editor} from './bbcode';
     import CommandHelp from './CommandHelp.vue';
@@ -168,23 +168,30 @@
         lastSearchInput = 0;
         messageCount = 0;
         searchTimer = 0;
-        windowHeight = window.innerHeight;
-        resizeHandler = () => {
-            const messageView = <HTMLElement>this.$refs['messages'];
-            if(this.windowHeight - window.innerHeight + messageView.scrollTop + messageView.offsetHeight >= messageView.scrollHeight - 15)
-                messageView.scrollTop = messageView.scrollHeight - messageView.offsetHeight;
-            this.windowHeight = window.innerHeight;
-        }
+        messageView!: HTMLElement;
+        resizeHandler!: EventListener;
         keydownHandler!: EventListener;
+        keypressHandler!: EventListener;
+        scrolledDown = true;
+        scrolledUp = false;
 
-        created(): void {
+        mounted(): void {
             this.extraButtons = [{
                 title: 'Help\n\nClick this button for a quick overview of slash commands.',
                 tag: '?',
                 icon: 'fa-question',
                 handler: () => (<CommandHelp>this.$refs['helpDialog']).show()
             }];
-            window.addEventListener('resize', this.resizeHandler);
+            window.addEventListener('resize', this.resizeHandler = () => {
+                if(this.scrolledDown)
+                    this.messageView.scrollTop = this.messageView.scrollHeight - this.messageView.offsetHeight;
+                this.onMessagesScroll();
+            });
+            window.addEventListener('keypress', this.keypressHandler = () => {
+                if(document.getSelection().isCollapsed && !anyDialogsShown &&
+                    (document.activeElement === document.body || document.activeElement.tagName === 'A'))
+                    (<Editor>this.$refs['textBox']).focus();
+            });
             window.addEventListener('keydown', this.keydownHandler = ((e: KeyboardEvent) => {
                 if(getKey(e) === Keys.KeyF && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
                     this.showSearch = true;
@@ -195,11 +202,13 @@
                 if(Date.now() - this.lastSearchInput > 500 && this.search !== this.searchInput)
                     this.search = this.searchInput;
             }, 500);
+            this.messageView = <HTMLElement>this.$refs['messages'];
         }
 
         destroyed(): void {
             window.removeEventListener('resize', this.resizeHandler);
             window.removeEventListener('keydown', this.keydownHandler);
+            window.removeEventListener('keypress', this.keypressHandler);
             clearInterval(this.searchTimer);
         }
 
@@ -224,29 +233,30 @@
 
         @Watch('conversation')
         conversationChanged(): void {
-            (<Editor>this.$refs['textBox']).focus();
+            if(!anyDialogsShown) (<Editor>this.$refs['textBox']).focus();
+            setTimeout(() => this.messageView.scrollTop = this.messageView.scrollHeight - this.messageView.offsetHeight);
+            this.scrolledDown = true;
         }
 
         @Watch('conversation.messages')
         messageAdded(newValue: Conversation.Message[]): void {
-            const messageView = <HTMLElement>this.$refs['messages'];
-            if(!this.keepScroll() && newValue.length === this.messageCount)
-                messageView.scrollTop -= (<HTMLElement>messageView.firstElementChild).clientHeight;
+            this.keepScroll();
+            if(!this.scrolledDown && newValue.length === this.messageCount)
+                this.messageView.scrollTop -= (this.messageView.firstElementChild!).clientHeight;
             this.messageCount = newValue.length;
         }
 
-        keepScroll(): boolean {
-            const messageView = <HTMLElement>this.$refs['messages'];
-            if(messageView.scrollTop + messageView.offsetHeight >= messageView.scrollHeight - 15) {
-                this.$nextTick(() => setTimeout(() => messageView.scrollTop = messageView.scrollHeight, 0));
-                return true;
-            }
-            return false;
+        keepScroll(): void {
+            if(this.scrolledDown)
+                this.$nextTick(() => setTimeout(() => this.messageView.scrollTop = this.messageView.scrollHeight, 0));
         }
 
         onMessagesScroll(): void {
-            const messageView = <HTMLElement | undefined>this.$refs['messages'];
-            if(messageView !== undefined && messageView.scrollTop < 50) this.conversation.loadMore();
+            if(this.messageView.scrollTop < 50 && !this.scrolledUp) {
+                this.scrolledUp = true;
+                this.conversation.loadMore();
+            } else this.scrolledUp = false;
+            this.scrolledDown = this.messageView.scrollTop + this.messageView.offsetHeight >= this.messageView.scrollHeight - 15;
         }
 
         @Watch('conversation.errorText')
@@ -376,6 +386,15 @@
             .mode-switcher a {
                 padding: 5px 8px;
             }
+        }
+    }
+
+    .chat-info-text {
+        display:flex;
+        align-items:center;
+        flex:1 51%;
+        @media (max-width: breakpoint-max(xs)) {
+            flex-basis: 100%;
         }
     }
 </style>

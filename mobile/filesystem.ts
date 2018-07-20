@@ -66,7 +66,7 @@ export class Logs implements Logging {
     private async getIndex(name: string): Promise<Index> {
         if(this.loadedCharacter === name) return this.loadedIndex!;
         this.loadedCharacter = name;
-        return this.loadedIndex = await NativeLogs.loadIndex(name);
+        return this.loadedIndex = name === core.connection.character ? this.index : await NativeLogs.loadIndex(name);
     }
 
     async getLogs(character: string, key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {

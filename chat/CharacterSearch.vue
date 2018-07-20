@@ -88,7 +88,7 @@
             if(options === undefined)
                 options = <Options | undefined>(await Axios.get('https://www.f-list.net/json/api/mapping-list.php')).data;
             if(options === undefined) return;
-            this.options = {
+            this.options = Object.freeze({
                 kinks: options.kinks.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0))),
                 genders: options.listitems.filter((x) => x.name === 'gender').map((x) => x.value),
                 orientations: options.listitems.filter((x) => x.name === 'orientation').map((x) => x.value),
@@ -96,7 +96,7 @@
                 furryprefs: options.listitems.filter((x) => x.name === 'furrypref').map((x) => x.value),
                 roles: options.listitems.filter((x) => x.name === 'subdom').map((x) => x.value),
                 positions: options.listitems.filter((x) => x.name === 'position').map((x) => x.value)
-            };
+            });
         }
 
         mounted(): void {

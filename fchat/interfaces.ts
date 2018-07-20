@@ -104,8 +104,9 @@ export namespace Connection {
             type: 'grouprequest' | 'bugreport' | 'helpdeskticket' | 'helpdeskreply' | 'featurerequest',
             name: string, id: number, title?: string
         } | {type: 'trackadd' | 'trackrem' | 'friendadd' | 'friendremove' | 'friendrequest', name: string},
-        SFC: {action: 'confirm', moderator: string, character: string, timestamp: string, tab: string, logid: number} |
-            {callid: number, action: 'report', report: string, timestamp: string, character: string, tab: string, logid: number},
+        SFC: {action: 'confirm', moderator: string, character: string, timestamp: string, tab: string, logid: number} | {
+            callid: number, action: 'report', report: string, timestamp: string, character: string, tab: string, logid: number, old?: true
+        },
         STA: {status: Character.Status, character: string, statusmsg: string},
         SYS: {message: string, channel?: string},
         TPN: {character: string, status: Character.TypingStatus},
@@ -123,10 +124,10 @@ export namespace Connection {
         readonly chat_max: number
         readonly priv_max: number
         readonly lfrp_max: number
-        //readonly cds_max: number
+        readonly cds_max: number
         readonly lfrp_flood: number
         readonly msg_flood: number
-        //readonly sta_flood: number
+        readonly sta_flood: number
         readonly permissions: number
         readonly icon_blacklist: ReadonlyArray<string>
     }

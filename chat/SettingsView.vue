@@ -48,6 +48,12 @@
                 </label>
             </div>
             <div class="form-group">
+                <label class="control-label" for="bbCodeBar">
+                    <input type="checkbox" id="bbCodeBar" v-model="bbCodeBar"/>
+                    {{l('settings.bbCodeBar')}}
+                </label>
+            </div>
+            <div class="form-group">
                 <label class="control-label" for="logMessages">
                     <input type="checkbox" id="logMessages" v-model="logMessages"/>
                     {{l('settings.logMessages')}}
@@ -158,6 +164,7 @@
         showNeedsReply!: boolean;
         enterSend!: boolean;
         colorBookmarks!: boolean;
+        bbCodeBar!: boolean;
 
         constructor() {
             super();
@@ -189,6 +196,7 @@
             this.showNeedsReply = settings.showNeedsReply;
             this.enterSend = settings.enterSend;
             this.colorBookmarks = settings.colorBookmarks;
+            this.bbCodeBar = settings.bbCodeBar;
         };
 
         async doImport(): Promise<void> {
@@ -226,7 +234,8 @@
                 fontSize: isNaN(this.fontSize) ? 14 : this.fontSize < 10 ? 10 : this.fontSize > 24 ? 24 : this.fontSize,
                 showNeedsReply: this.showNeedsReply,
                 enterSend: this.enterSend,
-                colorBookmarks: this.colorBookmarks
+                colorBookmarks: this.colorBookmarks,
+                bbCodeBar: this.bbCodeBar
             };
             if(this.notifications) await core.notifications.requestPermission();
         }

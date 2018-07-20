@@ -4,7 +4,7 @@ import AVFoundation
 
 class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     var webView: WKWebView!
-    let profileRegex = try! NSRegularExpression(pattern: "^https?://(www\\.)?f-list.net/c/(.+)/?#?", options: [.caseInsensitive])
+    let profileRegex = try! NSRegularExpression(pattern: "^https?://(www\\.)?f-list.net/c/([^/#]+)/?#?", options: [.caseInsensitive])
 
     override func loadView() {
         let config = WKWebViewConfiguration()

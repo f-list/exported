@@ -7,17 +7,12 @@ import BaseNotifications from '../chat/notifications';
 const browserWindow = remote.getCurrentWindow();
 
 export default class Notifications extends BaseNotifications {
-    notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void {
+    async notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): Promise<void> {
         if(!this.shouldNotify(conversation)) return;
-        this.playSound(sound);
+        await this.playSound(sound);
         browserWindow.flashFrame(true);
         if(core.state.settings.notifications) {
-            /*tslint:disable-next-line:no-object-literal-type-assertion*///false positive
-            const notification = new Notification(title, <NotificationOptions & {silent: boolean}>{
-                body,
-                icon: core.state.settings.showAvatars ? icon : undefined,
-                silent: true
-            });
+            const notification = new Notification(title, this.getOptions(conversation, body, icon));
             notification.onclick = () => {
                 browserWindow.webContents.send('show-tab', remote.getCurrentWebContents().id);
                 conversation.show();

@@ -152,7 +152,7 @@ class PrivateConversation extends Conversation implements Interfaces.PrivateConv
         if(message.type !== Interfaces.Message.Type.Event) {
             if(core.state.settings.logMessages) await core.logs.logMessage(this, message);
             if(this.settings.notify !== Interfaces.Setting.False && message.sender !== core.characters.ownCharacter)
-                core.notifications.notify(this, message.sender.name, message.text, characterImage(message.sender.name), 'attention');
+                await core.notifications.notify(this, message.sender.name, message.text, characterImage(message.sender.name), 'attention');
             if(this !== state.selectedConversation || !state.windowFocused)
                 this.unread = Interfaces.UnreadState.Mention;
             this.typingStatus = 'clear';
@@ -525,19 +525,21 @@ export default function(this: void): Interfaces.State {
         const message = createMessage(MessageType.Message, char, decodeHTML(data.message), time);
         await conversation.addMessage(message);
 
-        const words = conversation.settings.highlightWords.map((w) => w.replace(/[^\w]/gi, '\\$&'));
+        const words = conversation.settings.highlightWords.slice();
         if(conversation.settings.defaultHighlights) words.push(...core.state.settings.highlightWords);
         if(conversation.settings.highlight === Interfaces.Setting.Default && core.state.settings.highlight ||
             conversation.settings.highlight === Interfaces.Setting.True) words.push(core.connection.character);
+        for(let i = 0; i < words.length; ++i)
+            words[i] = words[i].replace(/[^\w]/gi, '\\$&');
         //tslint:disable-next-line:no-null-keyword
         const results = words.length > 0 ? message.text.match(new RegExp(`\\b(${words.join('|')})\\b`, 'i')) : null;
         if(results !== null) {
-            core.notifications.notify(conversation, data.character, l('chat.highlight', results[0], conversation.name, message.text),
+            await core.notifications.notify(conversation, data.character, l('chat.highlight', results[0], conversation.name, message.text),
                 characterImage(data.character), 'attention');
             if(conversation !== state.selectedConversation || !state.windowFocused) conversation.unread = Interfaces.UnreadState.Mention;
             message.isHighlight = true;
         } else if(conversation.settings.notify === Interfaces.Setting.True) {
-            core.notifications.notify(conversation, conversation.name, messageToString(message),
+            await core.notifications.notify(conversation, conversation.name, messageToString(message),
                 characterImage(data.character), 'attention');
             if(conversation !== state.selectedConversation || !state.windowFocused) conversation.unread = Interfaces.UnreadState.Mention;
         }
@@ -565,7 +567,7 @@ export default function(this: void): Interfaces.State {
             if(conversation === undefined) return core.channels.leave(channel);
             if(sender.isIgnored && !isOp(conversation)) return;
             if(data.type === 'bottle' && data.target === core.connection.character) {
-                core.notifications.notify(conversation, conversation.name, messageToString(message),
+                await core.notifications.notify(conversation, conversation.name, messageToString(message),
                     characterImage(data.character), 'attention');
                 if(conversation !== state.selectedConversation || !state.windowFocused)
                     conversation.unread = Interfaces.UnreadState.Mention;
@@ -648,13 +650,13 @@ export default function(this: void): Interfaces.State {
                     url += `newspost/${data.target_id}/#Comment${data.id}`;
                     break;
                 case 'bugreport':
-                    url += `view_bugreport.php?id=/${data.target_id}/#${data.id}`;
+                    url += `view_bugreport.php?id=${data.target_id}/#${data.id}`;
                     break;
                 case 'changelog':
-                    url += `log.php?id=/${data.target_id}/#${data.id}`;
+                    url += `log.php?id=${data.target_id}/#${data.id}`;
                     break;
                 case 'feature':
-                    url += `vote.php?id=/${data.target_id}/#${data.id}`;
+                    url += `vote.php?id=${data.target_id}/#${data.id}`;
             }
             const key = `events.rtbComment${(data.parent_id !== 0 ? 'Reply' : '')}`;
             text = l(key, `[user]${data.name}[/user]`, l(`events.rtbComment_${data.target_type}`), `[url=${url}]${data.target}[/url]`);
@@ -691,7 +693,7 @@ export default function(this: void): Interfaces.State {
         }
         await addEventMessage(new EventMessage(text, time));
         if(data.type === 'note')
-            core.notifications.notify(state.consoleTab, character, text, characterImage(character), 'newnote');
+            await core.notifications.notify(state.consoleTab, character, text, characterImage(character), 'newnote');
     });
     type SFCMessage = (Interfaces.Message & {sfc: Connection.ServerCommands['SFC'] & {confirmed?: true}});
     const sfcList: SFCMessage[] = [];
@@ -699,7 +701,8 @@ export default function(this: void): Interfaces.State {
         let text: string, message: Interfaces.Message;
         if(data.action === 'report') {
             text = l('events.report', `[user]${data.character}[/user]`, decodeHTML(data.tab), decodeHTML(data.report));
-            core.notifications.notify(state.consoleTab, data.character, text, characterImage(data.character), 'modalert');
+            if(!data.old)
+                await core.notifications.notify(state.consoleTab, data.character, text, characterImage(data.character), 'modalert');
             message = new EventMessage(text, time);
             safeAddMessage(sfcList, message, 500);
             (<SFCMessage>message).sfc = data;

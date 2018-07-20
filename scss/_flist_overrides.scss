@@ -4,13 +4,21 @@ hr {
 }
 
 .modal-dialog.modal-wide {
-  width: 95%;
+  max-width: 95%;
 }
 
 .card-title {
   font-weight: bold;
 }
 
-.nav-link {
-  cursor: pointer;
+$theme-is-dark: false !default;
+
+// HACK: Bootstrap offers no way to override these by default, and they are SUPER bright.
+// The level numbers have been changed to make them work for dark themes.
+@if $theme-is-dark {
+  @each $color, $value in $theme-colors {
+    @include table-row-variant($color, theme-color-level($color, 5));
+  }
 }
+
+@include table-row-variant(active, $table-active-bg);

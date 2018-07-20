@@ -40,7 +40,7 @@ async function characterData(name: string | undefined): Promise<Character> {
     };
     const newKinks: {[key: string]: KinkChoiceFull} = {};
     for(const key in data.kinks)
-        newKinks[key] = <KinkChoiceFull>(data.kinks[key] === 'fave' ? 'favorite' : data.kinks[key]);
+        newKinks[key] = <KinkChoiceFull>(<string>data.kinks[key] === 'fave' ? 'favorite' : data.kinks[key]);
     const newCustoms: CharacterCustom[] = [];
     for(const key in data.custom_kinks) {
         const custom = data.custom_kinks[key];

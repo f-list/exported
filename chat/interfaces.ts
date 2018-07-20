@@ -172,6 +172,7 @@ export namespace Settings {
         readonly showNeedsReply: boolean;
         readonly enterSend: boolean;
         readonly colorBookmarks: boolean;
+        readonly bbCodeBar: boolean;
     }
 }
 
@@ -179,9 +180,10 @@ export type Settings = Settings.Settings;
 
 export interface Notifications {
     isInBackground: boolean
-    notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void
-    playSound(sound: string): void
+    notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): Promise<void>
+    playSound(sound: string): Promise<void>
     requestPermission(): Promise<void>
+    initSounds(sounds: ReadonlyArray<string>): Promise<void>
 }
 
 export interface State {

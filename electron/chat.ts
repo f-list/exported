@@ -69,13 +69,14 @@ Axios.defaults.params = { __fchat: `desktop/${electron.remote.app.getVersion()}`
 if(process.env.NODE_ENV === 'production') {
     Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
         release: electron.remote.app.getVersion(),
-        dataCallback(data: {culprit: string, exception: {values: {stacktrace: {frames: {filename: string}[]}}[]}}): void {
+        dataCallback(data: {culprit: string, exception?: {values: {stacktrace: {frames: {filename: string}[]}}[]}}): void {
             data.culprit = `~${data.culprit.substr(data.culprit.lastIndexOf('/'))}`;
-            for(const ex of data.exception.values)
-                for(const frame of ex.stacktrace.frames) {
-                    const index = frame.filename.lastIndexOf('/');
-                    frame.filename = index !== -1 ? `~${frame.filename.substr(index)}` : frame.filename;
-                }
+            if(data.exception !== undefined)
+                for(const ex of data.exception.values)
+                    for(const frame of ex.stacktrace.frames) {
+                        const index = frame.filename.lastIndexOf('/');
+                        frame.filename = index !== -1 ? `~${frame.filename.substr(index)}` : frame.filename;
+                    }
         }
     }).addPlugin(VueRaven, Vue).install();
     (<Window & {onunhandledrejection(e: PromiseRejectionEvent): void}>window).onunhandledrejection = (e: PromiseRejectionEvent) => {
@@ -102,6 +103,12 @@ function openIncognito(url: string): void {
             break;
         case 'ChromeHTML':
             exec(`start chrome.exe -incognito ${url}`);
+            break;
+        case 'VivaldiHTM':
+            exec(`start vivaldi.exe -incognito ${url}`);
+            break;
+        case 'OperaStable':
+            exec(`start opera.exe -private ${url}`);
             break;
         default:
             exec(`start iexplore.exe -private ${url}`);
@@ -187,7 +194,7 @@ webContents.on('context-menu', (_, props) => {
             }
         }, {type: 'separator'});
 
-    if(menuTemplate.length > 0) electron.remote.Menu.buildFromTemplate(menuTemplate).popup();
+    if(menuTemplate.length > 0) electron.remote.Menu.buildFromTemplate(menuTemplate).popup({});
 });
 
 let dictDir = path.join(electron.remote.app.getPath('userData'), 'spellchecker');

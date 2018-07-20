@@ -30,16 +30,18 @@
             <div class="list-group conversation-nav" ref="privateConversations">
                 <a v-for="conversation in conversations.privateConversations" href="#" @click.prevent="conversation.show()"
                     :class="getClasses(conversation)" :data-character="conversation.character.name" data-touch="false"
-                    class="list-group-item list-group-item-action item-private" :key="conversation.key">
+                    class="list-group-item list-group-item-action item-private" :key="conversation.key" @click.middle="conversation.close()">
                     <img :src="characterImage(conversation.character.name)" v-if="showAvatars"/>
                     <div class="name">
                         <span>{{conversation.character.name}}</span>
                         <div style="line-height:0;display:flex">
-                            <span class="fas fa-reply" v-show="needsReply(conversation)"></span><span class="fas"
+                            <span class="fas fa-reply" v-show="needsReply(conversation)"></span>
+                            <span class="fas"
                                 :class="{'fa-comment-dots': conversation.typingStatus == 'typing', 'fa-comment': conversation.typingStatus == 'paused'}"
-                            ></span><span style="flex:1"></span>
+                            ></span>
+                            <span style="flex:1"></span>
                             <span class="pin fas fa-thumbtack" :class="{'active': conversation.isPinned}" @mousedown.prevent
-                            @click.stop="conversation.isPinned = !conversation.isPinned" :aria-label="l('chat.pinTab')"></span>
+                                @click.stop="conversation.isPinned = !conversation.isPinned" :aria-label="l('chat.pinTab')"></span>
                             <span class="fas fa-times leave" @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span>
                         </div>
                     </div>
@@ -49,11 +51,14 @@
                 {{l('chat.channels')}}</a>
             <div class="list-group conversation-nav" ref="channelConversations">
                 <a v-for="conversation in conversations.channelConversations" href="#" @click.prevent="conversation.show()"
-                    :class="getClasses(conversation)" class="list-group-item list-group-item-action item-channel"
-                    :key="conversation.key"><span class="name">{{conversation.name}}</span><span><span class="pin fas fa-thumbtack"
-                    :class="{'active': conversation.isPinned}" @click.stop="conversation.isPinned = !conversation.isPinned"
-                    :aria-label="l('chat.pinTab')" @mousedown.prevent></span><span class="fas fa-times leave"
-                    @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span></span>
+                    :class="getClasses(conversation)" class="list-group-item list-group-item-action item-channel" :key="conversation.key"
+                    @click.middle="conversation.close()">
+                    <span class="name">{{conversation.name}}</span>
+                    <span>
+                        <span class="pin fas fa-thumbtack" :class="{'active': conversation.isPinned}" :aria-label="l('chat.pinTab')"
+                            @click.stop="conversation.isPinned = !conversation.isPinned" @mousedown.prevent></span>
+                        <span class="fas fa-times leave" @click.stop="conversation.close()" :aria-label="l('chat.closeTab')"></span>
+                    </span>
                 </a>
             </div>
         </sidebar>
@@ -131,6 +136,8 @@
         conversations = core.conversations;
         getStatusIcon = getStatusIcon;
         keydownListener!: (e: KeyboardEvent) => void;
+        focusListener!: () => void;
+        blurListener!: () => void;
 
         mounted(): void {
             this.keydownListener = (e: KeyboardEvent) => this.onKeyDown(e);
@@ -152,7 +159,7 @@
             });
             const ownCharacter = core.characters.ownCharacter;
             let idleTimer: number | undefined, idleStatus: Connection.ClientCommands['STA'] | undefined, lastUpdate = 0;
-            window.addEventListener('focus', () => {
+            window.addEventListener('focus', this.focusListener = () => {
                 core.notifications.isInBackground = false;
                 if(idleTimer !== undefined) {
                     clearTimeout(idleTimer);
@@ -161,11 +168,11 @@
                 if(idleStatus !== undefined) {
                     const status = idleStatus;
                     window.setTimeout(() => core.connection.send('STA', status),
-                        Math.max(lastUpdate + 5 /*core.connection.vars.sta_flood*/ * 1000 + 1000 - Date.now(), 0));
+                        Math.max(lastUpdate + core.connection.vars.sta_flood * 1000 + 1000 - Date.now(), 0));
                     idleStatus = undefined;
                 }
             });
-            window.addEventListener('blur', () => {
+            window.addEventListener('blur', this.blurListener = () => {
                 core.notifications.isInBackground = true;
                 if(idleTimer !== undefined) clearTimeout(idleTimer);
                 if(core.state.settings.idleTimer > 0)
@@ -190,6 +197,8 @@
 
         destroyed(): void {
             window.removeEventListener('keydown', this.keydownListener);
+            window.removeEventListener('focus', this.focusListener);
+            window.removeEventListener('blur', this.blurListener);
         }
 
         needsReply(conversation: Conversation): boolean {

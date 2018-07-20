@@ -18,6 +18,7 @@
 
     .tag-input {
         background-color: $input-bg;
+        color: $input-color;
         border: none;
         width: auto;
         &:focus {
@@ -32,11 +33,11 @@
 }
 
 .tag-error {
-    border: 1px solid theme-color-border(danger);
-    background-color: theme-color-bg(danger);
+    border: 1px solid theme-color-level(danger, $alert-border-level);
+    background-color: theme-color-level(danger, $alert-bg-level);
     .tag-input {
-        text-color: theme-color-level(danger, 6);
-        background-color: theme-color-bg(danger);
+        text-color: theme-color-level(danger, $alert-color-level);
+        background-color: theme-color-level(danger, $alert-bg-level);
     }
 }
 

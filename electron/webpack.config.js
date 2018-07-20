@@ -3,6 +3,7 @@ const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const fs = require('fs');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
+const VueLoaderPlugin = require('vue-loader/lib/plugin');
 
 const mainConfig = {
     entry: [path.join(__dirname, 'main.ts'), path.join(__dirname, 'application.json')],
@@ -58,8 +59,9 @@ const mainConfig = {
                 test: /\.vue$/,
                 loader: 'vue-loader',
                 options: {
-                    preserveWhitespace: false,
-                    cssSourceMap: false
+                    compilerOptions: {
+                        preserveWhitespace: false
+                    }
                 }
             },
             {
@@ -76,7 +78,9 @@ const mainConfig = {
             {test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
             {test: /\.svg(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},
             {test: /\.(wav|mp3|ogg)$/, loader: 'file-loader?name=sounds/[name].[ext]'},
-            {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'}
+            {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'},
+            {test: /\.vue\.scss/, loader: ['vue-style-loader','css-loader','sass-loader']},
+            {test: /\.vue\.css/, loader: ['vue-style-loader','css-loader']},
         ]
     },
     node: {
@@ -90,7 +94,8 @@ const mainConfig = {
             tslint: path.join(__dirname, '../tslint.json'),
             tsconfig: './tsconfig-renderer.json',
             vue: true
-        })
+        }),
+        new VueLoaderPlugin()
     ],
     resolve: {
         extensions: ['.ts', '.js', '.vue', '.css'],
@@ -111,13 +116,13 @@ module.exports = function(mode) {
         rendererConfig.entry.chat.push(absPath);
         const plugin = new ExtractTextPlugin('themes/' + theme.slice(0, -5) + '.css');
         rendererConfig.plugins.push(plugin);
-        rendererConfig.module.rules.push({test: absPath, use: plugin.extract(cssOptions)});
+        rendererConfig.module.rules.unshift({test: absPath, use: plugin.extract(cssOptions)});
     }
     const faPath = path.join(themesDir, '../../fa.scss');
     rendererConfig.entry.chat.push(faPath);
     const faPlugin = new ExtractTextPlugin('./fa.css');
     rendererConfig.plugins.push(faPlugin);
-    rendererConfig.module.rules.push({test: faPath, use: faPlugin.extract(cssOptions)});
+    rendererConfig.module.rules.unshift({test: faPath, use: faPlugin.extract(cssOptions)});
     if(mode === 'production') {
         process.env.NODE_ENV = 'production';
         mainConfig.devtool = rendererConfig.devtool = 'source-map';

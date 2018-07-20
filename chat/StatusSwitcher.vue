@@ -11,8 +11,8 @@
         </div>
         <div class="form-group">
             <label class="control-label">{{l('chat.setStatus.message')}}</label>
-            <editor id="text" v-model="text" classes="form-control" maxlength="255" style="position:relative;">
-                <div style="float:right;text-align:right;">
+            <editor id="text" v-model="text" classes="form-control" maxlength="255">
+                <div class="bbcode-editor-controls">
                     {{getByteLength(text)}} / 255
                 </div>
             </editor>

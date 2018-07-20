@@ -1,11 +1,12 @@
 <template>
-    <div class="bbcode-editor">
+    <div class="bbcode-editor" style="display:flex;flex-wrap:wrap;justify-content:flex-end">
         <slot></slot>
         <a tabindex="0" class="btn btn-light bbcode-btn btn-sm" role="button" @click="showToolbar = true" @blur="showToolbar = false"
-            style="border-bottom-left-radius:0;border-bottom-right-radius:0">
+            style="border-bottom-left-radius:0;border-bottom-right-radius:0" v-if="hasToolbar">
             <i class="fa fa-code"></i>
         </a>
-        <div class="bbcode-toolbar btn-toolbar" role="toolbar" :style="showToolbar ? 'display:flex' : ''" @mousedown.stop.prevent>
+        <div class="bbcode-toolbar btn-toolbar" role="toolbar" :style="showToolbar ? 'display:flex' : ''" @mousedown.stop.prevent
+            v-if="hasToolbar" style="flex:1 51%">
             <div class="btn-group" style="flex-wrap:wrap">
                 <div class="btn btn-light btn-sm" v-for="button in buttons" :title="button.title" @click.prevent.stop="apply(button)">
                     <i :class="(button.class ? button.class : 'fa ') + button.icon"></i>
@@ -17,10 +18,10 @@
             </div>
             <button type="button" class="close" aria-label="Close" style="margin-left:10px" @click="showToolbar = false">&times;</button>
         </div>
-        <div class="bbcode-editor-text-area">
-            <textarea ref="input" v-model="text" @input="onInput" v-show="!preview" :maxlength="maxlength"
-                :class="finalClasses" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste" style="border-top-left-radius:0"
-                :placeholder="placeholder" @keypress="$emit('keypress', $event)" @keydown="onKeyDown"></textarea>
+        <div class="bbcode-editor-text-area" style="order:100;width:100%;">
+            <textarea ref="input" v-model="text" @input="onInput" v-show="!preview" :maxlength="maxlength" :placeholder="placeholder"
+                :class="finalClasses" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste" @keypress="$emit('keypress', $event)"
+                :style="hasToolbar ? 'border-top-left-radius:0' : ''"@keydown="onKeyDown"></textarea>
             <textarea ref="sizer"></textarea>
             <div class="bbcode-preview" v-show="preview">
                 <div class="bbcode-preview-warnings">
@@ -59,6 +60,8 @@
         readonly disabled?: boolean;
         @Prop()
         readonly placeholder?: string;
+        @Prop({default: true})
+        readonly hasToolbar!: boolean;
         @Prop({default: false, type: Boolean})
         readonly invalid!: boolean;
         preview = false;
@@ -191,6 +194,7 @@
                 button.startText = `[${button.tag}]`;
             if(button.endText === undefined)
                 button.endText = `[/${button.tag}]`;
+            if(this.text.length + button.startText.length + button.endText.length > this.maxlength) return;
             this.applyText(button.startText, button.endText);
             this.lastInput = Date.now();
         }

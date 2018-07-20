@@ -7,11 +7,11 @@
                 <i class="fa fa-cog"></i>
             </div>
             <ul class="nav nav-tabs" style="border-bottom:0;margin-bottom:-2px" ref="tabs">
-                <li v-for="tab in tabs" :key="tab.view.id" class="nav-item" @auxclick="remove(tab)">
+                <li v-for="tab in tabs" :key="tab.view.id" class="nav-item" @click.middle="remove(tab)">
                     <a href="#" @click.prevent="show(tab)" class="nav-link"
                         :class="{active: tab === activeTab, hasNew: tab.hasNew && tab !== activeTab}">
                         <img v-if="tab.user" :src="'https://static.f-list.net/images/avatar/' + tab.user.toLowerCase() + '.png'"/>
-                        {{tab.user || l('window.newTab')}}
+                        <span class="d-sm-inline d-none">{{tab.user || l('window.newTab')}}</span>
                         <a href="#" class="btn" :aria-label="l('action.close')" style="margin-left:10px;padding:0;color:inherit"
                             @click.stop="remove(tab)"><i class="fa fa-times"></i>
                         </a>
@@ -245,7 +245,7 @@
         }
 
         openMenu(): void {
-            electron.remote.Menu.getApplicationMenu()!.popup();
+            electron.remote.Menu.getApplicationMenu()!.popup({});
         }
     }
 </script>

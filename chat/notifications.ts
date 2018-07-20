@@ -11,26 +11,45 @@ export default class Notifications implements Interface {
             conversation !== core.conversations.selectedConversation || core.state.settings.alwaysNotify);
     }
 
-    notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): void {
+    async notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): Promise<void> {
         if(!this.shouldNotify(conversation)) return;
-        this.playSound(sound);
-        if(core.state.settings.notifications) {
-            /*tslint:disable-next-line:no-object-literal-type-assertion*///false positive
-            const notification = new Notification(title, <NotificationOptions & {silent: boolean}>{body, icon, silent: true});
+        await this.playSound(sound);
+        if(core.state.settings.notifications && (<any>Notification).permission === 'granted') { //tslint:disable-line:no-any
+            const notification = new Notification(title, this.getOptions(conversation, body, icon));
             notification.onclick = () => {
                 conversation.show();
                 window.focus();
                 notification.close();
             };
+            window.setTimeout(() => {
+                notification.close();
+            }, 5000);
         }
     }
 
-    playSound(sound: string): void {
+    getOptions(conversation: Conversation, body: string, icon: string):
+        NotificationOptions & {badge: string, silent: boolean, renotify: boolean} {
+        const badge = <string>require(`./assets/ic_notification.png`); //tslint:disable-line:no-require-imports
+        return {
+            body, icon: core.state.settings.showAvatars ? icon : undefined, badge, silent: true,  data: {key: conversation.key},
+            tag: conversation.key, renotify: true
+        };
+    }
+
+    async playSound(sound: string): Promise<void> {
         if(!core.state.settings.playSound) return;
-        const id = `soundplayer-${sound}`;
-        let audio = <HTMLAudioElement | null>document.getElementById(id);
-        if(audio === null) {
-            audio = document.createElement('audio');
+        const audio = <HTMLAudioElement>document.getElementById(`soundplayer-${sound}`);
+        audio.volume = 1;
+        audio.muted = false;
+        return audio.play();
+    }
+
+    initSounds(sounds: ReadonlyArray<string>): Promise<void> { //tslint:disable-line:promise-function-async
+        const promises = [];
+        for(const sound of sounds) {
+            const id = `soundplayer-${sound}`;
+            if(document.getElementById(id) !== null) continue;
+            const audio = document.createElement('audio');
             audio.id = id;
             for(const name in codecs) {
                 const src = document.createElement('source');
@@ -39,9 +58,14 @@ export default class Notifications implements Interface {
                 src.src = <string>require(`./assets/${sound}.${codecs[name]}`);
                 audio.appendChild(src);
             }
+            document.body.appendChild(audio);
+            audio.volume = 0;
+            audio.muted = true;
+            const promise = audio.play();
+            if(promise instanceof Promise)
+                promises.push(promise);
         }
-        //tslint:disable-next-line:no-floating-promises
-        audio.play();
+        return <any>Promise.all(promises); //tslint:disable-line:no-any
     }
 
     async requestPermission(): Promise<void> {

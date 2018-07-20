@@ -1,6 +1,6 @@
 <template>
     <span v-show="isShown">
-        <div tabindex="-1" class="modal" @click.self="hideWithCheck" style="display:flex">
+        <div class="modal" @click.self="hideWithCheck" style="display:flex">
             <div class="modal-dialog" :class="dialogClass" style="display:flex;align-items:center">
                 <div class="modal-content" style="max-height:100%">
                     <div class="modal-header" style="flex-shrink:0">
@@ -9,7 +9,7 @@
                         </h4>
                         <button type="button" class="close" @click="hide" aria-label="Close" v-show="!keepOpen">&times;</button>
                     </div>
-                    <div class="modal-body" style="overflow:auto" tabindex="-1">
+                    <div class="modal-body" style="overflow:auto;-webkit-overflow-scrolling:auto" tabindex="-1">
                         <slot></slot>
                     </div>
                     <div class="modal-footer" v-if="buttons">
@@ -40,9 +40,11 @@
         if(dialogStack.length > 0) {
             e.stopPropagation();
             e.preventDefault();
-            dialogStack.pop()!.isShown = false;
+            dialogStack[dialogStack.length - 1].hide();
         }
     }, true);
+
+    export let isShowing = false;
 
     @Component
     export default class Modal extends Vue {
@@ -72,18 +74,20 @@
             if(!e.defaultPrevented) this.hideWithCheck();
         }
 
-        /*tslint:disable-next-line:typedef*///https://github.com/palantir/tslint/issues/711
-        show(keepOpen = false): void {
-            this.isShown = true;
+        show(keepOpen: boolean = false): void {
             this.keepOpen = keepOpen;
+            if(this.isShown) return;
+            this.isShown = true;
             dialogStack.push(this);
             this.$emit('open');
+            isShowing = true;
         }
 
         hide(): void {
             this.isShown = false;
             this.$emit('close');
             dialogStack.pop();
+            if(dialogStack.length === 0) isShowing = false;
         }
 
         hideWithCheck(): void {

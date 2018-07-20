@@ -8,8 +8,8 @@ android {
 		applicationId "net.f_list.fchat"
 		minSdkVersion 19
 		targetSdkVersion 27
-		versionCode 14
-		versionName "3.0.3"
+		versionCode 17
+		versionName "3.0.6"
 	}
 	buildTypes {
 		release {

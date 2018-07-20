@@ -38,7 +38,7 @@
             <label for="date" class="col-sm-2 col-form-label">{{l('logs.date')}}</label>
             <div class="col-sm-8 col-10 col-xl-9">
                 <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
-                    <option :value="null">{{l('logs.selectDate')}}</option>
+                    <option :value="null">{{l('logs.allDates')}}</option>
                     <option v-for="date in dates" :value="date.getTime()">{{formatDate(date)}}</option>
                 </select>
             </div>
@@ -47,7 +47,7 @@
                     class="fa fa-download"></span></button>
             </div>
         </div>
-        <div class="messages-both" style="overflow: auto" ref="messages" tabindex="-1">
+        <div class="messages-both" style="overflow:auto" ref="messages" tabindex="-1" @scroll="onMessagesScroll">
             <message-view v-for="message in filteredMessages" :message="message" :key="message.id"></message-view>
         </div>
         <div class="input-group" style="flex-shrink:0">
@@ -102,6 +102,7 @@
         selectedCharacter = core.connection.character;
         showFilters = true;
         canZip = core.logs.canZip;
+        dateOffset = -1;
 
         get filteredMessages(): ReadonlyArray<Conversation.Message> {
             if(this.filter.length === 0) return this.messages;
@@ -139,7 +140,14 @@
             this.dates = this.selectedConversation === null ? [] :
                 (await core.logs.getLogDates(this.selectedCharacter, this.selectedConversation.key)).slice().reverse();
             this.selectedDate = null;
+            this.dateOffset = -1;
+            this.filter = '';
             await this.loadMessages();
+        }
+
+        @Watch('filter')
+        onFilterChanged(): void {
+            this.$nextTick(async() => this.onMessagesScroll());
         }
 
         download(file: string, logs: string): void {
@@ -189,6 +197,8 @@
             if(this.selectedCharacter !== '') {
                 this.conversations = (await core.logs.getConversations(this.selectedCharacter)).slice();
                 this.conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
+                this.dates = this.selectedConversation === null ? [] :
+                    (await core.logs.getLogDates(this.selectedCharacter, this.selectedConversation.key)).slice().reverse();
                 await this.loadMessages();
             }
             this.keyDownListener = (e) => {
@@ -213,10 +223,33 @@
         }
 
         async loadMessages(): Promise<ReadonlyArray<Conversation.Message>> {
-            if(this.selectedDate === null || this.selectedConversation === null)
+            if(this.selectedConversation === null)
                 return this.messages = [];
-            return this.messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key,
-                new Date(this.selectedDate));
+            if(this.selectedDate !== null) {
+                this.dateOffset = -1;
+                return this.messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key,
+                    new Date(this.selectedDate));
+            }
+            if(this.dateOffset === -1) {
+                this.messages = [];
+                this.dateOffset = 0;
+            }
+            this.$nextTick(async() => this.onMessagesScroll());
+            return this.messages;
+        }
+
+        async onMessagesScroll(): Promise<void> {
+            const list = <HTMLElement | undefined>this.$refs['messages'];
+            if(this.selectedConversation === null || this.selectedDate !== null || list === undefined || list.scrollTop > 15
+                || !this.dialog.isShown || this.dateOffset >= this.dates.length) return;
+            const messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key,
+                this.dates[this.dateOffset++]);
+            this.messages = messages.concat(this.messages);
+            const noOverflow = list.offsetHeight === list.scrollHeight;
+            this.$nextTick(() => {
+                if(list.offsetHeight === list.scrollHeight) return this.onMessagesScroll();
+                else if(noOverflow) list.scrollTop = list.scrollHeight;
+            });
         }
     }
 </script>

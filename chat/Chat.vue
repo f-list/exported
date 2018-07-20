@@ -69,7 +69,7 @@
         else if(node instanceof HTMLImageElement) str += node.alt;
         if(node.firstChild !== null && !flags.endFound) str += scanNode(node.firstChild, end, range, flags, hide);
         if(node.bbcodeTag !== undefined) str += `[/${node.bbcodeTag}]`;
-        if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\r\n';
+        if(node instanceof HTMLElement && getComputedStyle(node).display === 'block' && !flags.endFound) str += '\r\n';
         if(node.nextSibling !== null && !flags.endFound) str += scanNode(node.nextSibling, end, range, flags, hide);
         return hide ? '' : str;
     }
@@ -108,7 +108,7 @@
                     startValue = start instanceof HTMLImageElement ? start.alt : scanNode(start.firstChild!, end, range, {});
                 } else
                     startValue = start.nodeValue!.substring(range.startOffset, start === range.endContainer ? range.endOffset : undefined);
-                if(end instanceof HTMLElement) end = end.childNodes[range.endOffset - 1];
+                if(end instanceof HTMLElement && range.endOffset > 0) end = end.childNodes[range.endOffset - 1];
                 e.clipboardData.setData('text/plain', copyNode(startValue, start, end, range, {}));
                 e.preventDefault();
             }) as EventListener);
@@ -122,9 +122,9 @@
             core.register('characters', Characters(core.connection));
             core.register('channels', Channels(core.connection, core.characters));
             core.register('conversations', Conversations());
-            core.connection.onEvent('closed', (isReconnect) => {
+            core.connection.onEvent('closed', async(isReconnect) => {
                 if(isReconnect) (<Modal>this.$refs['reconnecting']).show(true);
-                if(this.connected) core.notifications.playSound('logout');
+                if(this.connected) await core.notifications.playSound('logout');
                 this.connected = false;
                 this.connecting = false;
                 document.title = l('title');
@@ -133,12 +133,12 @@
                 this.connecting = true;
                 if(core.state.settings.notifications) await core.notifications.requestPermission();
             });
-            core.connection.onEvent('connected', () => {
+            core.connection.onEvent('connected', async() => {
                 (<Modal>this.$refs['reconnecting']).hide();
                 this.error = '';
                 this.connecting = false;
                 this.connected = true;
-                core.notifications.playSound('login');
+                await core.notifications.playSound('login');
                 document.title = l('title.connected', core.connection.character);
             });
             core.watch(() => core.conversations.hasNew, (hasNew) => {
@@ -157,8 +157,9 @@
             (<Modal>this.$refs['reconnecting']).hide();
         }
 
-        connect(): void {
+        async connect(): Promise<void> {
             this.connecting = true;
+            await core.notifications.initSounds(['attention', 'login', 'logout', 'modalert', 'newnote']);
             core.connection.connect(this.selectedCharacter);
         }
     }

@@ -1,4 +1,4 @@
-import Axios, {AxiosResponse} from 'axios';
+import Axios, {AxiosError, AxiosResponse} from 'axios';
 import * as qs from 'qs';
 import {Connection as Interfaces, WebSocketConnection} from './interfaces';
 
@@ -36,7 +36,9 @@ export default class Connection implements Interfaces.Connection {
         try {
             this.ticket = await this.ticketProvider();
         } catch(e) {
-            if(this.reconnectTimer !== undefined) this.reconnect();
+            if(this.reconnectTimer !== undefined)
+                if((<AxiosError>e).request !== undefined) this.reconnect();
+                else await this.invokeHandlers('closed', false);
             return this.invokeErrorHandlers(<Error>e, true);
         }
         try {

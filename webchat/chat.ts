@@ -35,12 +35,12 @@ import Vue from 'vue';
 import Chat from '../chat/Chat.vue';
 import {init as initCore} from '../chat/core';
 import l from '../chat/localize';
-import Notifications from '../chat/notifications';
 import VueRaven from '../chat/vue-raven';
 import Socket from '../chat/WebSocket';
 import Connection from '../fchat/connection';
 import '../scss/fa.scss'; //tslint:disable-line:no-import-side-effect
 import {Logs, SettingsStore} from './logs';
+import Notifications from './notifications';
 
 //@ts-ignore
 if(typeof window.Promise !== 'function' || typeof window.Notification !== 'function') //tslint:disable-line:strict-type-predicates
@@ -52,15 +52,18 @@ Axios.defaults.params = { __fchat: `web/${version}` };
 if(process.env.NODE_ENV === 'production') {
     Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
         release: `web-${version}`,
-        dataCallback: (data: {culprit: string, exception: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
-            const end = data.culprit.lastIndexOf('?');
-            data.culprit = `~${data.culprit.substring(data.culprit.lastIndexOf('/'), end === -1 ? undefined : end)}`;
-            for(const ex of data.exception.values)
-                for(const frame of ex.stacktrace.frames) {
-                    const index = frame.filename.lastIndexOf('/');
-                    const endIndex = frame.filename.lastIndexOf('?');
-                    frame.filename = `~${frame.filename.substring(index !== -1 ? index : 0, endIndex === -1 ? undefined : endIndex)}`;
-                }
+        dataCallback: (data: {culprit?: string, exception?: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
+            if(data.culprit !== undefined) {
+                const end = data.culprit.lastIndexOf('?');
+                data.culprit = `~${data.culprit.substring(data.culprit.lastIndexOf('/'), end === -1 ? undefined : end)}`;
+            }
+            if(data.exception !== undefined)
+                for(const ex of data.exception.values)
+                    for(const frame of ex.stacktrace.frames) {
+                        const index = frame.filename.lastIndexOf('/');
+                        const endIndex = frame.filename.lastIndexOf('?');
+                        frame.filename = `~${frame.filename.substring(index !== -1 ? index : 0, endIndex === -1 ? undefined : endIndex)}`;
+                    }
         }
     }).addPlugin(VueRaven, Vue).install();
     (<Window & {onunhandledrejection(e: PromiseRejectionEvent): void}>window).onunhandledrejection = (e: PromiseRejectionEvent) => {
@@ -77,7 +80,7 @@ const ticketProvider = async() => {
     throw new Error(data.error);
 };
 
-const connection = new Connection('F-Chat 3.0 (Web)', '3.0', Socket, chatSettings.account, ticketProvider);
+const connection = new Connection('F-Chat 3.0 (Web)', version, Socket, chatSettings.account, ticketProvider);
 initCore(connection, Logs, SettingsStore, Notifications);
 
 window.addEventListener('beforeunload', (e) => {
