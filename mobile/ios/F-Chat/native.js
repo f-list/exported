@@ -77,5 +77,8 @@ window.NativeLogs = {
     },
     getCharacters: function() {
         return sendMessage('Logs', 'getCharacters', {});
+    },
+    repair: function(character) {
+        return sendMessage('Logs', 'repair', {character: character});
     }
 };

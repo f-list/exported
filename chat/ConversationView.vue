@@ -26,7 +26,7 @@
                     <span v-show="conversation.channel.id.substr(0, 4) !== 'adh-'" class="fa fa-star" :title="l('channel.official')"
                         style="margin-right:5px;vertical-align:sub"></span>
                     <h5 style="margin:0;display:inline;vertical-align:middle">{{conversation.name}}</h5>
-                    <a @click="descriptionExpanded = !descriptionExpanded" class="btn">
+                    <a href="#" @click.prevent="descriptionExpanded = !descriptionExpanded" class="btn">
                         <span class="fa" :class="{'fa-chevron-down': !descriptionExpanded, 'fa-chevron-up': descriptionExpanded}"></span>
                         <span class="btn-text">{{l('channel.description')}}</span>
                     </a>
@@ -69,13 +69,13 @@
             <a class="btn btn-sm btn-light" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:0;z-index:10"
                 @click="hideSearch"><i class="fas fa-times"></i></a>
         </div>
-        <div class="border-top messages" :class="'messages-' + conversation.mode" style="flex:1;overflow:auto;margin-top:2px"
-            ref="messages" @scroll="onMessagesScroll">
+        <div class="border-top messages" :class="'messages-' + conversation.mode" ref="messages" @scroll="onMessagesScroll"
+            style="flex:1;overflow:auto;margin-top:2px;position:relative">
             <template v-for="message in messages">
                 <message-view :message="message" :channel="conversation.channel" :key="message.id"
                     :classes="message == conversation.lastRead ? 'last-read' : ''">
                 </message-view>
-                <span v-if="message.sfc && message.sfc.action == 'report'" :key="message.id">
+                <span v-if="message.sfc && message.sfc.action == 'report'" :key="'r' + message.id">
                     <a :href="'https://www.f-list.net/fchat/getLog.php?log=' + message.sfc.logid"
                         v-if="message.sfc.logid" target="_blank">{{l('events.report.viewLog')}}</a>
                     <span v-else>{{l('events.report.noLog')}}</span>
@@ -174,6 +174,8 @@
         keypressHandler!: EventListener;
         scrolledDown = true;
         scrolledUp = false;
+        adCountdown = 0;
+        adsMode = l('channel.mode.ads');
 
         mounted(): void {
             this.extraButtons = [{
@@ -203,6 +205,21 @@
                     this.search = this.searchInput;
             }, 500);
             this.messageView = <HTMLElement>this.$refs['messages'];
+            this.$watch('conversation.nextAd', (value: number) => {
+                const setAdCountdown = () => {
+                    const diff = ((<Conversation.ChannelConversation>this.conversation).nextAd - Date.now()) / 1000;
+                    if(diff <= 0) {
+                        if(this.adCountdown !== 0) window.clearInterval(this.adCountdown);
+                        this.adCountdown = 0;
+                        this.adsMode = l('channel.mode.ads');
+                    } else this.adsMode = l('channel.mode.ads.countdown', Math.floor(diff / 60), Math.floor(diff % 60));
+                };
+                if(Date.now() < value) {
+                    if(this.adCountdown === 0)
+                        this.adCountdown = window.setInterval(setAdCountdown, 1000);
+                    setAdCountdown();
+                }
+            });
         }
 
         destroyed(): void {
@@ -252,9 +269,13 @@
         }
 
         onMessagesScroll(): void {
-            if(this.messageView.scrollTop < 50 && !this.scrolledUp) {
+            if(this.messageView.scrollTop < 20) {
+                if(!this.scrolledUp) {
+                    const firstMessage = this.messageView.firstElementChild;
+                    if(this.conversation.loadMore() && firstMessage !== null)
+                        this.$nextTick(() => setTimeout(() => this.messageView.scrollTop = (<HTMLElement>firstMessage).offsetTop, 0));
+                }
                 this.scrolledUp = true;
-                this.conversation.loadMore();
             } else this.scrolledUp = false;
             this.scrolledDown = this.messageView.scrollTop + this.messageView.offsetHeight >= this.messageView.scrollHeight - 15;
         }
@@ -313,7 +334,7 @@
                 else if(getKey(e) === Keys.Enter) {
                     if(e.shiftKey === this.settings.enterSend) return;
                     e.preventDefault();
-                    await this.conversation.send();
+                    setImmediate(async() => this.conversation.send());
                 }
             }
         }
@@ -333,13 +354,6 @@
                 conv.isSendingAds = is;
                 (<Editor>this.$refs['textBox']).focus();
             }
-        }
-
-        get adsMode(): string | undefined {
-            if(!Conversation.isChannel(this.conversation)) return;
-            if(this.conversation.adCountdown <= 0) return l('channel.mode.ads');
-            else return l('channel.mode.ads.countdown',
-                Math.floor(this.conversation.adCountdown / 60).toString(), (this.conversation.adCountdown % 60).toString());
         }
 
         get characterImage(): string {
@@ -390,9 +404,9 @@
     }
 
     .chat-info-text {
-        display:flex;
-        align-items:center;
-        flex:1 51%;
+        display: flex;
+        align-items: center;
+        flex: 1 51%;
         @media (max-width: breakpoint-max(xs)) {
             flex-basis: 100%;
         }

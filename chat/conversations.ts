@@ -81,10 +81,11 @@ abstract class Conversation implements Interfaces.Conversation {
         this.enteredText = this.lastSent;
     }
 
-    loadMore(): void {
-        if(this.messages.length >= this.allMessages.length) return;
+    loadMore(): boolean {
+        if(this.messages.length >= this.allMessages.length) return false;
         this.maxMessages += 50;
         this.messages = this.allMessages.slice(-this.maxMessages);
+        return true;
     }
 
     show(): void {
@@ -198,7 +199,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
     readonly context = CommandContext.Channel;
     readonly name = this.channel.name;
     isSendingAds = this.channel.mode === 'ads';
-    adCountdown = 0;
+    nextAd = 0;
     private chat: Interfaces.Message[] = [];
     private ads: Interfaces.Message[] = [];
     private both: Interfaces.Message[] = [];
@@ -284,6 +285,13 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
         this.addModeMessage('both', message);
     }
 
+    clear(): void {
+        this.messages = [];
+        this.chat.length = 0;
+        this.ads.length = 0;
+        this.both.length = 0;
+    }
+
     close(): void {
         core.connection.send('LCH', {channel: this.channel.id});
     }
@@ -296,17 +304,13 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
 
     protected async doSend(): Promise<void> {
         const isAd = this.isSendingAds;
-        if(isAd && this.adCountdown > 0) return;
+        if(isAd && Date.now() < this.nextAd) return;
         core.connection.send(isAd ? 'LRP' : 'MSG', {channel: this.channel.id, message: this.enteredText});
         await this.addMessage(
             createMessage(isAd ? MessageType.Ad : MessageType.Message, core.characters.ownCharacter, this.enteredText, new Date()));
-        if(isAd) {
-            this.adCountdown = core.connection.vars.lfrp_flood;
-            const interval = setInterval(() => {
-                this.adCountdown -= 1;
-                if(this.adCountdown === 0) clearInterval(interval);
-            }, 1000);
-        } else this.enteredText = '';
+        if(isAd)
+            this.nextAd = Date.now() + core.connection.vars.lfrp_flood * 1000;
+        else this.enteredText = '';
     }
 }
 

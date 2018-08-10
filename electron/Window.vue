@@ -81,6 +81,7 @@
         l = l;
         hasUpdate = false;
         platform = process.platform;
+        lockTab = false;
 
         mounted(): void {
             this.addTab();
@@ -193,26 +194,30 @@
         }
 
         addTab(): void {
+            if(this.lockTab) return;
             const tray = new electron.remote.Tray(trayIcon);
             tray.setToolTip(l('title'));
             tray.on('click', (_) => this.trayClicked(tab));
             const view = new electron.remote.BrowserView();
             view.setAutoResize({width: true, height: true});
-            view.webContents.loadURL(url.format({
-                pathname: path.join(__dirname, 'index.html'),
-                protocol: 'file:',
-                slashes: true,
-                query: {settings: JSON.stringify(this.settings)}
-            }));
             electron.ipcRenderer.send('tab-added', view.webContents.id);
             const tab = {active: false, view, user: undefined, hasNew: false, tray};
             tray.setContextMenu(electron.remote.Menu.buildFromTemplate(this.createTrayMenu(tab)));
             this.tabs.push(tab);
             this.tabMap[view.webContents.id] = tab;
             this.show(tab);
+            this.lockTab = true;
+            view.webContents.loadURL(url.format({
+                pathname: path.join(__dirname, 'index.html'),
+                protocol: 'file:',
+                slashes: true,
+                query: {settings: JSON.stringify(this.settings)}
+            }));
+            view.webContents.on('did-stop-loading', () => this.lockTab = false);
         }
 
         show(tab: Tab): void {
+            if(this.lockTab) return;
             this.activeTab = tab;
             browserWindow.setBrowserView(tab.view);
             tab.view.setBounds(getWindowBounds());
@@ -313,7 +318,7 @@
 
         #window-tabs {
             h4 {
-                margin: 0 34px 0 77px;
+                margin: 0 15px 0 77px;
             }
 
             .btn, li a {

@@ -1,19 +1,21 @@
 package net.f_list.fchat
 
 import android.content.Context
+import android.util.SparseArray
 import android.webkit.JavascriptInterface
 import org.json.JSONArray
 import org.json.JSONStringer
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.CharBuffer
 import java.util.*
 
 class Logs(private val ctx: Context) {
-	data class IndexItem(val name: String, val index: MutableMap<Int, Long> = HashMap(), val dates: MutableList<Int> = LinkedList())
+	data class IndexItem(val name: String, val index: MutableMap<Int, Int> = LinkedHashMap(), val offsets: MutableList<Long> = ArrayList())
 
 	private var index: MutableMap<String, IndexItem>? = null
 	private var loadedIndex: MutableMap<String, IndexItem>? = null
@@ -42,8 +44,8 @@ class Logs(private val ctx: Context) {
 				buffer.limit(read)
 				while(buffer.position() < buffer.limit()) {
 					val key = buffer.short.toInt()
-					indexItem.index[key] = buffer.int.toLong() or (buffer.get().toLong() shl 32)
-					indexItem.dates.add(key)
+					indexItem.index[key] = indexItem.offsets.size
+					indexItem.offsets.add(buffer.int.toLong() or (buffer.get().toLong() shl 32))
 				}
 				index[file.nameWithoutExtension] = indexItem
 			}
@@ -60,7 +62,7 @@ class Logs(private val ctx: Context) {
 		loadedIndex = index
 		val json = JSONStringer().`object`()
 		for(item in index!!)
-			json.key(item.key).`object`().key("name").value(item.value.name).key("dates").value(JSONArray(item.value.dates)).endObject()
+			json.key(item.key).`object`().key("name").value(item.value.name).key("dates").value(JSONArray(item.value.index.keys)).endObject()
 		return json.endObject().toString()
 	}
 
@@ -70,7 +72,7 @@ class Logs(private val ctx: Context) {
 		val file = File(baseDir, key)
 		buffer.clear()
 		if(!index!!.containsKey(key)) {
-			index!![key] = IndexItem(conversation, HashMap())
+			index!![key] = IndexItem(conversation)
 			buffer.position(1)
 			encoder.encode(CharBuffer.wrap(conversation), buffer, true)
 			buffer.put(0, (buffer.position() - 1).toByte())
@@ -79,10 +81,9 @@ class Logs(private val ctx: Context) {
 		if(!item.index.containsKey(day)) {
 			buffer.putShort(day.toShort())
 			val size = file.length()
-			item.index[day] = size
-			item.dates.add(day)
-			buffer.putInt((size and 0xffffffffL).toInt())
-			buffer.put((size shr 32).toByte())
+			item.index[day] = item.offsets.size
+			item.offsets.add(size)
+			buffer.putInt((size and 0xffffffffL).toInt()).put((size shr 32).toByte())
 			FileOutputStream(File(baseDir, "$key.idx"), true).use { file ->
 				buffer.flip()
 				file.channel.write(buffer)
@@ -141,20 +142,22 @@ class Logs(private val ctx: Context) {
 
 	@JavascriptInterface
 	fun getLogsN(character: String, key: String, date: Int): String {
-		val offset = loadedIndex!![key]?.index?.get(date) ?: return "[]"
+		val indexItem = loadedIndex!![key] ?: return "[]"
+		val dateKey = indexItem.index[date] ?: return "[]"
 		val json = JSONStringer()
 		json.array()
 		FileInputStream(File(ctx.filesDir, "$character/logs/$key")).use { stream ->
 			val channel = stream.channel
-			channel.position(offset)
-			while(channel.position() < channel.size()) {
-				buffer.clear()
-				val oldPosition = channel.position()
-				channel.read(buffer)
-				buffer.rewind()
-				deserializeMessage(buffer, json, date)
-				if(buffer.position() == 0) break
-				channel.position(oldPosition + buffer.position() + 2)
+			val start = indexItem.offsets[dateKey]
+			val end = if(dateKey >= indexItem.offsets.size - 1) channel.size() else indexItem.offsets[dateKey + 1]
+			channel.position(start)
+			val buffer = ByteBuffer.allocateDirect((end - start).toInt()).order(ByteOrder.LITTLE_ENDIAN)
+			channel.read(buffer)
+			buffer.rewind()
+			while(buffer.position() < buffer.limit()) {
+				deserializeMessage(buffer, json)
+				buffer.limit(buffer.capacity())
+				buffer.position(buffer.position() + 2)
 			}
 		}
 		return json.endArray().toString()
@@ -165,7 +168,7 @@ class Logs(private val ctx: Context) {
 		loadedIndex = if(character == this.character) this.index else this.loadIndex(character)
 		val json = JSONStringer().`object`()
 		for(item in loadedIndex!!)
-			json.key(item.key).`object`().key("name").value(item.value.name).key("dates").value(JSONArray(item.value.dates)).endObject()
+			json.key(item.key).`object`().key("name").value(item.value.name).key("dates").value(JSONArray(item.value.index.keys)).endObject()
 		return json.endObject().toString()
 	}
 
@@ -174,22 +177,83 @@ class Logs(private val ctx: Context) {
 		return JSONArray(ctx.filesDir.listFiles().filter { it.isDirectory }.map { it.name }).toString()
 	}
 
-	private fun deserializeMessage(buffer: ByteBuffer, json: JSONStringer, checkDate: Int = -1) {
-		val date = buffer.int
-		if(checkDate != -1 && date / 86400 != checkDate) return
+	@JavascriptInterface
+	fun repair() {
+		val files = baseDir.listFiles()
+		val indexBuffer = ByteBuffer.allocateDirect(7).order(ByteOrder.LITTLE_ENDIAN)
+		for(entry in files) {
+			if(entry.name.endsWith(".idx")) continue
+			RandomAccessFile("$entry.idx", "rw").use { idx ->
+				buffer.clear()
+				buffer.limit(1)
+				idx.channel.read(buffer)
+				idx.channel.truncate((buffer.get(0) + 1).toLong())
+				idx.channel.position(idx.channel.size())
+				RandomAccessFile(entry, "rw").use { file ->
+ 					var lastDay = 0
+					val size = file.channel.size()
+					var pos = 0L
+					try {
+						while(file.channel.position() < size) {
+							buffer.clear()
+							pos = file.channel.position()
+							val read = file.channel.read(buffer)
+							var success = false
+							buffer.flip()
+							while(buffer.remaining() > 10) {
+								val offset = buffer.position()
+								val day = buffer.int / 86400
+								buffer.get()
+								val senderLength = buffer.get()
+								if(buffer.remaining() < senderLength + 4) break
+								buffer.limit(buffer.position() + senderLength)
+								decoder.decode(buffer)
+								buffer.limit(read)
+								val textLength = buffer.short.toInt()
+								if(buffer.remaining() < textLength + 2) break
+								buffer.limit(buffer.position() + textLength)
+								decoder.decode(buffer)
+								buffer.limit(read)
+								val messageSize = buffer.position() - offset
+								if(messageSize != buffer.short.toInt()) throw Exception()
+
+								if(day > lastDay) {
+									lastDay = day
+									indexBuffer.position(0)
+									indexBuffer.putShort(day.toShort())
+									indexBuffer.putInt((pos and 0xffffffffL).toInt()).put((pos shr 32).toByte())
+									indexBuffer.position(0)
+									idx.channel.write(indexBuffer)
+								}
+								pos += messageSize + 2
+								success = true
+							}
+							if(!success) throw Exception()
+							file.channel.position(pos)
+						}
+					} catch(e: Exception) {
+						file.channel.truncate(pos)
+					}
+				}
+			}
+		}
+	}
+
+	private fun deserializeMessage(buffer: ByteBuffer, json: JSONStringer) {
+		val start = buffer.position()
 		json.`object`()
 		json.key("time")
-		json.value(date)
+		json.value(buffer.int)
 		json.key("type")
 		json.value(buffer.get())
 		json.key("sender")
 		val senderLength = buffer.get()
-		buffer.limit(6 + senderLength)
+		buffer.limit(start + 6 + senderLength)
 		json.value(decoder.decode(buffer))
 		buffer.limit(buffer.capacity())
 		val textLength = buffer.short.toInt() and 0xffff
 		json.key("text")
-		buffer.limit(8 + senderLength + textLength)
+		buffer.limit(start + 8 + senderLength + textLength)
 		json.value(decoder.decode(buffer))
 		json.endObject()
 	}

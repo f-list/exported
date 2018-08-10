@@ -3,7 +3,6 @@ import {WebSocketConnection} from '../fchat';
 export default class Socket implements WebSocketConnection {
     static host = 'wss://chat.f-list.net:9799';
     private socket: WebSocket;
-    private errorHandler: ((error: Error) => void) | undefined;
     private lastHandler: Promise<void> = Promise.resolve();
 
     constructor() {
@@ -16,7 +15,10 @@ export default class Socket implements WebSocketConnection {
 
     onMessage(handler: (message: string) => void): void {
         this.socket.addEventListener('message', (e) => {
-            this.lastHandler = this.lastHandler.then(() => handler(<string>e.data), this.errorHandler);
+            this.lastHandler = this.lastHandler.then(() => handler(<string>e.data), (err) => {
+                window.requestAnimationFrame(() => { throw err; });
+                handler(<string>e.data);
+            });
         });
     }
 
@@ -29,7 +31,6 @@ export default class Socket implements WebSocketConnection {
     }
 
     onError(handler: (error: Error) => void): void {
-        this.errorHandler = handler;
         this.socket.addEventListener('error', () => handler(new Error()));
     }
 

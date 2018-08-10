@@ -42,6 +42,7 @@ export namespace Connection {
         RLL: {channel: string, dice: 'bottle' | string} | {recipient: string, dice: 'bottle' | string},
         RMO: {channel: string, mode: Channel.Mode},
         RST: {channel: string, status: 'public' | 'private'},
+        SCP: {action: 'add' | 'remove', character: string}
         RWD: {character: string},
         SFC: {action: 'report', report: string, tab?: string, logid: number} | {action: 'confirm', callid: number},
         STA: {status: Character.Status, statusmsg: string},

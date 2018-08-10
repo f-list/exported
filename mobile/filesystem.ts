@@ -1,6 +1,7 @@
 import {Message as MessageImpl} from '../chat/common';
 import core from '../chat/core';
 import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
+import l from '../chat/localize';
 
 declare global {
     const NativeFile: {
@@ -20,6 +21,7 @@ declare global {
                    message: string): Promise<void>;
         getBacklog(key: string): Promise<ReadonlyArray<NativeMessage>>;
         getLogs(character: string, key: string, date: number): Promise<ReadonlyArray<NativeMessage>>
+        repair(character: string): Promise<void>
     };
 }
 
@@ -41,10 +43,16 @@ export class Logs implements Logging {
     private index: Index = {};
     private loadedIndex?: Index;
     private loadedCharacter?: string;
+    attemptedFix = false;
 
     constructor() {
         core.connection.onEvent('connecting', async() => {
-            this.index = await NativeLogs.init(core.connection.character);
+            this.attemptedFix = false;
+            try {
+                this.index = await NativeLogs.init(core.connection.character);
+            } catch {
+                await this.fixLogs(core.connection.character);
+            }
         });
     }
 
@@ -59,20 +67,35 @@ export class Logs implements Logging {
     }
 
     async getBacklog(conversation: Conversation): Promise<ReadonlyArray<Conversation.Message>> {
-        return (await NativeLogs.getBacklog(conversation.key))
-            .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
+        try {
+            return (await NativeLogs.getBacklog(conversation.key))
+                .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
+        } catch {
+            await this.fixLogs(this.loadedCharacter!);
+            return [];
+        }
     }
 
     private async getIndex(name: string): Promise<Index> {
         if(this.loadedCharacter === name) return this.loadedIndex!;
         this.loadedCharacter = name;
-        return this.loadedIndex = name === core.connection.character ? this.index : await NativeLogs.loadIndex(name);
+        try {
+            return this.loadedIndex = name === core.connection.character ? this.index : await NativeLogs.loadIndex(name);
+        } catch {
+            await this.fixLogs(name);
+            return {};
+        }
     }
 
     async getLogs(character: string, key: string, date: Date): Promise<ReadonlyArray<Conversation.Message>> {
-        await NativeLogs.loadIndex(character);
-        return (await NativeLogs.getLogs(character, key, Math.floor(date.getTime() / dayMs - date.getTimezoneOffset() / 1440)))
-            .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
+        try {
+            await NativeLogs.loadIndex(character);
+            return (await NativeLogs.getLogs(character, key, Math.floor(date.getTime() / dayMs - date.getTimezoneOffset() / 1440)))
+                .map((x) => new MessageImpl(x.type, core.characters.get(x.sender), x.text, new Date(x.time * 1000)));
+        } catch {
+            await this.fixLogs(character);
+            return [];
+        }
     }
 
     async getLogDates(character: string, key: string): Promise<ReadonlyArray<Date>> {
@@ -93,6 +116,19 @@ export class Logs implements Logging {
 
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
         return NativeLogs.getCharacters();
+    }
+
+    async fixLogs(character: string): Promise<void> {
+        if(this.attemptedFix) return alert(l('logs.corruption.mobile.error'));
+        this.attemptedFix = true;
+        alert(l('logs.corruption.mobile'));
+        try {
+            await NativeLogs.repair(character);
+            this.index = await NativeLogs.init(core.connection.character);
+            alert(l('logs.corruption.mobile.success'));
+        } catch {
+            alert(l('logs.corruption.mobile.error'));
+        }
     }
 }
 

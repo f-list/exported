@@ -39,7 +39,7 @@
             </div>
             <div class="form-group">
                 <label class="control-label" for="idleTimer">{{l('settings.idleTimer')}}</label>
-                <input id="idleTimer" class="form-control" type="number" v-model="idleTimer"/>
+                <input id="idleTimer" class="form-control" type="number" v-model="idleTimer" min="0" max="1440"/>
             </div>
             <div class="form-group">
                 <label class="control-label" for="messageSeparators">
@@ -160,7 +160,7 @@
         alwaysNotify!: boolean;
         logMessages!: boolean;
         logAds!: boolean;
-        fontSize!: number;
+        fontSize!: string;
         showNeedsReply!: boolean;
         enterSend!: boolean;
         colorBookmarks!: boolean;
@@ -192,7 +192,7 @@
             this.alwaysNotify = settings.alwaysNotify;
             this.logMessages = settings.logMessages;
             this.logAds = settings.logAds;
-            this.fontSize = settings.fontSize;
+            this.fontSize = settings.fontSize.toString();
             this.showNeedsReply = settings.showNeedsReply;
             this.enterSend = settings.enterSend;
             this.colorBookmarks = settings.colorBookmarks;
@@ -215,6 +215,8 @@
         }
 
         async submit(): Promise<void> {
+            const idleTimer = parseInt(this.idleTimer, 10);
+            const fontSize = parseInt(this.fontSize, 10);
             core.state.settings = {
                 playSound: this.playSound,
                 clickOpensMessage: this.clickOpensMessage,
@@ -224,14 +226,14 @@
                 highlightWords: this.highlightWords.split(',').map((x) => x.trim()).filter((x) => x.length),
                 showAvatars: this.showAvatars,
                 animatedEicons: this.animatedEicons,
-                idleTimer: this.idleTimer.length > 0 ? parseInt(this.idleTimer, 10) : 0,
+                idleTimer: isNaN(idleTimer) ? 0 : idleTimer < 0 ? 0 : idleTimer > 1440 ? 1440 : idleTimer,
                 messageSeparators: this.messageSeparators,
                 eventMessages: this.eventMessages,
                 joinMessages: this.joinMessages,
                 alwaysNotify: this.alwaysNotify,
                 logMessages: this.logMessages,
                 logAds: this.logAds,
-                fontSize: isNaN(this.fontSize) ? 14 : this.fontSize < 10 ? 10 : this.fontSize > 24 ? 24 : this.fontSize,
+                fontSize: isNaN(fontSize) ? 14 : fontSize < 10 ? 10 : fontSize > 24 ? 24 : fontSize,
                 showNeedsReply: this.showNeedsReply,
                 enterSend: this.enterSend,
                 colorBookmarks: this.colorBookmarks,

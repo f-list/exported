@@ -40,7 +40,7 @@ export async function ensureDictionary(lang: string): Promise<void> {
         const filePath = path.join(dictDir, `${lang}.${type}`);
         const downloaded = downloadedDictionaries[file.name];
         if(downloaded === undefined || downloaded.hash !== file.hash || !fs.existsSync(filePath)) {
-            await writeFile(filePath, new Buffer((await Axios.get<string>(`${downloadUrl}${file.name}`, requestConfig)).data));
+            await writeFile(filePath, Buffer.from((await Axios.get<string>(`${downloadUrl}${file.name}`, requestConfig)).data));
             downloadedDictionaries[file.name] = file;
             await writeFile(downloadedPath, JSON.stringify(downloadedDictionaries));
         }

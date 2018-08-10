@@ -31,7 +31,6 @@
  */
 import * as electron from 'electron';
 import log from 'electron-log'; //tslint:disable-line:match-default-export-name
-import {autoUpdater} from 'electron-updater';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as url from 'url';
@@ -53,31 +52,18 @@ let tabCount = 0;
 
 const baseDir = app.getPath('userData');
 mkdir(baseDir);
-autoUpdater.logger = log;
-log.transports.file.level = 'debug';
-log.transports.console.level = 'debug';
-log.transports.file.maxSize = 5 * 1024 * 1024;
-log.transports.file.file = path.join(baseDir, 'log.txt');
-log.info('Starting application.');
+let shouldImportSettings = false;
+
+const settingsDir = path.join(baseDir, 'data');
+mkdir(settingsDir);
+const settingsFile = path.join(settingsDir, 'settings');
+const settings = new GeneralSettings();
 
 async function setDictionary(lang: string | undefined): Promise<void> {
     if(lang !== undefined) await ensureDictionary(lang);
     settings.spellcheckLang = lang;
     setGeneralSettings(settings);
 }
-
-const settingsDir = path.join(electron.app.getPath('userData'), 'data');
-mkdir(settingsDir);
-const settingsFile = path.join(settingsDir, 'settings');
-const settings = new GeneralSettings();
-let shouldImportSettings = false;
-if(!fs.existsSync(settingsFile)) shouldImportSettings = true;
-else
-    try {
-        Object.assign(settings, <GeneralSettings>JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
-    } catch(e) {
-        log.error(`Error loading settings: ${e}`);
-    }
 
 function setGeneralSettings(value: GeneralSettings): void {
     fs.writeFileSync(path.join(settingsDir, 'settings'), JSON.stringify(value));
@@ -150,7 +136,21 @@ function showPatchNotes(): void {
 }
 
 function onReady(): void {
-    app.setAppUserModelId('net.f-list.f-chat');
+    log.transports.file.level = 'debug';
+    log.transports.console.level = 'debug';
+    log.transports.file.maxSize = 5 * 1024 * 1024;
+    log.transports.file.file = path.join(baseDir, 'log.txt');
+    log.info('Starting application.');
+
+    if(!fs.existsSync(settingsFile)) shouldImportSettings = true;
+    else
+        try {
+            Object.assign(settings, <GeneralSettings>JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
+        } catch(e) {
+            log.error(`Error loading settings: ${e}`);
+        }
+
+    app.setAppUserModelId('com.squirrel.fchat.F-Chat');
     app.on('open-file', createWindow);
 
     if(settings.version !== app.getVersion()) {
@@ -159,11 +159,12 @@ function onReady(): void {
         setGeneralSettings(settings);
     }
 
+    const updaterUrl = `https://client.f-list.net/${process.platform}`;
     if(process.env.NODE_ENV === 'production') {
-        autoUpdater.channel = settings.beta ? 'beta' : 'latest';
-        autoUpdater.checkForUpdates(); //tslint:disable-line:no-floating-promises
-        const updateTimer = setInterval(async() => autoUpdater.checkForUpdates(), 3600000);
-        autoUpdater.on('update-downloaded', () => {
+        electron.autoUpdater.setFeedURL({url: updaterUrl + (settings.beta ? '?channel=beta' : ''), serverType: 'json'});
+        setTimeout(() => electron.autoUpdater.checkForUpdates(), 10000);
+        const updateTimer = setInterval(() => electron.autoUpdater.checkForUpdates(), 3600000);
+        electron.autoUpdater.on('update-downloaded', () => {
             clearInterval(updateTimer);
             const menu = electron.Menu.getApplicationMenu()!;
             const item = menu.getMenuItemById('update') as MenuItem | null;
@@ -175,7 +176,7 @@ function onReady(): void {
                         label: l('action.update'),
                         click: () => {
                             for(const w of windows) w.webContents.send('quit');
-                            autoUpdater.quitAndInstall(false, true);
+                            electron.autoUpdater.quitAndInstall();
                         }
                     }, {
                         label: l('help.changelog'),
@@ -186,12 +187,12 @@ function onReady(): void {
             electron.Menu.setApplicationMenu(menu);
             for(const w of windows) w.webContents.send('update-available', true);
         });
-        autoUpdater.on('update-not-available', () => {
-            (<any>autoUpdater).downloadedUpdateHelper.clear(); //tslint:disable-line:no-any no-unsafe-any
+        electron.autoUpdater.on('update-not-available', () => {
             for(const w of windows) w.webContents.send('update-available', false);
             const item = electron.Menu.getApplicationMenu()!.getMenuItemById('update') as MenuItem | null;
             if(item !== null) item.visible = false;
         });
+        electron.autoUpdater.on('error', (e) => log.error(e));
     }
 
     const viewItem = {
@@ -275,8 +276,8 @@ function onReady(): void {
                     click: async(item: Electron.MenuItem) => {
                         settings.beta = item.checked;
                         setGeneralSettings(settings);
-                        autoUpdater.channel = item.checked ? 'beta' : 'latest';
-                        return autoUpdater.checkForUpdates();
+                        electron.autoUpdater.setFeedURL({url: updaterUrl + (item.checked ? '?channel=beta' : ''), serverType: 'json'});
+                        return electron.autoUpdater.checkForUpdates();
                     }
                 }, {
                     label: l('fixLogs.action'),
@@ -360,6 +361,15 @@ function onReady(): void {
         else characters.push(character);
         e.returnValue = true;
     });
+    electron.ipcMain.on('dictionary-add', (_: Event, word: string) => {
+        if(settings.customDictionary.indexOf(word) !== -1) return;
+        settings.customDictionary.push(word);
+        setGeneralSettings(settings);
+    });
+    electron.ipcMain.on('dictionary-remove', (_: Event, word: string) => {
+        settings.customDictionary.splice(settings.customDictionary.indexOf(word), 1);
+        setGeneralSettings(settings);
+    });
     electron.ipcMain.on('disconnect', (_: Event, character: string) => characters.splice(characters.indexOf(character), 1));
     const emptyBadge = electron.nativeImage.createEmpty();
     //tslint:disable-next-line:no-require-imports
@@ -372,7 +382,7 @@ function onReady(): void {
     createWindow();
 }
 
-const running = process.env.NODE_ENV === 'production' && app.makeSingleInstance(createWindow);
-if(running) app.quit();
+const isSquirrelStart = require('electron-squirrel-startup'); //tslint:disable-line:no-require-imports
+if(isSquirrelStart || process.env.NODE_ENV === 'production' && app.makeSingleInstance(createWindow)) app.quit();
 else app.on('ready', onReady);
 app.on('window-all-closed', () => app.quit());

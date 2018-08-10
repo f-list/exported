@@ -4,7 +4,7 @@
         @touchend="$refs['userMenu'].handleEvent($event)">
         <sidebar id="sidebar" :label="l('chat.menu')" icon="fa-bars">
             <img :src="characterImage(ownCharacter.name)" v-if="showAvatars" style="float:left;margin-right:5px;width:60px"/>
-            <a href="#" target="_blank" :href="ownCharacterLink" class="btn" style="margin-right:5px">{{ownCharacter.name}}</a>
+            <a target="_blank" :href="ownCharacterLink" class="btn" style="margin-right:5px">{{ownCharacter.name}}</a>
             <a href="#" @click.prevent="logOut" class="btn"><i class="fas fa-sign-out-alt"></i>{{l('chat.logout')}}</a><br/>
             <div>
                 {{l('chat.status')}}

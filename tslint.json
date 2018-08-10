@@ -63,6 +63,7 @@
     ],
     "cyclomatic-complexity": false,
     "eofline": false,
+    "file-name-casing": false,
     "forin": false,
     "interface-name": false,
     "interface-over-type-literal": false,

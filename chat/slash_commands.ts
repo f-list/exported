@@ -269,6 +269,16 @@ const commands: {readonly [key: string]: Command | undefined} = {
         context: CommandContext.Channel,
         params: [{type: ParamType.Character}]
     },
+    scop: {
+        exec: (_, character: string) => core.connection.send('SCP', {action: 'add', character}),
+        permission: Permission.Admin,
+        params: [{type: ParamType.Character}]
+    },
+    scdeop: {
+        exec: (_, character: string) => core.connection.send('SCP', {action: 'remove', character}),
+        permission: Permission.Admin,
+        params: [{type: ParamType.Character}]
+    },
     oplist: {
         exec: (conv: ChannelConversation) => core.connection.send('COL', {channel: conv.channel.id}),
         context: CommandContext.Channel

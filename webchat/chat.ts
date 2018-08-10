@@ -30,12 +30,10 @@
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
 import Axios from 'axios';
-import * as Raven from 'raven-js';
-import Vue from 'vue';
 import Chat from '../chat/Chat.vue';
 import {init as initCore} from '../chat/core';
 import l from '../chat/localize';
-import VueRaven from '../chat/vue-raven';
+import {setupRaven} from '../chat/vue-raven';
 import Socket from '../chat/WebSocket';
 import Connection from '../fchat/connection';
 import '../scss/fa.scss'; //tslint:disable-line:no-import-side-effect
@@ -49,27 +47,8 @@ if(typeof window.Promise !== 'function' || typeof window.Notification !== 'funct
 const version = (<{version: string}>require('./package.json')).version; //tslint:disable-line:no-require-imports
 Axios.defaults.params = { __fchat: `web/${version}` };
 
-if(process.env.NODE_ENV === 'production') {
-    Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
-        release: `web-${version}`,
-        dataCallback: (data: {culprit?: string, exception?: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
-            if(data.culprit !== undefined) {
-                const end = data.culprit.lastIndexOf('?');
-                data.culprit = `~${data.culprit.substring(data.culprit.lastIndexOf('/'), end === -1 ? undefined : end)}`;
-            }
-            if(data.exception !== undefined)
-                for(const ex of data.exception.values)
-                    for(const frame of ex.stacktrace.frames) {
-                        const index = frame.filename.lastIndexOf('/');
-                        const endIndex = frame.filename.lastIndexOf('?');
-                        frame.filename = `~${frame.filename.substring(index !== -1 ? index : 0, endIndex === -1 ? undefined : endIndex)}`;
-                    }
-        }
-    }).addPlugin(VueRaven, Vue).install();
-    (<Window & {onunhandledrejection(e: PromiseRejectionEvent): void}>window).onunhandledrejection = (e: PromiseRejectionEvent) => {
-        Raven.captureException(<Error>e.reason);
-    };
-}
+if(process.env.NODE_ENV === 'production')
+    setupRaven('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', `web-${version}`);
 
 declare const chatSettings: {account: string, theme: string, characters: ReadonlyArray<string>, defaultCharacter: string | null};
 

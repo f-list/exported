@@ -266,4 +266,9 @@
     html, body, #page {
         height: 100%;
     }
+
+    *:not([draggable]), *::after, *::before {
+        -webkit-user-drag: none;
+        -webkit-app-region: no-drag;
+    }
 </style>

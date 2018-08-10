@@ -1,8 +1,10 @@
+import {getByteLength} from './common';
+
 let crcTable!: number[];
 
 export default class Zip {
-    private blob: (object | string)[] = [];
-    private files: {header: object[], offset: number, name: string}[] = [];
+    private blob: BlobPart[] = [];
+    private files: {header: BlobPart[], offset: number, name: string}[] = [];
     private offset = 0;
 
     constructor() {
@@ -19,6 +21,7 @@ export default class Zip {
     addFile(name: string, content: string): void {
         let crc = -1;
         let length = 0;
+        const nameLength = getByteLength(name);
         for(let i = 0, strlen = content.length; i < strlen; ++i) {
             let c = content.charCodeAt(i);
             if(c > 0xD800 && c < 0xD8FF) //surrogate pairs
@@ -35,13 +38,13 @@ export default class Zip {
         }
         crc = (crc ^ (-1)) >>> 0;
         const file = {
-            header: [Uint16Array.of(0, 0, 0, 0, 0), Uint32Array.of(crc, length, length), Uint16Array.of(name.length, 0)],
+            header: [Uint16Array.of(0, 0, 0, 0, 0), Uint32Array.of(crc, length, length), Uint16Array.of(nameLength, 0)],
             offset: this.offset, name
         };
         this.blob.push(Uint32Array.of(0x04034B50));
         this.blob.push(...file.header);
         this.blob.push(name, content);
-        this.offset += name.length + length + 30;
+        this.offset += nameLength + length + 30;
         this.files.push(file);
     }
 
@@ -51,7 +54,7 @@ export default class Zip {
             this.blob.push(Uint16Array.of(0x4B50, 0x0201, 0));
             this.blob.push(...file.header);
             this.blob.push(Uint16Array.of(0, 0, 0, 0, 0), Uint32Array.of(file.offset), file.name);
-            this.offset += file.name.length + 46;
+            this.offset += getByteLength(file.name) + 46;
         }
         this.blob.push(Uint16Array.of(0x4B50, 0x0605, 0, 0, this.files.length, this.files.length),
             Uint32Array.of(this.offset - start, start), Uint16Array.of(0));

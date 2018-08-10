@@ -124,7 +124,7 @@
             core.register('conversations', Conversations());
             core.connection.onEvent('closed', async(isReconnect) => {
                 if(isReconnect) (<Modal>this.$refs['reconnecting']).show(true);
-                if(this.connected) await core.notifications.playSound('logout');
+                if(this.connected) core.notifications.playSound('logout');
                 this.connected = false;
                 this.connecting = false;
                 document.title = l('title');
@@ -138,7 +138,7 @@
                 this.error = '';
                 this.connecting = false;
                 this.connected = true;
-                await core.notifications.playSound('login');
+                core.notifications.playSound('login');
                 document.title = l('title.connected', core.connection.character);
             });
             core.watch(() => core.conversations.hasNew, (hasNew) => {

@@ -32,14 +32,11 @@
 import Axios from 'axios';
 import {exec, execSync} from 'child_process';
 import * as electron from 'electron';
-import * as fs from 'fs';
 import * as path from 'path';
 import * as qs from 'querystring';
-import * as Raven from 'raven-js';
-import Vue from 'vue';
 import {getKey} from '../chat/common';
 import l from '../chat/localize';
-import VueRaven from '../chat/vue-raven';
+import {setupRaven} from '../chat/vue-raven';
 import {Keys} from '../keys';
 import {GeneralSettings, nativeRequire} from './common';
 import * as SlimcatImporter from './importer';
@@ -67,21 +64,7 @@ const spellchecker = new sc.Spellchecker();
 Axios.defaults.params = { __fchat: `desktop/${electron.remote.app.getVersion()}` };
 
 if(process.env.NODE_ENV === 'production') {
-    Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
-        release: electron.remote.app.getVersion(),
-        dataCallback(data: {culprit: string, exception?: {values: {stacktrace: {frames: {filename: string}[]}}[]}}): void {
-            data.culprit = `~${data.culprit.substr(data.culprit.lastIndexOf('/'))}`;
-            if(data.exception !== undefined)
-                for(const ex of data.exception.values)
-                    for(const frame of ex.stacktrace.frames) {
-                        const index = frame.filename.lastIndexOf('/');
-                        frame.filename = index !== -1 ? `~${frame.filename.substr(index)}` : frame.filename;
-                    }
-        }
-    }).addPlugin(VueRaven, Vue).install();
-    (<Window & {onunhandledrejection(e: PromiseRejectionEvent): void}>window).onunhandledrejection = (e: PromiseRejectionEvent) => {
-        Raven.captureException(<Error>e.reason);
-    };
+    setupRaven('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', electron.remote.app.getVersion());
 
     electron.remote.getCurrentWebContents().on('devtools-opened', () => {
         console.log(`%c${l('consoleWarning.head')}`, 'background: red; color: yellow; font-size: 30pt');
@@ -171,12 +154,7 @@ webContents.on('context-menu', (_, props) => {
         const corrections = spellchecker.getCorrectionsForMisspelling(props.misspelledWord);
         menuTemplate.unshift({
             label: l('spellchecker.add'),
-            click: () => {
-                if(customDictionary.indexOf(props.misspelledWord) !== -1) return;
-                spellchecker.add(props.misspelledWord);
-                customDictionary.push(props.misspelledWord);
-                fs.writeFile(customDictionaryPath, JSON.stringify(customDictionary), () => {/**/});
-            }
+            click: () => electron.ipcRenderer.send('dictionary-add', props.misspelledWord)
         }, {type: 'separator'});
         if(corrections.length > 0)
             menuTemplate.unshift(...corrections.map((correction: string) => ({
@@ -184,14 +162,10 @@ webContents.on('context-menu', (_, props) => {
                 click: () => webContents.replaceMisspelling(correction)
             })));
         else menuTemplate.unshift({enabled: false, label: l('spellchecker.noCorrections')});
-    } else if(customDictionary.indexOf(props.selectionText) !== -1)
+    } else if(settings.customDictionary.indexOf(props.selectionText) !== -1)
         menuTemplate.unshift({
             label: l('spellchecker.remove'),
-            click: () => {
-                spellchecker.remove(props.selectionText);
-                customDictionary.splice(customDictionary.indexOf(props.selectionText), 1);
-                fs.writeFile(customDictionaryPath, JSON.stringify(customDictionary), () => {/**/});
-            }
+            click: () => electron.ipcRenderer.send('dictionary-remove', props.selectionText)
         }, {type: 'separator'});
 
     if(menuTemplate.length > 0) electron.remote.Menu.buildFromTemplate(menuTemplate).popup({});
@@ -201,10 +175,14 @@ let dictDir = path.join(electron.remote.app.getPath('userData'), 'spellchecker')
 if(process.platform === 'win32')
    exec(`for /d %I in ("${dictDir}") do @echo %~sI`, (_, stdout) => { dictDir = stdout.trim(); });
 electron.webFrame.setSpellCheckProvider('', false, {spellCheck: (text) => !spellchecker.isMisspelled(text)});
-electron.ipcRenderer.on('settings', async(_: Event, s: GeneralSettings) => spellchecker.setDictionary(s.spellcheckLang, dictDir));
+electron.ipcRenderer.on('settings', async(_: Event, s: GeneralSettings) => {
+    settings = s;
+    spellchecker.setDictionary(s.spellcheckLang, dictDir);
+    for(const word of s.customDictionary) spellchecker.add(word);
+});
 
 const params = <{[key: string]: string | undefined}>qs.parse(window.location.search.substr(1));
-const settings = <GeneralSettings>JSON.parse(params['settings']!);
+let settings = <GeneralSettings>JSON.parse(params['settings']!);
 if(params['import'] !== undefined)
     try {
         if(SlimcatImporter.canImportGeneral() && confirm(l('importer.importGeneral'))) {
@@ -214,11 +192,6 @@ if(params['import'] !== undefined)
     } catch {
         alert(l('importer.error'));
     }
-spellchecker.setDictionary(settings.spellcheckLang, dictDir);
-
-const customDictionaryPath = path.join(settings.logDirectory, 'words');
-const customDictionary = fs.existsSync(customDictionaryPath) ? <string[]>JSON.parse(fs.readFileSync(customDictionaryPath, 'utf8')) : [];
-for(const word of customDictionary) spellchecker.add(word);
 
 //tslint:disable-next-line:no-unused-expression
 new Index({

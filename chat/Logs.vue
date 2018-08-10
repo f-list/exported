@@ -246,9 +246,11 @@
                 this.dates[this.dateOffset++]);
             this.messages = messages.concat(this.messages);
             const noOverflow = list.offsetHeight === list.scrollHeight;
+            const firstMessage = <HTMLElement>list.firstElementChild!;
             this.$nextTick(() => {
                 if(list.offsetHeight === list.scrollHeight) return this.onMessagesScroll();
-                else if(noOverflow) list.scrollTop = list.scrollHeight;
+                else if(noOverflow) setTimeout(() => list.scrollTop = list.scrollHeight, 0);
+                else setTimeout(() => list.scrollTop = firstMessage.offsetTop, 0);
             });
         }
     }

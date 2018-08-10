@@ -8,12 +8,12 @@ android {
 		applicationId "net.f_list.fchat"
 		minSdkVersion 19
 		targetSdkVersion 27
-		versionCode 17
-		versionName "3.0.6"
+		versionCode 18
+		versionName "3.0.7"
 	}
 	buildTypes {
 		release {
-			minifyEnabled false
+			minifyEnabled true
 			proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
 		}
 	}

@@ -87,6 +87,10 @@ const strings: {[key: string]: string | undefined} = {
     'logs.selectCharacter': 'Select a character...',
     'logs.selectConversation': 'Select a conversation...',
     'logs.allDates': 'Show all',
+    'logs.corruption.desktop': 'Log corruption has been detected. This is usually caused by a crash/force close or power loss mid-write. Please use the "Fix corrupted logs" option for this character to restore proper functionality.',
+    'logs.corruption.mobile': 'Log corruption has been detected. This is usually caused by a crash/force close or power loss mid-write. Will now attempt to fix corrupted logs.',
+    'logs.corruption.mobile.success': 'Your logs have been fixed.',
+    'logs.corruption.mobile.error': 'Unable to fix corrupted logs. Please clear the application data or reinstall the app.',
     'user.profile': 'Profile',
     'user.message': 'Open conversation',
     'user.messageJump': 'View conversation',
@@ -384,6 +388,10 @@ Once this process has started, do not interrupt it or your logs will get corrupt
     'commands.gop.help': 'Promotes a character to global chat OP.',
     'commands.gdeop': 'Demote from Chat OP',
     'commands.gdeop.help': 'Demotes a character from global chat OP.',
+    'commands.scop': 'Promote to Super COP',
+    'commands.scop.help': 'Promotes a character to super channel operator, making them an operator in all public channels.',
+    'commands.scdeop': 'Demote from Super COP',
+    'commands.scdeop.help': 'Demotes a character from super channel operator.',
     'commands.reloadconfig': 'Reload config',
     'commands.reloadconfig.help': 'Reload server-side config from disk.',
     'commands.reloadconfig.param0': 'Save?',
@@ -412,13 +420,13 @@ Any existing FChat 3.0 data for this character will be overwritten.`,
     'importer.error': 'There was an error importing your settings. The defaults will be used.'
 };
 
-export default function l(key: string, ...args: string[]): string {
+export default function l(key: string, ...args: (string | number)[]): string {
     let i = args.length;
     let str = strings[key];
     if(str === undefined)
         if(process.env.NODE_ENV !== 'production') throw new Error(`String ${key} does not exist.`);
         else return '';
     while(i-- > 0)
-        str = str.replace(new RegExp(`\\{${i}\\}`, 'igm'), args[i]);
+        str = str.replace(new RegExp(`\\{${i}\\}`, 'igm'), args[i].toString());
     return str;
 }

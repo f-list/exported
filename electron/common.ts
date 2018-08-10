@@ -14,6 +14,7 @@ export class GeneralSettings {
     theme = 'default';
     version = electron.app.getVersion();
     beta = false;
+    customDictionary: string[] = [];
 }
 
 export function mkdir(dir: string): void {

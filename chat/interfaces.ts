@@ -63,7 +63,7 @@ export namespace Conversation {
     export interface ChannelConversation extends TabConversation {
         readonly channel: Channel
         mode: Channel.Mode
-        readonly adCountdown: number
+        readonly nextAd: number
         isSendingAds: boolean
     }
 
@@ -116,7 +116,7 @@ export namespace Conversation {
         clear(): void
         loadLastSent(): void
         show(): void
-        loadMore(): void
+        loadMore(): boolean
     }
 }
 
@@ -181,7 +181,7 @@ export type Settings = Settings.Settings;
 export interface Notifications {
     isInBackground: boolean
     notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): Promise<void>
-    playSound(sound: string): Promise<void>
+    playSound(sound: string): void
     requestPermission(): Promise<void>
     initSounds(sounds: ReadonlyArray<string>): Promise<void>
 }

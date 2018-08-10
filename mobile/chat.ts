@@ -30,9 +30,7 @@
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
 import Axios from 'axios';
-import * as Raven from 'raven-js';
-import Vue from 'vue';
-import VueRaven from '../chat/vue-raven';
+import {setupRaven} from '../chat/vue-raven';
 import Index from './Index.vue';
 
 const version = (<{version: string}>require('./package.json')).version; //tslint:disable-line:no-require-imports
@@ -40,23 +38,8 @@ const version = (<{version: string}>require('./package.json')).version; //tslint
     Axios.defaults.params = { __fchat: `mobile-${platform}/${version}` };
 };
 
-if(process.env.NODE_ENV === 'production') {
-    Raven.config('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', {
-        release: `mobile-${version}`,
-        dataCallback: (data: {culprit: string, exception?: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
-            data.culprit = `~${data.culprit.substr(data.culprit.lastIndexOf('/'))}`;
-            if(data.exception !== undefined)
-                for(const ex of data.exception.values)
-                    for(const frame of ex.stacktrace.frames) {
-                        const index = frame.filename.lastIndexOf('/');
-                        frame.filename = index !== -1 ? `~${frame.filename.substr(index)}` : frame.filename;
-                    }
-        }
-    }).addPlugin(VueRaven, Vue).install();
-    (<Window & {onunhandledrejection(e: PromiseRejectionEvent): void}>window).onunhandledrejection = (e: PromiseRejectionEvent) => {
-        Raven.captureException(<Error>e.reason);
-    };
-}
+if(process.env.NODE_ENV === 'production')
+    setupRaven('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', `mobile-${version}`);
 
 new Index({ //tslint:disable-line:no-unused-expression
     el: '#app'

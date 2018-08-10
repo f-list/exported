@@ -13,17 +13,15 @@ export default class Notifications implements Interface {
 
     async notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): Promise<void> {
         if(!this.shouldNotify(conversation)) return;
-        await this.playSound(sound);
+        this.playSound(sound);
         if(core.state.settings.notifications && (<any>Notification).permission === 'granted') { //tslint:disable-line:no-any
             const notification = new Notification(title, this.getOptions(conversation, body, icon));
             notification.onclick = () => {
                 conversation.show();
                 window.focus();
-                notification.close();
+                if('close' in notification) notification.close();
             };
-            window.setTimeout(() => {
-                notification.close();
-            }, 5000);
+            if('close' in notification) window.setTimeout(() => notification.close(), 5000);
         }
     }
 
@@ -36,20 +34,22 @@ export default class Notifications implements Interface {
         };
     }
 
-    async playSound(sound: string): Promise<void> {
+    playSound(sound: string): void {
         if(!core.state.settings.playSound) return;
         const audio = <HTMLAudioElement>document.getElementById(`soundplayer-${sound}`);
         audio.volume = 1;
         audio.muted = false;
-        return audio.play();
+        const promise = audio.play();
+        if(promise instanceof Promise) promise.catch((e) => console.error(e));
     }
 
-    initSounds(sounds: ReadonlyArray<string>): Promise<void> { //tslint:disable-line:promise-function-async
+    async initSounds(sounds: ReadonlyArray<string>): Promise<void> {
         const promises = [];
         for(const sound of sounds) {
             const id = `soundplayer-${sound}`;
             if(document.getElementById(id) !== null) continue;
             const audio = document.createElement('audio');
+            audio.preload = 'auto';
             audio.id = id;
             for(const name in codecs) {
                 const src = document.createElement('source');
@@ -63,7 +63,7 @@ export default class Notifications implements Interface {
             audio.muted = true;
             const promise = audio.play();
             if(promise instanceof Promise)
-                promises.push(promise);
+                promises.push(promise.catch((e) => console.error(e)));
         }
         return <any>Promise.all(promises); //tslint:disable-line:no-any
     }

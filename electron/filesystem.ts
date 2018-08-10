@@ -1,6 +1,7 @@
 import * as electron from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import {promisify} from 'util';
 import {Message as MessageImpl} from '../chat/common';
 import core from '../chat/core';
 import {Character, Conversation, Logs as Logging, Settings} from '../chat/interfaces';
@@ -14,7 +15,7 @@ declare module '../chat/interfaces' {
 }
 
 const dayMs = 86400000;
-
+const read = promisify(fs.read);
 const noAssert = process.env.NODE_ENV === 'production';
 
 function writeFile(p: fs.PathLike | number, data: string | object | number,
@@ -110,43 +111,51 @@ export function fixLogs(character: string): void {
     const dir = getLogDir(character);
     const files = fs.readdirSync(dir);
     const buffer = Buffer.allocUnsafe(50100);
-    for(const file of files)
-        if(file.substr(-4) !== '.idx') {
-            const fd = fs.openSync(path.join(dir, file), 'r+');
-            const indexFd = fs.openSync(path.join(dir, `${file}.idx`), 'r+');
-            fs.readSync(indexFd, buffer, 0, 1, 0);
-            let pos = 0, lastDay = 0;
-            const nameEnd = buffer.readUInt8(0, noAssert) + 1;
-            fs.readSync(indexFd, buffer, 0, nameEnd, null); //tslint:disable-line:no-null-keyword
-            buffer.toString('utf8', 1, nameEnd);
-            fs.ftruncateSync(indexFd, nameEnd);
-            const size = (fs.fstatSync(fd)).size;
-            try {
-                while(pos < size) {
-                    buffer.fill(-1);
-                    fs.readSync(fd, buffer, 0, 50100, pos);
-                    const deserialized = deserializeMessage(buffer, 0, (name) => ({
-                        gender: 'None', status: 'online', statusText: '', isFriend: false, isBookmarked: false, isChatOp: false,
-                        isIgnored: false, name
-                    }), false);
-                    const time = deserialized.message.time;
-                    const day = Math.floor(time.getTime() / dayMs - time.getTimezoneOffset() / 1440);
-                    if(day > lastDay) {
-                        buffer.writeUInt16LE(day, 0, noAssert);
-                        buffer.writeUIntLE(pos, 2, 5, noAssert);
-                        fs.writeSync(indexFd, buffer, 0, 7);
-                        lastDay = day;
-                    }
-                    if(buffer.readUInt16LE(deserialized.size - 2) !== deserialized.size - 2) throw new Error();
-                    pos += deserialized.size;
-                }
-            } catch {
-                fs.ftruncateSync(fd, pos);
-            } finally {
-                fs.closeSync(fd);
-                fs.closeSync(indexFd);
-            }
+    for(const file of files) {
+        const full = path.join(dir, file);
+        if(file.substr(-4) === '.idx') {
+            if(!fs.existsSync(full.slice(0, -4))) fs.unlinkSync(full);
+            continue;
         }
+        const fd = fs.openSync(full, 'r+');
+        const indexPath = path.join(dir, `${file}.idx`);
+        if(!fs.existsSync(indexPath)) {
+            fs.unlinkSync(full);
+            continue;
+        }
+        const indexFd = fs.openSync(indexPath, 'r+');
+        fs.readSync(indexFd, buffer, 0, 1, 0);
+        let pos = 0, lastDay = 0;
+        const nameEnd = buffer.readUInt8(0, noAssert) + 1;
+        fs.ftruncateSync(indexFd, nameEnd);
+        fs.readSync(indexFd, buffer, 0, nameEnd, null); //tslint:disable-line:no-null-keyword
+        const size = (fs.fstatSync(fd)).size;
+        try {
+            while(pos < size) {
+                buffer.fill(-1);
+                fs.readSync(fd, buffer, 0, 50100, pos);
+                const deserialized = deserializeMessage(buffer, 0, (name) => ({
+                    gender: 'None', status: 'online', statusText: '', isFriend: false, isBookmarked: false, isChatOp: false,
+                    isIgnored: false, name
+                }), false);
+                const time = deserialized.message.time;
+                const day = Math.floor(time.getTime() / dayMs - time.getTimezoneOffset() / 1440);
+                if(day > lastDay) {
+                    buffer.writeUInt16LE(day, 0, noAssert);
+                    buffer.writeUIntLE(pos, 2, 5, noAssert);
+                    fs.writeSync(indexFd, buffer, 0, 7);
+                    lastDay = day;
+                }
+                if(buffer.readUInt16LE(deserialized.size - 2) !== deserialized.size - 2) throw new Error();
+                pos += deserialized.size;
+            }
+        } catch {
+            fs.ftruncateSync(fd, pos);
+        } finally {
+            fs.closeSync(fd);
+            fs.closeSync(indexFd);
+        }
+    }
 }
 
 function loadIndex(name: string): Index {
@@ -155,19 +164,23 @@ function loadIndex(name: string): Index {
     const files = fs.readdirSync(dir);
     for(const file of files)
         if(file.substr(-4) === '.idx') {
-            const content = fs.readFileSync(path.join(dir, file));
-            let offset = content.readUInt8(0, noAssert) + 1;
-            const item: IndexItem = {
-                name: content.toString('utf8', 1, offset),
-                index: {},
-                offsets: new Array(content.length - offset)
-            };
-            for(; offset < content.length; offset += 7) {
-                const key = content.readUInt16LE(offset);
-                item.index[key] = item.offsets.length;
-                item.offsets.push(content.readUIntLE(offset + 2, 5, noAssert));
+            try {
+                const content = fs.readFileSync(path.join(dir, file));
+                let offset = content.readUInt8(0, noAssert) + 1;
+                const item: IndexItem = {
+                    name: content.toString('utf8', 1, offset),
+                    index: {},
+                    offsets: new Array(content.length - offset)
+                };
+                for(; offset < content.length; offset += 7) {
+                    const key = content.readUInt16LE(offset);
+                    item.index[key] = item.offsets.length;
+                    item.offsets.push(content.readUIntLE(offset + 2, 5, noAssert));
+                }
+                index[file.slice(0, -4).toLowerCase()] = item;
+            } catch {
+                alert(l('logs.corruption.desktop'));
             }
-            index[file.slice(0, -4).toLowerCase()] = item;
         }
     return index;
 }
@@ -190,18 +203,24 @@ export class Logs implements Logging {
         let count = 20;
         let messages = new Array<Conversation.Message>(count);
         const fd = fs.openSync(file, 'r');
-        let pos = fs.fstatSync(fd).size;
-        const buffer = Buffer.allocUnsafe(65536);
-        while(pos > 0 && count > 0) {
-            fs.readSync(fd, buffer, 0, 2, pos - 2);
-            const length = buffer.readUInt16LE(0);
-            pos = pos - length - 2;
-            fs.readSync(fd, buffer, 0, length, pos);
-            messages[--count] = deserializeMessage(buffer).message;
+        try {
+            let pos = fs.fstatSync(fd).size;
+            const buffer = Buffer.allocUnsafe(65536);
+            while(pos > 0 && count > 0) {
+                fs.readSync(fd, buffer, 0, 2, pos - 2);
+                const length = buffer.readUInt16LE(0);
+                pos = pos - length - 2;
+                fs.readSync(fd, buffer, 0, length, pos);
+                messages[--count] = deserializeMessage(buffer).message;
+            }
+            if(count !== 0) messages = messages.slice(count);
+            return messages;
+        } catch {
+            alert(l('logs.corruption.desktop'));
+            return [];
+        } finally {
+            fs.closeSync(fd);
         }
-        if(count !== 0) messages = messages.slice(count);
-        fs.closeSync(fd);
-        return messages;
     }
 
     private getIndex(name: string): Index {
@@ -229,18 +248,25 @@ export class Logs implements Logging {
         const messages: Conversation.Message[] = [];
         const pos = index.offsets[dateOffset];
         const fd = fs.openSync(getLogFile(character, key), 'r');
-        const end = dateOffset + 1 < index.offsets.length ? index.offsets[dateOffset + 1] : (fs.fstatSync(fd)).size;
-        const length = end - pos;
-        const buffer = Buffer.allocUnsafe(length);
-        fs.readSync(fd, buffer, 0, length, pos);
-        fs.closeSync(fd);
-        let offset = 0;
-        while(offset < length) {
-            const deserialized = deserializeMessage(buffer, offset);
-            messages.push(deserialized.message);
-            offset += deserialized.size;
+        try {
+            const end = dateOffset + 1 < index.offsets.length ? index.offsets[dateOffset + 1] : (fs.fstatSync(fd)).size;
+            const length = end - pos;
+            const buffer = Buffer.allocUnsafe(length);
+            await read(fd, buffer, 0, length, pos);
+            fs.closeSync(fd);
+            let offset = 0;
+            while(offset < length) {
+                const deserialized = deserializeMessage(buffer, offset);
+                messages.push(deserialized.message);
+                offset += deserialized.size;
+            }
+            return messages;
+        } catch {
+            alert(l('logs.corruption.desktop'));
+            return [];
+        } finally {
+            fs.closeSync(fd);
         }
-        return messages;
     }
 
     logMessage(conversation: {key: string, name: string}, message: Message): void {
@@ -262,6 +288,7 @@ export class Logs implements Logging {
 
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
         const baseDir = core.state.generalSettings!.logDirectory;
+        mkdir(baseDir);
         return (fs.readdirSync(baseDir)).filter((x) => fs.lstatSync(path.join(baseDir, x)).isDirectory());
     }
 }

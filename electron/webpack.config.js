@@ -6,7 +6,7 @@ const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const VueLoaderPlugin = require('vue-loader/lib/plugin');
 
 const mainConfig = {
-    entry: [path.join(__dirname, 'main.ts'), path.join(__dirname, 'application.json')],
+    entry: [path.join(__dirname, 'main.ts'), path.join(__dirname, 'package.json')],
     output: {
         path: __dirname + '/app',
         filename: 'main.js'
@@ -23,7 +23,7 @@ const mainConfig = {
                     transpileOnly: true
                 }
             },
-            {test: path.join(__dirname, 'application.json'), loader: 'file-loader?name=package.json', type: 'javascript/auto'},
+            {test: path.join(__dirname, 'package.json'), loader: 'file-loader?name=package.json', type: 'javascript/auto'},
             {test: /\.(png|html)$/, loader: 'file-loader?name=[name].[ext]'}
         ]
     },
@@ -45,7 +45,7 @@ const mainConfig = {
 }, rendererConfig = {
     entry: {
         chat: [path.join(__dirname, 'chat.ts'), path.join(__dirname, 'index.html')],
-        window: [path.join(__dirname, 'window.ts'), path.join(__dirname, 'window.html')]
+        window: [path.join(__dirname, 'window.ts'), path.join(__dirname, 'window.html'), path.join(__dirname, 'build', 'tray@2x.png')]
     },
     output: {
         path: __dirname + '/app',

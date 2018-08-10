@@ -9,7 +9,7 @@ const browserWindow = remote.getCurrentWindow();
 export default class Notifications extends BaseNotifications {
     async notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): Promise<void> {
         if(!this.shouldNotify(conversation)) return;
-        await this.playSound(sound);
+        this.playSound(sound);
         browserWindow.flashFrame(true);
         if(core.state.settings.notifications) {
             const notification = new Notification(title, this.getOptions(conversation, body, icon));

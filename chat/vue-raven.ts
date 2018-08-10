@@ -1,4 +1,4 @@
-import {RavenStatic} from 'raven-js';
+import * as Raven from 'raven-js';
 import Vue from 'vue';
 
 /*tslint:disable:no-unsafe-any no-any*///hack
@@ -13,7 +13,7 @@ function formatComponentName(vm: any): string {
 //tslint:enable
 
 /*tslint:disable:no-unbound-method strict-type-predicates*///hack
-export default function VueRaven(this: void, raven: RavenStatic): RavenStatic {
+function VueRaven(this: void, raven: Raven.RavenStatic): Raven.RavenStatic {
     if(typeof Vue.config !== 'object') return raven;
     const oldOnError = Vue.config.errorHandler;
     Vue.config.errorHandler = (error: Error, vm: Vue, info: string): void => {
@@ -45,3 +45,26 @@ export default function VueRaven(this: void, raven: RavenStatic): RavenStatic {
     return raven;
 }
 //tslint:enable
+
+export function setupRaven(dsn: string, version: string): void {
+    Raven.config(dsn, {
+        release: version,
+        dataCallback: (data: {culprit?: string, exception?: {values: {stacktrace: {frames: {filename: string}[]}}[]}}) => {
+            if(data.culprit !== undefined) {
+                const end = data.culprit.lastIndexOf('?');
+                data.culprit = `~${data.culprit.substring(data.culprit.lastIndexOf('/'), end === -1 ? undefined : end)}`;
+            }
+            if(data.exception !== undefined)
+                for(const ex of data.exception.values)
+                    for(const frame of ex.stacktrace.frames) {
+                        const index = frame.filename.lastIndexOf('/');
+                        const endIndex = frame.filename.lastIndexOf('?');
+                        frame.filename =
+                            `~${frame.filename.substring(index !== -1 ? index : 0, endIndex === -1 ? undefined : endIndex)}`;
+                    }
+        }
+    }).addPlugin(VueRaven, Vue).install();
+    (<Window & {onunhandledrejection(e: PromiseRejectionEvent): void}>window).onunhandledrejection = (e: PromiseRejectionEvent) => {
+        Raven.captureException(<Error>e.reason);
+    };
+}
