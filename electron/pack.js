@@ -29,12 +29,13 @@ function mkdir(dir) {
 
 const distDir = path.join(__dirname, 'dist');
 const isBeta = pkg.version.indexOf('beta') !== -1;
-const spellcheckerPath = 'node_modules/spellchecker/build/Release/spellchecker.node',
-    keytarPath = 'node_modules/keytar/build/Release/keytar.node';
-mkdir(path.dirname(path.join(__dirname, 'app', spellcheckerPath)));
-mkdir(path.dirname(path.join(__dirname, 'app', keytarPath)));
-fs.copyFileSync(spellcheckerPath, path.join(__dirname, 'app', spellcheckerPath));
-fs.copyFileSync(keytarPath, path.join(__dirname, 'app', keytarPath));
+const spellcheckerPath = 'spellchecker/build/Release/spellchecker.node', keytarPath = 'keytar/build/Release/keytar.node';
+const modules = path.join(__dirname, 'app', 'node_modules');
+mkdir(path.dirname(path.join(modules, spellcheckerPath)));
+mkdir(path.dirname(path.join(modules, keytarPath)));
+fs.copyFileSync(require.resolve(spellcheckerPath), path.join(modules, spellcheckerPath));
+fs.copyFileSync(require.resolve(keytarPath), path.join(modules, keytarPath));
+
 
 require('electron-packager')({
     dir: path.join(__dirname, 'app'),
@@ -101,16 +102,22 @@ require('electron-packager')({
         console.log('Creating Linux AppImage');
         fs.renameSync(path.join(appPaths[0], 'F-Chat'), path.join(appPaths[0], 'AppRun'));
         fs.copyFileSync(path.join(__dirname, 'build', 'icon.png'), path.join(appPaths[0], 'icon.png'));
+        const libDir = path.join(appPaths[0], 'usr', 'lib'), libSource = path.join(__dirname, 'build', 'linux-libs');
+        mkdir(libDir);
+        for(const file of fs.readdirSync(libSource))
+            fs.copyFileSync(path.join(libSource, file), path.join(libDir, file));
         fs.symlinkSync(path.join(appPaths[0], 'icon.png'), path.join(appPaths[0], '.DirIcon'));
         fs.writeFileSync(path.join(appPaths[0], 'fchat.desktop'), '[Desktop Entry]\nName=F-Chat\nExec=AppRun\nIcon=icon\nType=Application\nCategories=GTK;GNOME;Utility;');
         require('axios').get('https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage', {responseType: 'stream'}).then((res) => {
             const downloaded = path.join(distDir, 'appimagetool.AppImage');
-            res.data.pipe(fs.createWriteStream(downloaded));
-            res.data.on('end', () => {
-                const args = [appPaths[0], 'fchat.AppImage', '-u', 'zsync|https://client.f-list.net/fchat.AppImage.zsync'];
+            const stream = fs.createWriteStream(downloaded);
+            res.data.pipe(stream);
+            stream.on('close', () => {
+                const args = [appPaths[0], 'fchat.AppImage', '-u', 'zsync|httpos://client.f-list.net/fchat.AppImage.zsync'];
                 if(process.argv.length > 2) args.push('-s', '--sign-key', process.argv[2]);
                 else console.warn('Warning: Creating unsigned AppImage');
                 if(process.argv.length > 3) args.push('--sign-args', `--passphrase=${process.argv[3]}`);
+                fs.chmodSync(downloaded, 0o755);
                 child_process.spawn(downloaded, ['--appimage-extract'], {cwd: distDir}).on('close', () => {
                     const child = child_process.spawn(path.join(distDir, 'squashfs-root', 'AppRun'), args, {cwd: distDir});
                     child.stdout.on('data', (data) => console.log(data.toString()));

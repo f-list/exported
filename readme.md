@@ -20,7 +20,7 @@ See https://electron.atom.io/docs/tutorial/application-distribution/
  - Run `yarn pack`. The generated installer is placed into the `dist` directory.
    - On Windows you can add the path to and password for a code signing certificate as arguments.
    - On Mac you can add your code signing identity as an argument. `zip` is required to be installed.
-   - On Linux you can add a GPG key for signing as an argument. `mksquashfs` and `zsyncmake` are required to be installed.
+   - On Linux you can add a GPG key for signing and its password as arguments. `mksquashfs` and `zsyncmake` are required to be installed.
 
 ## Building for Mobile
  - Change into the `mobile` directory.

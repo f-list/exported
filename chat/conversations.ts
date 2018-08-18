@@ -59,6 +59,10 @@ abstract class Conversation implements Interfaces.Conversation {
         state.savePinned(); //tslint:disable-line:no-floating-promises
     }
 
+    clearText(): void {
+        setImmediate(() => this.enteredText = '');
+    }
+
     async send(): Promise<void> {
         if(this.enteredText.length === 0) return;
         if(isCommand(this.enteredText)) {
@@ -67,7 +71,7 @@ abstract class Conversation implements Interfaces.Conversation {
             else {
                 parsed.call(this);
                 this.lastSent = this.enteredText;
-                this.enteredText = '';
+                this.clearText();
             }
         } else {
             this.lastSent = this.enteredText;
@@ -186,7 +190,7 @@ class PrivateConversation extends Conversation implements Interfaces.PrivateConv
         const message = createMessage(MessageType.Message, core.characters.ownCharacter, this.enteredText);
         this.safeAddMessage(message);
         if(core.state.settings.logMessages) await core.logs.logMessage(this, message);
-        this.enteredText = '';
+        this.clearText();
     }
 
     private setOwnTyping(status: Interfaces.TypingStatus): void {
@@ -257,8 +261,8 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
     }
 
     addModeMessage(mode: Channel.Mode, message: Interfaces.Message): void {
-        if(this._mode === mode) this.safeAddMessage(message);
-        else safeAddMessage(this[mode], message, 500);
+        safeAddMessage(this[mode], message, 500);
+        if(this._mode === mode) safeAddMessage(this.messages, message, this.maxMessages);
     }
 
     async addMessage(message: Interfaces.Message): Promise<void> {
@@ -283,6 +287,8 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
             } else this.addModeMessage('ads', message);
         }
         this.addModeMessage('both', message);
+        if(message.type !== Interfaces.Message.Type.Event)
+            safeAddMessage(this.reportMessages, message, 500);
     }
 
     clear(): void {
@@ -310,7 +316,7 @@ class ChannelConversation extends Conversation implements Interfaces.ChannelConv
             createMessage(isAd ? MessageType.Ad : MessageType.Message, core.characters.ownCharacter, this.enteredText, new Date()));
         if(isAd)
             this.nextAd = Date.now() + core.connection.vars.lfrp_flood * 1000;
-        else this.enteredText = '';
+        else this.clearText();
     }
 }
 

@@ -175,11 +175,12 @@ let dictDir = path.join(electron.remote.app.getPath('userData'), 'spellchecker')
 if(process.platform === 'win32')
    exec(`for /d %I in ("${dictDir}") do @echo %~sI`, (_, stdout) => { dictDir = stdout.trim(); });
 electron.webFrame.setSpellCheckProvider('', false, {spellCheck: (text) => !spellchecker.isMisspelled(text)});
-electron.ipcRenderer.on('settings', async(_: Event, s: GeneralSettings) => {
+function onSettings(s: GeneralSettings): void {
     settings = s;
     spellchecker.setDictionary(s.spellcheckLang, dictDir);
     for(const word of s.customDictionary) spellchecker.add(word);
-});
+}
+electron.ipcRenderer.on('settings', (_: Event, s: GeneralSettings) => onSettings(s));
 
 const params = <{[key: string]: string | undefined}>qs.parse(window.location.search.substr(1));
 let settings = <GeneralSettings>JSON.parse(params['settings']!);
@@ -192,7 +193,7 @@ if(params['import'] !== undefined)
     } catch {
         alert(l('importer.error'));
     }
-
+onSettings(settings);
 //tslint:disable-next-line:no-unused-expression
 new Index({
     el: '#app',

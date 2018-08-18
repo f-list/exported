@@ -163,7 +163,7 @@ function loadIndex(name: string): Index {
     const dir = getLogDir(name);
     const files = fs.readdirSync(dir);
     for(const file of files)
-        if(file.substr(-4) === '.idx') {
+        if(file.substr(-4) === '.idx')
             try {
                 const content = fs.readFileSync(path.join(dir, file));
                 let offset = content.readUInt8(0, noAssert) + 1;
@@ -178,10 +178,10 @@ function loadIndex(name: string): Index {
                     item.offsets.push(content.readUIntLE(offset + 2, 5, noAssert));
                 }
                 index[file.slice(0, -4).toLowerCase()] = item;
-            } catch {
+            } catch(e) {
+                console.error(e);
                 alert(l('logs.corruption.desktop'));
             }
-        }
     return index;
 }
 
@@ -215,7 +215,8 @@ export class Logs implements Logging {
             }
             if(count !== 0) messages = messages.slice(count);
             return messages;
-        } catch {
+        } catch(e) {
+            console.error(e);
             alert(l('logs.corruption.desktop'));
             return [];
         } finally {
@@ -253,7 +254,6 @@ export class Logs implements Logging {
             const length = end - pos;
             const buffer = Buffer.allocUnsafe(length);
             await read(fd, buffer, 0, length, pos);
-            fs.closeSync(fd);
             let offset = 0;
             while(offset < length) {
                 const deserialized = deserializeMessage(buffer, offset);
@@ -261,7 +261,8 @@ export class Logs implements Logging {
                 offset += deserialized.size;
             }
             return messages;
-        } catch {
+        } catch(e) {
+            console.error(e);
             alert(l('logs.corruption.desktop'));
             return [];
         } finally {

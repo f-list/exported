@@ -355,10 +355,36 @@ const commands: {readonly [key: string]: Command | undefined} = {
         params: [{type: ParamType.String, delimiter: ' '}, {type: ParamType.String}]
     },
     elf: {
-        exec: (conv: Conversation) => conv.infoText =
-            'Now no one can say there\'s "not enough Elf." It\'s a well-kept secret, but elves love headpets. You should try it sometime.',
+        exec: (conv: Conversation) => conv.infoText = elf[Math.floor(Math.random() * elf.length)],
         documented: false
     }
 };
+
+const elf = [ //Ceran is to be thanked for most of these.
+    `Now no one can say there's "not enough Elf." It's a well-kept secret, but elves love headpets. You should try it sometime.`,
+    `Your task for the day: provide a soft cushion in a sunny area for maximum elf comfort, earn +2 Bliss pts.`,
+    `Your task for the day: pet an elf at least (3) times, receive Good Karma.`,
+    `Your task for the day: make dinner for an elf, receive +3 Luck pts.`,
+    `The reason that elves' ears are so long is so that they can better hear your sins. Now that's an Elf Fact!`,
+    `A "straight" elf is basically an oxymoron.`,
+    `Don't forget to water your elf today!`,
+    `Please don't let your elf eat out of the trash can.`,
+    `Elves are not allowed to have soda after 12pm, but they will anyway.`,
+    `Pet an elf on the ears (4) times. Any more and the elf will bite. Now that's an Elf Fact!`,
+    `There are two kinds of people in the world. People who like elves. And people with questionable taste.`,
+    `Love yourself, pet an elf!!!`,
+    `Your task for the day: leave out snacks for your local elves, they'll help dispel vermin!`,
+    `An elf in your home will discourage the presence of predators! Or summon them. I forget which.`,
+    `If you crack open an elf, there's just a smaller elf within. It's just smaller and smaller elves all the way down.`,
+    `In case of an emergency, an elf's ass can be used as a flotation device. Now that's an Elf Fact!`,
+    `Running low on inventory space? An elf can be used to slot additional cylindrical artifacts! Now that's an Elf Fact!`,
+    `The average elf can consume half their body weight in cum. Now that's an Elf Fact!`,
+    `Your task for the day: subjugate yourself to your elven overlords in order to achieve righteous bliss.`,
+    `Your task for the day: Rub an elf's tummy. Be wary of them bear-trapping your arm as the forces of darkness consume their soul.`,
+    `Listen, that elfroot you found in my sock drawer is PURELY medicinal!`,
+    `What are elves? We just don't know.`,
+    `As long as you pet an elf's head, they will be content. What will happen if you stop? No one's ever come back to tell the tale.`,
+    `Elves are very helpful creatures. Just ask them to carry something for you, and they will. Especially eggs.`
+];
 
 export default commands;

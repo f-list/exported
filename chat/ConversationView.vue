@@ -174,6 +174,7 @@
         keypressHandler!: EventListener;
         scrolledDown = true;
         scrolledUp = false;
+        ignoreScroll = false;
         adCountdown = 0;
         adsMode = l('channel.mode.ads');
 
@@ -184,11 +185,7 @@
                 icon: 'fa-question',
                 handler: () => (<CommandHelp>this.$refs['helpDialog']).show()
             }];
-            window.addEventListener('resize', this.resizeHandler = () => {
-                if(this.scrolledDown)
-                    this.messageView.scrollTop = this.messageView.scrollHeight - this.messageView.offsetHeight;
-                this.onMessagesScroll();
-            });
+            window.addEventListener('resize', this.resizeHandler = () => this.keepScroll());
             window.addEventListener('keypress', this.keypressHandler = () => {
                 if(document.getSelection().isCollapsed && !anyDialogsShown &&
                     (document.activeElement === document.body || document.activeElement.tagName === 'A'))
@@ -244,14 +241,14 @@
             return this.conversation.messages.filter((x) => filter.test(x.text));
         }
 
-        sendButton(): void {
-            setImmediate(async() => this.conversation.send());
+        async sendButton(): Promise<void> {
+            return this.conversation.send();
         }
 
         @Watch('conversation')
         conversationChanged(): void {
             if(!anyDialogsShown) (<Editor>this.$refs['textBox']).focus();
-            setTimeout(() => this.messageView.scrollTop = this.messageView.scrollHeight - this.messageView.offsetHeight);
+            this.$nextTick(() => setTimeout(() => this.messageView.scrollTop = this.messageView.scrollHeight));
             this.scrolledDown = true;
         }
 
@@ -265,10 +262,17 @@
 
         keepScroll(): void {
             if(this.scrolledDown)
-                this.$nextTick(() => setTimeout(() => this.messageView.scrollTop = this.messageView.scrollHeight, 0));
+                this.$nextTick(() => setTimeout(() => {
+                    this.ignoreScroll = true;
+                    this.messageView.scrollTop = this.messageView.scrollHeight;
+                }, 0));
         }
 
         onMessagesScroll(): void {
+            if(this.ignoreScroll) {
+                this.ignoreScroll = false;
+                return;
+            }
             if(this.messageView.scrollTop < 20) {
                 if(!this.scrolledUp) {
                     const firstMessage = this.messageView.firstElementChild;
@@ -334,7 +338,7 @@
                 else if(getKey(e) === Keys.Enter) {
                     if(e.shiftKey === this.settings.enterSend) return;
                     e.preventDefault();
-                    setImmediate(async() => this.conversation.send());
+                    await this.conversation.send();
                 }
             }
         }

@@ -2,10 +2,10 @@
     <div class="row character-page" id="pageBody">
         <div class="alert alert-info" v-show="loading" style="margin:0 15px;flex:1">Loading character information.</div>
         <div class="alert alert-danger" v-show="error" style="margin:0 15px;flex:1">{{error}}</div>
-        <div class="col-md-4 col-lg-3 col-xl-2" v-if="!loading">
+        <div class="col-md-4 col-lg-3 col-xl-2" v-if="!loading && character">
             <sidebar :character="character" @memo="memo" @bookmarked="bookmarked" :oldApi="oldApi"></sidebar>
         </div>
-        <div class="col-md-8 col-lg-9 col-xl-10 profile-body" v-if="!loading">
+        <div class="col-md-8 col-lg-9 col-xl-10 profile-body" v-if="!loading && character">
             <div id="characterView">
                 <div>
                     <div v-if="character.ban_reason" id="headerBanReason" class="alert alert-warning">
@@ -146,6 +146,8 @@
         }
 
         private async _getCharacter(): Promise<void> {
+            this.error = '';
+            this.character = null;
             if(this.name === undefined || this.name.length === 0)
                 return;
             try {
@@ -154,12 +156,11 @@
                 this.character = await methods.characterData(this.name, this.characterid);
                 standardParser.allowInlines = true;
                 standardParser.inlines = this.character.character.inlines;
-                this.loading = false;
             } catch(e) {
-                if(Utils.isJSONError(e))
-                    this.error = <string>e.response.data.error;
+                this.error = Utils.isJSONError(e) ? <string>e.response.data.error : (<Error>e).message;
                 Utils.ajaxError(e, 'Failed to load character information.');
             }
+            this.loading = false;
         }
     }
 </script>

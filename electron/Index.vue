@@ -267,7 +267,7 @@
         height: 100%;
     }
 
-    *:not([draggable]), *::after, *::before {
+    a[href^="#"]:not([draggable]) {
         -webkit-user-drag: none;
         -webkit-app-region: no-drag;
     }

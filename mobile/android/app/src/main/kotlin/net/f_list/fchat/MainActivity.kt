@@ -16,10 +16,8 @@ import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import org.json.JSONTokener
 import java.io.FileOutputStream
 import java.net.URLDecoder
-import java.util.*
 
 
 class MainActivity : Activity() {
@@ -55,7 +53,7 @@ class MainActivity : Activity() {
 		}
 		webView.webChromeClient = object : WebChromeClient() {
 			override fun onJsAlert(view: WebView, url: String, message: String, result: JsResult): Boolean {
-				AlertDialog.Builder(this@MainActivity).setTitle(R.string.app_name).setMessage(message).setPositiveButton(R.string.ok, { _, _ -> result.confirm() }).show()
+				AlertDialog.Builder(this@MainActivity).setTitle(R.string.app_name).setMessage(message).setPositiveButton(R.string.ok, { _, _ -> }).setOnDismissListener({ result.confirm() }).show()
 				return true
 			}
 

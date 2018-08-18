@@ -216,12 +216,14 @@
                     if(this.undoIndex === 0 && this.undoStack[0] !== this.text) this.undoStack.unshift(this.text);
                     if(this.undoStack.length > this.undoIndex + 1) {
                         this.text = this.undoStack[++this.undoIndex];
+                        this.$emit('input', this.text);
                         this.lastInput = Date.now();
                     }
                 } else if(key === Keys.KeyY) {
                     e.preventDefault();
                     if(this.undoIndex > 0) {
                         this.text = this.undoStack[--this.undoIndex];
+                        this.$emit('input', this.text);
                         this.lastInput = Date.now();
                     }
                 }

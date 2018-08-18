@@ -8,11 +8,13 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Vibrator
+import android.provider.Settings
 import android.webkit.JavascriptInterface
 import java.net.URL
 
@@ -20,19 +22,12 @@ class Notifications(private val ctx: Context) {
 	init {
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager;
-			manager.createNotificationChannel(NotificationChannel("messages", ctx.getString(R.string.channel_messages), NotificationManager.IMPORTANCE_LOW))
+			manager.createNotificationChannel(NotificationChannel("messages", ctx.getString(R.string.channel_messages), NotificationManager.IMPORTANCE_DEFAULT))
 		}
 	}
 
 	@JavascriptInterface
 	fun notify(notify: Boolean, title: String, text: String, icon: String, sound: String?, data: String?): Int {
-		if(!notify) {
-			val vibrator = (ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
-			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-				vibrator.vibrate(400, Notification.AUDIO_ATTRIBUTES_DEFAULT)
-			else vibrator.vibrate(400)
-			return 0
-		}
 		if(sound != null) {
 			val player = MediaPlayer()
 			val asset = ctx.assets.openFd("www/sounds/$sound.mp3")
@@ -41,6 +36,15 @@ class Notifications(private val ctx: Context) {
 			player.prepare()
 			player.start()
 			player.setOnCompletionListener { it.release() }
+		}
+		if(!notify) {
+			if((ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).ringerMode != AudioManager.RINGER_MODE_SILENT) {
+				val vibrator = (ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
+				if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+					vibrator.vibrate(400, Notification.AUDIO_ATTRIBUTES_DEFAULT)
+				else vibrator.vibrate(400)
+			}
+			return 0
 		}
 		val intent = Intent(ctx, MainActivity::class.java)
 		intent.action = "notification"
