@@ -613,30 +613,36 @@ export default function(this: void): Interfaces.State {
         if(conv !== undefined) conv.typingStatus = data.status;
     });
     connection.onMessage('CBU', async(data, time) => {
-        const text = l('events.ban', data.channel, data.character, data.operator);
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
+        const text = l('events.ban', conv.name, data.character, data.operator);
         conv.infoText = text;
         return addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('CKU', async(data, time) => {
-        const text = l('events.kick', data.channel, data.character, data.operator);
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
+        const text = l('events.kick', conv.name, data.character, data.operator);
         conv.infoText = text;
         return addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('CTU', async(data, time) => {
-        const text = l('events.timeout', data.channel, data.character, data.operator, data.length.toString());
         const conv = state.channelMap[data.channel.toLowerCase()];
         if(conv === undefined) return core.channels.leave(data.channel);
+        const text = l('events.timeout', conv.name, data.character, data.operator, data.length.toString());
         conv.infoText = text;
         return addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('BRO', async(data, time) => {
-        const text = data.character === undefined ? decodeHTML(data.message) :
-            l('events.broadcast', `[user]${data.character}[/user]`, decodeHTML(data.message.substr(data.character.length + 23)));
-        return addEventMessage(new EventMessage(text, time));
+        if(data.character !== undefined) {
+            const content = decodeHTML(data.message.substr(data.character.length + 24));
+            const message = new EventMessage(l('events.broadcast', `[user]${data.character}[/user]`, content), time);
+            await state.consoleTab.addMessage(message);
+            await core.notifications.notify(state.consoleTab, l('events.broadcast.notification', data.character), content,
+                characterImage(data.character), 'attention');
+            for(const conv of (<Conversation[]>state.channelConversations).concat(state.privateConversations))
+                await conv.addMessage(message);
+        } else return addEventMessage(new EventMessage(decodeHTML(data.message), time));
     });
     connection.onMessage('CIU', async(data, time) => {
         const text = l('events.invite', `[user]${data.sender}[/user]`, `[session=${data.title}]${data.name}[/session]`);

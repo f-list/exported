@@ -1,18 +1,18 @@
 <template>
-    <div style="display:flex;flex-direction:column;height:100%;padding:1px" :class="'platform-' + platform" @auxclick.prevent>
+    <div style="display:flex;flex-direction:column;height:100%" :class="'platform-' + platform" @auxclick.prevent>
         <div v-html="styling"></div>
-        <div style="display:flex;align-items:stretch;" class="border-bottom" id="window-tabs">
-            <h4>F-Chat</h4>
+        <div style="display:flex;align-items:stretch;border-bottom-width:1px" class="border-bottom" id="window-tabs">
+            <h4 style="padding:2px 0">F-Chat</h4>
             <div class="btn" :class="'btn-' + (hasUpdate ? 'warning' : 'light')" @click="openMenu" id="settings">
                 <i class="fa fa-cog"></i>
             </div>
-            <ul class="nav nav-tabs" style="border-bottom:0;margin-bottom:-2px" ref="tabs">
+            <ul class="nav nav-tabs" style="border-bottom:0;margin-bottom:-1px;margin-top:1px" ref="tabs">
                 <li v-for="tab in tabs" :key="tab.view.id" class="nav-item" @click.middle="remove(tab)">
-                    <a href="#" @click.prevent="show(tab)" class="nav-link"
+                    <a href="#" @click.prevent="show(tab)" class="nav-link tab"
                         :class="{active: tab === activeTab, hasNew: tab.hasNew && tab !== activeTab}">
                         <img v-if="tab.user" :src="'https://static.f-list.net/images/avatar/' + tab.user.toLowerCase() + '.png'"/>
                         <span class="d-sm-inline d-none">{{tab.user || l('window.newTab')}}</span>
-                        <a href="#" class="btn" :aria-label="l('action.close')" style="margin-left:10px;padding:0;color:inherit"
+                        <a href="#" :aria-label="l('action.close')" style="margin-left:10px;padding:0;color:inherit;text-decoration:none"
                             @click.stop="remove(tab)"><i class="fa fa-times"></i>
                         </a>
                     </a>
@@ -21,7 +21,7 @@
                     <a href="#" @click.prevent="addTab" class="nav-link"><i class="fa fa-plus"></i></a>
                 </li>
             </ul>
-            <div style="flex:1;display:flex;justify-content:flex-end;-webkit-app-region:drag;margin-top:3px" class="btn-group"
+            <div style="flex:1;display:flex;justify-content:flex-end;-webkit-app-region:drag" class="btn-group"
                 id="windowButtons">
                 <i class="far fa-window-minimize btn btn-light" @click.stop="minimize"></i>
                 <i class="far btn btn-light" :class="'fa-window-' + (isMaximized ? 'restore' : 'maximize')" @click="maximize"></i>
@@ -225,7 +225,7 @@
         }
 
         remove(tab: Tab, shouldConfirm: boolean = true): void {
-            if(shouldConfirm && tab.user !== undefined && !confirm(l('chat.confirmLeave'))) return;
+            if(this.lockTab || shouldConfirm && tab.user !== undefined && !confirm(l('chat.confirmLeave'))) return;
             this.tabs.splice(this.tabs.indexOf(tab), 1);
             electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
             delete this.tabMap[tab.view.webContents.id];
@@ -259,11 +259,12 @@
     #window-tabs {
         user-select: none;
         .btn {
+            border: 0;
             border-radius: 0;
-            padding: 2px 15px;
+            padding: 0 18px;
             display: flex;
-            margin: 0px -1px -1px 0;
             align-items: center;
+            line-height: 1;
             -webkit-app-region: no-drag;
         }
 
@@ -287,10 +288,6 @@
                 height: 28px;
                 margin: -5px 3px -5px -5px;
             }
-
-            &.active {
-                margin-bottom: -2px;
-            }
         }
 
         h4 {
@@ -307,8 +304,8 @@
     }
 
     #windowButtons .btn {
-        margin: -4px -1px -1px 0;
         border-top: 0;
+        font-size: 14px;
     }
 
     .platform-darwin {
@@ -322,8 +319,8 @@
             }
 
             .btn, li a {
-                padding-top: 5px;
-                padding-bottom: 5px;
+                padding-top: 6px;
+                padding-bottom: 6px;
             }
         }
     }

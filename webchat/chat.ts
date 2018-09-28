@@ -40,8 +40,7 @@ import '../scss/fa.scss'; //tslint:disable-line:no-import-side-effect
 import {Logs, SettingsStore} from './logs';
 import Notifications from './notifications';
 
-//@ts-ignore
-if(typeof window.Promise !== 'function' || typeof window.Notification !== 'function') //tslint:disable-line:strict-type-predicates
+if(typeof (<{Promise?: object}>window).Promise !== 'function') //tslint:disable-line:strict-type-predicates
     alert('Your browser is too old to be supported by F-Chat 3.0. Please update to a newer version.');
 
 const version = (<{version: string}>require('./package.json')).version; //tslint:disable-line:no-require-imports

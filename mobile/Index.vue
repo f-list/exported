@@ -1,7 +1,7 @@
 <template>
     <div id="page" style="position: relative; padding: 10px;" v-if="settings">
         <div v-html="styling"></div>
-        <div v-if="!characters" style="display:flex; align-items:center; justify-content:center; height: 100%;">
+        <div v-if="!characters" style="display:flex; align-items:center; justify-content:center; min-height: 100%;">
             <div class="card bg-light" style="width: 400px;">
                 <h3 class="card-header" style="margin-top:0">{{l('title')}}</h3>
                 <div class="card-body">

@@ -53,9 +53,13 @@ class Notifications(private val ctx: Context) {
 				.setContentIntent(PendingIntent.getActivity(ctx, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT)).setDefaults(Notification.DEFAULT_VIBRATE or Notification.DEFAULT_LIGHTS)
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) notification.setChannelId("messages")
 		object : AsyncTask<String, Void, Bitmap>() {
-			override fun doInBackground(vararg args: String): Bitmap {
-				val connection = URL(args[0]).openConnection()
-				return BitmapFactory.decodeStream(connection.getInputStream())
+			override fun doInBackground(vararg args: String): Bitmap? {
+				return try {
+					val connection = URL(args[0]).openConnection()
+					BitmapFactory.decodeStream(connection.getInputStream())
+				} catch(e: Exception) {
+					null
+				}
 			}
 
 			override fun onPostExecute(result: Bitmap?) {

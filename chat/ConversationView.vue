@@ -187,8 +187,9 @@
             }];
             window.addEventListener('resize', this.resizeHandler = () => this.keepScroll());
             window.addEventListener('keypress', this.keypressHandler = () => {
-                if(document.getSelection().isCollapsed && !anyDialogsShown &&
-                    (document.activeElement === document.body || document.activeElement.tagName === 'A'))
+                const selection = document.getSelection();
+                if((selection === null || selection.isCollapsed) && !anyDialogsShown &&
+                    (document.activeElement === document.body || document.activeElement === null || document.activeElement.tagName === 'A'))
                     (<Editor>this.$refs['textBox']).focus();
             });
             window.addEventListener('keydown', this.keydownHandler = ((e: KeyboardEvent) => {
@@ -211,11 +212,9 @@
                         this.adsMode = l('channel.mode.ads');
                     } else this.adsMode = l('channel.mode.ads.countdown', Math.floor(diff / 60), Math.floor(diff % 60));
                 };
-                if(Date.now() < value) {
-                    if(this.adCountdown === 0)
-                        this.adCountdown = window.setInterval(setAdCountdown, 1000);
-                    setAdCountdown();
-                }
+                if(Date.now() < value && this.adCountdown === 0)
+                    this.adCountdown = window.setInterval(setAdCountdown, 1000);
+                setAdCountdown();
             });
         }
 
@@ -261,11 +260,13 @@
         }
 
         keepScroll(): void {
-            if(this.scrolledDown)
+            if(this.scrolledDown) {
+                this.ignoreScroll = true;
                 this.$nextTick(() => setTimeout(() => {
                     this.ignoreScroll = true;
                     this.messageView.scrollTop = this.messageView.scrollHeight;
                 }, 0));
+            }
         }
 
         onMessagesScroll(): void {

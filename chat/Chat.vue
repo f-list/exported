@@ -99,7 +99,7 @@
                     return;
                 }
                 const selection = document.getSelection();
-                if(selection.isCollapsed) return;
+                if(selection === null || selection.isCollapsed) return;
                 const range = selection.getRangeAt(0);
                 let start = range.startContainer, end = range.endContainer;
                 let startValue: string;

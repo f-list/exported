@@ -17,6 +17,7 @@ export const BBCodeView: Component = {
             insert(node: VNode): void {
                 node.elm!.appendChild(core.bbCodeParser.parseEverything(
                     context.props.text !== undefined ? context.props.text : context.props.unsafeText));
+                if(context.props.afterInsert !== undefined) context.props.afterInsert(node.elm);
             },
             destroy(node: VNode): void {
                 const element = (<BBCodeElement>(<Element>node.elm).firstChild);

@@ -15,6 +15,7 @@ export class GeneralSettings {
     version = electron.app.getVersion();
     beta = false;
     customDictionary: string[] = [];
+    hwAcceleration = true;
 }
 
 export function mkdir(dir: string): void {

@@ -45,7 +45,7 @@ type Index = {[key: string]: StoredConversation | undefined};
 async function openDatabase(character: string): Promise<IDBDatabase> {
     const request = window.indexedDB.open(`logs-${character}`);
     request.onupgradeneeded = () => {
-        const db = <IDBDatabase>request.result;
+        const db = request.result;
         const logsStore = db.createObjectStore('logs', {keyPath: 'id', autoIncrement: true});
         logsStore.createIndex('conversation', 'conversation');
         logsStore.createIndex('conversation-day', hasComposite ? ['conversation', 'day'] : 'day');

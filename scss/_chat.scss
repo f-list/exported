@@ -201,6 +201,35 @@
   color: $text-dark;
 }
 
+.message-ad {
+  &:not(.expanded) {
+    max-height: 100px;
+    overflow: hidden;
+    position: relative;
+
+    > .expand {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 5px;
+      position: absolute;
+      top: 70px;
+      width: 100%;
+      left: 0;
+      height: 30px;
+      cursor: pointer;
+      background: linear-gradient(rgba($white, 0), $white);
+
+      &:hover {
+        background: linear-gradient(rgba($white, 0) 50%, $white);
+      }
+    }
+  }
+  >  .expand {
+    display: none;
+  }
+}
+
 .message-highlight {
   background-color: theme-color-level("success", -8);
 }
@@ -254,12 +283,17 @@ $genders: (
   max-width: 98%;
 }
 
-#window-tabs .hasNew {
-  background-color: theme-color-level("warning", -2);
-  border-color: theme-color-level("warning", -4);
-  color: color-yiq(theme-color("warning"));
-  &:hover {
-    background-color: theme-color-level("warning", -4);
+#window-tabs {
+  .hasNew {
+    background-color: theme-color-level("warning", -2);
+    border-color: theme-color-level("warning", -4);
+    color: color-yiq(theme-color("warning"));
+    &:hover {
+      background-color: theme-color-level("warning", -4);
+    }
+  }
+  .tab:not(.active):not(:hover) {
+    opacity: 0.5;
   }
 }
 

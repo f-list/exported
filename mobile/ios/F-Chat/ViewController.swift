@@ -21,12 +21,15 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         config.userContentController = controller
         config.mediaTypesRequiringUserActionForPlayback = [.video]
         config.setValue(true, forKey: "_alwaysRunsAtForegroundPriority")
-        webView = WKWebView(frame: .zero, configuration: config)
+        webView = WKWebView(frame: UIApplication.shared.windows[0].frame, configuration: config)
         webView.uiDelegate = self
         webView.navigationDelegate = self
         view = webView
         NotificationCenter.default.addObserver(self, selector: #selector(ViewController.keyboardWillShow), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(ViewController.keyboardDidShow), name: NSNotification.Name.UIKeyboardDidShow, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(ViewController.keyboardWillHide), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.bounces = false
         UIApplication.shared.statusBarStyle = .lightContent
         (UIApplication.shared.value(forKey: "statusBar") as! UIView).backgroundColor = UIColor(white: 0, alpha: 0.5)
     }
@@ -36,30 +39,25 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         let htmlPath = Bundle.main.path(forResource: "www/index", ofType: "html")
         let url = URL(fileURLWithPath: htmlPath!, isDirectory: false)
         webView.loadFileURL(url, allowingReadAccessTo: url)
-        webView.scrollView.isScrollEnabled = false
-    }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
     }
 
     @objc func keyboardWillShow(notification: NSNotification) {
         let info = notification.userInfo!
-        let frame = webView.frame
         let newHeight = view.window!.frame.height - (info[UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue.height
         UIView.animate(withDuration: (info[UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue, animations: {
-            self.webView.scrollView.bounds = CGRect(x: 0, y: 0, width: frame.width, height: newHeight)
-        }, completion: { (_: Bool) in self.webView.evaluateJavaScript("window.dispatchEvent(new Event('resize'))", completionHandler: nil) })
+            self.webView.frame = CGRect(x: 0, y: 0, width: self.webView.frame.width, height: newHeight)
+        })
+    }
+
+    @objc func keyboardDidShow(notification: NSNotification) {
+        webView.scrollView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: webView.scrollView.contentInset.bottom - webView.scrollView.adjustedContentInset.bottom, right: 0)
     }
 
     @objc func keyboardWillHide(notification: NSNotification) {
         let info = notification.userInfo!
-        let frame = webView.scrollView.bounds
-        let newHeight = frame.height + (info[UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue.height
         UIView.animate(withDuration: (info[UIKeyboardAnimationDurationUserInfoKey] as! NSNumber).doubleValue, animations: {
-            self.webView.scrollView.bounds = CGRect(x: 0, y: 0, width: frame.width, height: newHeight)
-        }, completion: { (_: Bool) in self.webView.evaluateJavaScript("window.dispatchEvent(new Event('resize'))", completionHandler: nil) })
+            self.webView.frame = UIApplication.shared.windows[0].frame
+        })
     }
 
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo,
@@ -101,4 +99,3 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         UIApplication.shared.open(navigationAction.request.url!)
     }
 }
-

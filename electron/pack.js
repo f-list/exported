@@ -1,3 +1,4 @@
+process.env.DEBUG = 'electron-windows-installer:main';
 const path = require('path');
 const pkg = require(path.join(__dirname, 'package.json'));
 const fs = require('fs');
@@ -60,7 +61,7 @@ require('electron-packager')({
         require('electron-winstaller').createWindowsInstaller({
             appDirectory: appPaths[0],
             outputDirectory: distDir,
-            iconUrl: icon,
+            iconUrl: 'file:///%localappdata%\\fchat\\app.ico',
             setupIcon: icon,
             noMsi: true,
             exe: 'F-Chat.exe',

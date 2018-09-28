@@ -205,6 +205,7 @@
                 if(getKey(e) === Keys.KeyA && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
                     e.preventDefault();
                     const selection = document.getSelection();
+                    if(selection === null) return;
                     selection.removeAllRanges();
                     if(this.messages.length > 0) {
                         const range = document.createRange();

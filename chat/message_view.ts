@@ -37,7 +37,18 @@ const MessageView: Component = {
                 userPostfix[message.type] !== undefined ? userPostfix[message.type]! : ' ');
             if(message.isHighlight) classes += ' message-highlight';
         }
-        children.push(createElement(BBCodeView, {props: {unsafeText: message.text}}));
+        children.push(createElement(BBCodeView,
+            {props: {unsafeText: message.text, afterInsert: message.type === Conversation.Message.Type.Ad ? (elm: HTMLElement) => {
+            setImmediate(() => {
+                elm = elm.parentElement!;
+                if(elm.scrollHeight > elm.offsetHeight) {
+                    const expand = document.createElement('div');
+                    expand.className = 'expand fas fa-caret-down';
+                    expand.addEventListener('click', function(): void { this.parentElement!.className += ' expanded'; });
+                    elm.appendChild(expand);
+                }
+            });
+        } : undefined}}));
         const node = createElement('div', {attrs: {class: classes}}, children);
         node.key = context.data.key;
         return node;

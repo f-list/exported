@@ -1,5 +1,4 @@
 const path = require('path');
-const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const fs = require('fs');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
@@ -109,20 +108,15 @@ const mainConfig = {
 module.exports = function(mode) {
     const themesDir = path.join(__dirname, '../scss/themes/chat');
     const themes = fs.readdirSync(themesDir);
-    const cssOptions = {use: ['css-loader', 'sass-loader']};
     for(const theme of themes) {
         if(!theme.endsWith('.scss')) continue;
         const absPath = path.join(themesDir, theme);
         rendererConfig.entry.chat.push(absPath);
-        const plugin = new ExtractTextPlugin('themes/' + theme.slice(0, -5) + '.css');
-        rendererConfig.plugins.push(plugin);
-        rendererConfig.module.rules.unshift({test: absPath, use: plugin.extract(cssOptions)});
+        rendererConfig.module.rules.unshift({test: absPath, loader: ['file-loader?name=themes/[name].css', 'extract-loader', 'css-loader', 'sass-loader']});
     }
     const faPath = path.join(themesDir, '../../fa.scss');
     rendererConfig.entry.chat.push(faPath);
-    const faPlugin = new ExtractTextPlugin('./fa.css');
-    rendererConfig.plugins.push(faPlugin);
-    rendererConfig.module.rules.unshift({test: faPath, use: faPlugin.extract(cssOptions)});
+    rendererConfig.module.rules.unshift({test: faPath, loader: ['file-loader?name=fa.css', 'extract-loader', 'css-loader', 'sass-loader']});
     if(mode === 'production') {
         process.env.NODE_ENV = 'production';
         mainConfig.devtool = rendererConfig.devtool = 'source-map';

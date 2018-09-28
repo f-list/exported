@@ -216,7 +216,7 @@
 
         async submit(): Promise<void> {
             const idleTimer = parseInt(this.idleTimer, 10);
-            const fontSize = parseInt(this.fontSize, 10);
+            const fontSize = parseFloat(this.fontSize);
             core.state.settings = {
                 playSound: this.playSound,
                 clickOpensMessage: this.clickOpensMessage,

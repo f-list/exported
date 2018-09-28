@@ -59,6 +59,19 @@ mkdir(settingsDir);
 const settingsFile = path.join(settingsDir, 'settings');
 const settings = new GeneralSettings();
 
+if(!fs.existsSync(settingsFile)) shouldImportSettings = true;
+else
+    try {
+        Object.assign(settings, <GeneralSettings>JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
+    } catch(e) {
+        log.error(`Error loading settings: ${e}`);
+    }
+
+if(!settings.hwAcceleration) {
+    log.info('Disabling hardware acceleration.');
+    app.disableHardwareAcceleration();
+}
+
 async function setDictionary(lang: string | undefined): Promise<void> {
     if(lang !== undefined) await ensureDictionary(lang);
     settings.spellcheckLang = lang;
@@ -141,14 +154,6 @@ function onReady(): void {
     log.transports.file.maxSize = 5 * 1024 * 1024;
     log.transports.file.file = path.join(baseDir, 'log.txt');
     log.info('Starting application.');
-
-    if(!fs.existsSync(settingsFile)) shouldImportSettings = true;
-    else
-        try {
-            Object.assign(settings, <GeneralSettings>JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
-        } catch(e) {
-            log.error(`Error loading settings: ${e}`);
-        }
 
     app.setAppUserModelId('com.squirrel.fchat.F-Chat');
     app.on('open-file', createWindow);
@@ -272,6 +277,12 @@ function onReady(): void {
                         type: <'radio'>'radio'
                     }))
                 }, {
+                    label: l('settings.hwAcceleration'), type: 'checkbox', checked: settings.hwAcceleration,
+                    click: (item: Electron.MenuItem) => {
+                        settings.hwAcceleration = item.checked;
+                        setGeneralSettings(settings);
+                    }
+                }, {
                     label: l('settings.beta'), type: 'checkbox', checked: settings.beta,
                     click: async(item: Electron.MenuItem) => {
                         settings.beta = item.checked;
@@ -383,6 +394,7 @@ function onReady(): void {
 }
 
 const isSquirrelStart = require('electron-squirrel-startup'); //tslint:disable-line:no-require-imports
-if(isSquirrelStart || process.env.NODE_ENV === 'production' && app.makeSingleInstance(createWindow)) app.quit();
+if(isSquirrelStart || process.env.NODE_ENV === 'production' && !app.requestSingleInstanceLock()) app.quit();
 else app.on('ready', onReady);
+app.on('second-instance', createWindow);
 app.on('window-all-closed', () => app.quit());

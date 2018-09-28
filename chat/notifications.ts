@@ -14,7 +14,8 @@ export default class Notifications implements Interface {
     async notify(conversation: Conversation, title: string, body: string, icon: string, sound: string): Promise<void> {
         if(!this.shouldNotify(conversation)) return;
         this.playSound(sound);
-        if(core.state.settings.notifications && (<any>Notification).permission === 'granted') { //tslint:disable-line:no-any
+        if(core.state.settings.notifications && (<{Notification?: object}>window).Notification !== undefined
+            && Notification.permission === 'granted') {
             const notification = new Notification(title, this.getOptions(conversation, body, icon));
             notification.onclick = () => {
                 conversation.show();
@@ -69,6 +70,6 @@ export default class Notifications implements Interface {
     }
 
     async requestPermission(): Promise<void> {
-        await Notification.requestPermission();
+        if((<{Notification?: object}>window).Notification !== undefined) await Notification.requestPermission();
     }
 }

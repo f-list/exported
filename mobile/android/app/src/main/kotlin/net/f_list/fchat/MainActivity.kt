@@ -11,19 +11,27 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.view.KeyEvent
 import android.view.ViewGroup
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.EditText
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.URLDecoder
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 
 class MainActivity : Activity() {
 	private lateinit var webView: WebView
 	private val profileRegex = Regex("^https?://(www\\.)?f-list.net/c/([^/#]+)/?#?")
 	private val backgroundPlugin = Background(this)
+	private var debugPressed = 0
+	private val debugHandler = Handler()
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -89,6 +97,50 @@ class MainActivity : Activity() {
 			}
 		}
 
+	}
+
+	private fun addFolder(folder: java.io.File, out: ZipOutputStream, path: String) {
+		for(file in folder.listFiles()) {
+			if(file.isDirectory) addFolder(file, out, "$path${file.name}/")
+			else {
+				out.putNextEntry(ZipEntry("$path${file.name}"))
+				FileInputStream(file).use { it.copyTo(out) }
+			}
+		}
+	}
+
+	val debug = Runnable {
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			val permission = checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+			if(permission != PackageManager.PERMISSION_GRANTED) {
+				return@Runnable requestPermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
+			}
+		}
+		val view = EditText(this)
+		view.hint = "Enter character name"
+		AlertDialog.Builder(this).setView(view).setPositiveButton("OK", { _, _ ->
+			val file = java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "test.zip")
+			val dest = FileOutputStream(file)
+			val out = ZipOutputStream(dest)
+			addFolder(java.io.File(filesDir, view.text.toString()), out, "")
+			out.close()
+			val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+			downloadManager.addCompletedDownload(file.name, file.name, false, "text/plain", file.absolutePath, file.length(), true)
+		}).setNegativeButton("Cancel", { dialog, _ -> dialog.dismiss() }).setTitle("DEBUG").show()
+	}
+
+	override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+		if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) debugPressed = debugPressed or 1
+		else if(keyCode == KeyEvent.KEYCODE_VOLUME_UP) debugPressed = debugPressed or 2
+		if(debugPressed == 3) debugHandler.postDelayed(debug, 5000)
+		return super.onKeyDown(keyCode, event)
+	}
+
+	override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+		if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) debugPressed = debugPressed xor 1
+		else if(keyCode == KeyEvent.KEYCODE_VOLUME_UP) debugPressed = debugPressed xor 2
+		debugHandler.removeCallbacks(debug)
+		return super.onKeyUp(keyCode, event)
 	}
 
 	override fun onBackPressed() {
