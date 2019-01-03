@@ -1,24 +1,23 @@
 <template>
-    <div style="height:100%; display: flex; position: relative;" id="chatView" @click="$refs['userMenu'].handleEvent($event)"
-        @contextmenu="$refs['userMenu'].handleEvent($event)" @touchstart.passive="$refs['userMenu'].handleEvent($event)"
-        @touchend="$refs['userMenu'].handleEvent($event)">
+    <div style="height:100%; display: flex; position: relative;" id="chatView" @click="userMenuHandle" @contextmenu="userMenuHandle" @touchstart.passive="userMenuHandle"
+        @touchend="userMenuHandle">
         <sidebar id="sidebar" :label="l('chat.menu')" icon="fa-bars">
             <img :src="characterImage(ownCharacter.name)" v-if="showAvatars" style="float:left;margin-right:5px;width:60px"/>
             <a target="_blank" :href="ownCharacterLink" class="btn" style="margin-right:5px">{{ownCharacter.name}}</a>
-            <a href="#" @click.prevent="logOut" class="btn"><i class="fas fa-sign-out-alt"></i>{{l('chat.logout')}}</a><br/>
+            <a href="#" @click.prevent="logOut()" class="btn"><i class="fas fa-sign-out-alt"></i>{{l('chat.logout')}}</a><br/>
             <div>
                 {{l('chat.status')}}
-                <a href="#" @click.prevent="$refs['statusDialog'].show()" class="btn">
+                <a href="#" @click.prevent="showStatus()" class="btn">
                     <span class="fas fa-fw" :class="getStatusIcon(ownCharacter.status)"></span>{{l('status.' + ownCharacter.status)}}
                 </a>
             </div>
             <div style="clear:both">
-                <a href="#" @click.prevent="$refs['searchDialog'].show()" class="btn"><span class="fas fa-search"></span>
+                <a href="#" @click.prevent="showSearch()" class="btn"><span class="fas fa-search"></span>
                     {{l('characterSearch.open')}}</a>
             </div>
-            <div><a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn"><span class="fas fa-cog"></span>
+            <div><a href="#" @click.prevent="showSettings()" class="btn"><span class="fas fa-cog"></span>
                 {{l('settings.open')}}</a></div>
-            <div><a href="#" @click.prevent="$refs['recentDialog'].show()" class="btn"><span class="fas fa-history"></span>
+            <div><a href="#" @click.prevent="showRecent()" class="btn"><span class="fas fa-history"></span>
                 {{l('chat.recentConversations')}}</a></div>
             <div class="list-group conversation-nav">
                 <a :class="getClasses(conversations.consoleTab)" href="#" @click.prevent="conversations.consoleTab.show()"
@@ -47,7 +46,7 @@
                     </div>
                 </a>
             </div>
-            <a href="#" @click.prevent="$refs['channelsDialog'].show()" class="btn"><span class="fas fa-list"></span>
+            <a href="#" @click.prevent="showChannels()" class="btn"><span class="fas fa-list"></span>
                 {{l('chat.channels')}}</a>
             <div class="list-group conversation-nav" ref="channelConversations">
                 <a v-for="conversation in conversations.channelConversations" href="#" @click.prevent="conversation.show()"
@@ -62,7 +61,7 @@
                 </a>
             </div>
         </sidebar>
-        <div style="width: 100%; display:flex; flex-direction:column;">
+        <div style="display:flex;flex-direction:column;flex:1;min-width:0">
             <div id="quick-switcher" class="list-group">
                 <a :class="getClasses(conversations.consoleTab)" href="#" @click.prevent="conversations.consoleTab.show()"
                     class="list-group-item list-group-item-action">
@@ -95,10 +94,10 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook} from '@f-list/vue-ts';
     //tslint:disable-next-line:no-require-imports
     import Sortable = require('sortablejs');
     import Vue from 'vue';
-    import Component from 'vue-class-component';
     import {Keys} from '../keys';
     import ChannelList from './ChannelList.vue';
     import CharacterSearch from './CharacterSearch.vue';
@@ -139,22 +138,23 @@
         focusListener!: () => void;
         blurListener!: () => void;
 
+        @Hook('mounted')
         mounted(): void {
             this.keydownListener = (e: KeyboardEvent) => this.onKeyDown(e);
             window.addEventListener('keydown', this.keydownListener);
             this.setFontSize(core.state.settings.fontSize);
-            Sortable.create(this.$refs['privateConversations'], {
+            Sortable.create(<HTMLElement>this.$refs['privateConversations'], {
                 animation: 50,
-                onEnd: async(e: {oldIndex: number, newIndex: number}) => {
+                onEnd: async(e) => {
                     if(e.oldIndex === e.newIndex) return;
-                    return core.conversations.privateConversations[e.oldIndex].sort(e.newIndex);
+                    return core.conversations.privateConversations[e.oldIndex!].sort(e.newIndex!);
                 }
             });
-            Sortable.create(this.$refs['channelConversations'], {
+            Sortable.create(<HTMLElement>this.$refs['channelConversations'], {
                 animation: 50,
-                onEnd: async(e: {oldIndex: number, newIndex: number}) => {
+                onEnd: async(e) => {
                     if(e.oldIndex === e.newIndex) return;
-                    return core.conversations.channelConversations[e.oldIndex].sort(e.newIndex);
+                    return core.conversations.channelConversations[e.oldIndex!].sort(e.newIndex!);
                 }
             });
             const ownCharacter = core.characters.ownCharacter;
@@ -175,7 +175,7 @@
             window.addEventListener('blur', this.blurListener = () => {
                 core.notifications.isInBackground = true;
                 if(idleTimer !== undefined) clearTimeout(idleTimer);
-                if(core.state.settings.idleTimer > 0)
+                if(core.state.settings.idleTimer > 0 && core.characters.ownCharacter.status !== 'dnd')
                     idleTimer = window.setTimeout(() => {
                         lastUpdate = Date.now();
                         idleStatus = {status: ownCharacter.status, statusmsg: ownCharacter.statusText};
@@ -195,6 +195,7 @@
             });
         }
 
+        @Hook('destroyed')
         destroyed(): void {
             window.removeEventListener('keydown', this.keydownListener);
             window.removeEventListener('focus', this.focusListener);
@@ -204,7 +205,7 @@
         needsReply(conversation: Conversation): boolean {
             if(!core.state.settings.showNeedsReply) return false;
             for(let i = conversation.messages.length - 1; i >= 0; --i) {
-                const sender = conversation.messages[i].sender;
+                const sender = (<Partial<Conversation.ChatMessage>>conversation.messages[i]).sender;
                 if(sender !== undefined)
                     return sender !== core.characters.ownCharacter;
             }
@@ -266,6 +267,30 @@
 
         logOut(): void {
             if(confirm(l('chat.confirmLeave'))) core.connection.close();
+        }
+
+        showSettings(): void {
+            (<SettingsView>this.$refs['settingsDialog']).show();
+        }
+
+        showSearch(): void {
+            (<CharacterSearch>this.$refs['searchDialog']).show();
+        }
+
+        showRecent(): void {
+            (<RecentConversations>this.$refs['recentDialog']).show();
+        }
+
+        showChannels(): void {
+            (<ChannelList>this.$refs['channelsDialog']).show();
+        }
+
+        showStatus(): void {
+            (<StatusSwitcher>this.$refs['statusDialog']).show();
+        }
+
+        userMenuHandle(e: MouseEvent | TouchEvent): void {
+            (<UserMenu>this.$refs['userMenu']).handleEvent(e);
         }
 
         get showAvatars(): boolean {

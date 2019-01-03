@@ -118,7 +118,7 @@ class MainActivity : Activity() {
 		}
 		val view = EditText(this)
 		view.hint = "Enter character name"
-		AlertDialog.Builder(this).setView(view).setPositiveButton("OK", { _, _ ->
+		AlertDialog.Builder(this).setView(view).setPositiveButton("OK") { _, _ ->
 			val file = java.io.File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "test.zip")
 			val dest = FileOutputStream(file)
 			val out = ZipOutputStream(dest)
@@ -126,7 +126,7 @@ class MainActivity : Activity() {
 			out.close()
 			val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 			downloadManager.addCompletedDownload(file.name, file.name, false, "text/plain", file.absolutePath, file.length(), true)
-		}).setNegativeButton("Cancel", { dialog, _ -> dialog.dismiss() }).setTitle("DEBUG").show()
+		}.setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }.setTitle("DEBUG").show()
 	}
 
 	override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

@@ -22,7 +22,7 @@ class Notifications(private val ctx: Context) {
 	init {
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			val manager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager;
-			manager.createNotificationChannel(NotificationChannel("messages", ctx.getString(R.string.channel_messages), NotificationManager.IMPORTANCE_DEFAULT))
+			manager.createNotificationChannel(NotificationChannel("messages", ctx.getString(R.string.channel_messages), NotificationManager.IMPORTANCE_HIGH))
 		}
 	}
 

@@ -184,7 +184,7 @@ export async function importCharacter(ownCharacter: string, progress: (progress:
         progress(i / subdirs.length);
         const subdir = subdirs[i];
         const subdirPath = path.join(dir, subdir);
-        if(subdir === '!Notifications' || subdir === 'Global' || !fs.lstatSync(subdirPath).isDirectory()) continue;
+        if(subdir === '!Notifications' || subdir === 'Global' || !fs.statSync(subdirPath).isDirectory()) continue;
 
         const channelMarker = subdir.indexOf('(');
         let key: string, name: string;

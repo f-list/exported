@@ -1,13 +1,12 @@
 <template>
-    <modal id="deleteDialog" :action="'Delete character' + name" :disabled="deleting" @submit.prevent="deleteCharacter">
+    <modal id="deleteDialog" :action="'Delete character' + name" :disabled="deleting" @submit.prevent="deleteCharacter()">
         Are you sure you want to permanently delete {{ name }}?<br/>
         Character deletion cannot be undone for any reason.
     </modal>
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {Component, Prop} from '@f-list/vue-ts';
     import CustomDialog from '../../components/custom_dialog';
     import Modal from '../../components/Modal.vue';
     import * as Utils from '../utils';

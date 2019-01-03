@@ -1,3 +1,3 @@
 .whiteText {
-  text-shadow: $gray-600 1px 1px 1px, $gray-600 -1px 1px 1px, $gray-600 1px -1px 1px, $gray-600 -1px -1px 1px;
+  @include text-outline($gray-600);
 }

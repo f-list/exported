@@ -1,16 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "es5",
-      "es2015.promise"
-    ],
+    "target": "es6",
     "module": "commonjs",
     "sourceMap": true,
     "experimentalDecorators": true,
     "allowJs": true,
-    "outDir": "build",
     "noEmitHelpers": true,
     "importHelpers": true,
     "forceConsistentCasingInFileNames": true,
@@ -18,8 +12,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["chat.ts", "../**/*.d.ts"],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["chat.ts", "../**/*.d.ts"]
 }

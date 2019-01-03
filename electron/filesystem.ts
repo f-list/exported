@@ -290,7 +290,7 @@ export class Logs implements Logging {
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
         const baseDir = core.state.generalSettings!.logDirectory;
         mkdir(baseDir);
-        return (fs.readdirSync(baseDir)).filter((x) => fs.lstatSync(path.join(baseDir, x)).isDirectory());
+        return (fs.readdirSync(baseDir)).filter((x) => fs.statSync(path.join(baseDir, x)).isDirectory());
     }
 }
 
@@ -312,7 +312,7 @@ export class SettingsStore implements Settings.Store {
 
     async getAvailableCharacters(): Promise<ReadonlyArray<string>> {
         const baseDir = core.state.generalSettings!.logDirectory;
-        return (fs.readdirSync(baseDir)).filter((x) => fs.lstatSync(path.join(baseDir, x)).isDirectory());
+        return (fs.readdirSync(baseDir)).filter((x) => fs.statSync(path.join(baseDir, x)).isDirectory());
     }
 
     async set<K extends keyof Settings.Keys>(key: K, value: Settings.Keys[K]): Promise<void> {

@@ -1,14 +1,7 @@
+import {InlineImage} from '../interfaces';
 import {CoreBBCodeParser} from './core';
 import {InlineDisplayMode} from './interfaces';
 import {BBCodeCustomTag, BBCodeSimpleTag, BBCodeTextTag} from './parser';
-
-interface InlineImage {
-    id: number
-    hash: string
-    extension: string
-    nsfw: boolean
-    name?: string
-}
 
 interface StandardParserSettings {
     siteDomain: string
@@ -29,7 +22,7 @@ export class StandardBBCodeParser extends CoreBBCodeParser {
         const outerEl = this.createElement('div');
         const el = this.createElement('img');
         el.className = 'inline-image';
-        el.title = el.alt = inline.name!;
+        el.title = el.alt = inline.name;
         el.src = `${this.settings.staticDomain}images/charinline/${p1}/${p2}/${inline.hash}.${inline.extension}`;
         outerEl.appendChild(el);
         return outerEl;

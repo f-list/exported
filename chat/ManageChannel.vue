@@ -38,8 +38,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {Component, Prop} from '@f-list/vue-ts';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
     import {Editor} from './bbcode';

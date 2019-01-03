@@ -1,7 +1,7 @@
 <template>
     <span v-show="isShown">
-        <div class="modal" @click.self="hideWithCheck" style="display:flex">
-            <div class="modal-dialog" :class="dialogClass" style="display:flex;align-items:center">
+        <div class="modal" @click.self="hideWithCheck()" style="display:flex;justify-content:center">
+            <div class="modal-dialog" :class="dialogClass" style="display:flex;align-items:center;margin-left:0;margin-right:0">
                 <div class="modal-content" style="max-height:100%">
                     <div class="modal-header" style="flex-shrink:0">
                         <h4 class="modal-title">
@@ -26,9 +26,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
     import {getKey} from '../chat/common';
     import {Keys} from '../keys';
 
@@ -95,6 +94,7 @@
             this.hide();
         }
 
+        @Hook('beforeDestroy')
         beforeDestroy(): void {
             if(this.isShown) this.hide();
         }

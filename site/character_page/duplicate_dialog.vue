@@ -1,5 +1,5 @@
 <template>
-    <modal id="duplicateDialog" :action="'Duplicate character' + name" :disabled="duplicating || checking" @submit.prevent="duplicate">
+    <modal id="duplicateDialog" :action="'Duplicate character' + name" :disabled="duplicating || checking" @submit.prevent="duplicate()">
         <p>This will duplicate the character, kinks, infotags, customs, subkinks and images. Guestbook
             entries, friends, groups, and bookmarks are not duplicated.</p>
         <div class="form-row mb-2">
@@ -17,8 +17,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {Component, Prop} from '@f-list/vue-ts';
     import CustomDialog from '../../components/custom_dialog';
     import FormGroupInputgroup from '../../components/form_group_inputgroup.vue';
     import Modal from '../../components/Modal.vue';
@@ -31,10 +30,10 @@
     })
     export default class DuplicateDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character!: Character;
+        readonly character!: Character;
 
         errors: {[key: string]: string} = {};
-        private newName = '';
+        newName = '';
         valid = false;
 
         checking = false;

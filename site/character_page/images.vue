@@ -10,19 +10,19 @@
         </template>
         <div v-if="!loading && !images.length" class="alert alert-info">No images.</div>
         <div class="image-preview" v-show="previewImage" @click="previewImage = ''">
-            <img :src="previewImage" />
+            <img :src="previewImage"/>
             <div class="modal-backdrop show"></div>
         </div>
     </div>
 </template>
 
 <script lang="ts">
+    import {Component, Prop} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {CharacterImage} from '../../interfaces';
     import * as Utils from '../utils';
     import {methods} from './data_store';
-    import {Character, CharacterImage} from './interfaces';
+    import {Character} from './interfaces';
 
     @Component
     export default class ImagesView extends Vue {

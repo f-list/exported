@@ -1,8 +1,10 @@
+import {Character as CharacterInfo, CharacterImage, CharacterSettings, Infotag, Kink, KinkChoice} from '../../interfaces';
+
 export interface CharacterMenuItem {
     label: string
     permission: string
     link(character: Character): string
-    handleClick?(evt?: MouseEvent): void
+    handleClick?(evt: MouseEvent): void
 }
 
 export interface SelectItem {
@@ -69,7 +71,6 @@ export interface SharedKinks {
 }
 
 export type SiteDate = number | string | null;
-export type KinkChoice = 'favorite' | 'yes' | 'maybe' | 'no';
 export type KinkChoiceFull = KinkChoice | number;
 export const CONTACT_GROUP_ID = '1';
 
@@ -93,28 +94,11 @@ export interface DisplayInfotag {
     list?: number
 }
 
-export interface Kink {
-    id: number
-    name: string
-    description: string
-    kink_group: number
-}
-
 export interface KinkGroup {
     id: number
     name: string
     description: string
     sort_order: number
-}
-
-export interface Infotag {
-    id: number
-    name: string
-    type: 'number' | 'text' | 'list'
-    search_field: string
-    validator: string
-    allow_legacy: boolean
-    infotag_group: string
 }
 
 export interface InfotagGroup {
@@ -139,46 +123,6 @@ export interface CharacterFriend {
 export interface CharacterKink {
     id: number
     choice: KinkChoice
-}
-
-export interface CharacterInfotag {
-    list?: number
-    string?: string
-    number?: number
-}
-
-export interface CharacterCustom {
-    id: number
-    choice: KinkChoice
-    name: string
-    description: string
-}
-
-export interface CharacterInline {
-    id: number
-    hash: string
-    extension: string
-    nsfw: boolean
-}
-
-export type CharacterImage = CharacterImageOld | CharacterImageNew;
-
-export interface CharacterImageNew {
-    id: number
-    extension: string
-    description: string
-    hash: string
-    sort_order: number | null
-}
-
-export interface CharacterImageOld {
-    id: number
-    extension: string
-    height: number
-    width: number
-    description: string
-    sort_order: number | null
-    url: string
 }
 
 export type CharacterName = string | CharacterNameDetails;
@@ -209,34 +153,6 @@ export interface CharacterGroup {
     myPermissions: GroupPermissions
     character: CharacterName
     owner: boolean
-}
-
-export interface CharacterInfo {
-    readonly id: number
-    readonly name: string
-    readonly description: string
-    readonly title?: string
-    readonly created_at: SiteDate
-    readonly updated_at: SiteDate
-    readonly views: number
-    readonly last_online_at?: SiteDate
-    readonly timezone?: number
-    readonly image_count?: number
-    readonly inlines: {[key: string]: CharacterInline | undefined}
-    images?: CharacterImage[]
-    readonly kinks: {[key: string]: KinkChoiceFull | undefined}
-    readonly customs: CharacterCustom[]
-    readonly infotags: {[key: string]: CharacterInfotag | undefined}
-    readonly online_chat?: boolean
-}
-
-export interface CharacterSettings {
-    readonly customs_first: boolean
-    readonly show_friends: boolean
-    readonly badges: boolean
-    readonly guestbook: boolean
-    readonly prevent_bookmarks: boolean
-    readonly public: boolean
 }
 
 export interface Character {

@@ -104,7 +104,6 @@ export interface Core {
     register(module: 'conversations', state: Conversation.State): void
     register(module: 'channels', state: Channel.State): void
     register(module: 'characters', state: Character.State): void
-    reloadSettings(): void
     watch<T>(getter: (this: VueState) => T, callback: WatchHandler<T>): void
 }
 

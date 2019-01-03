@@ -1,17 +1,17 @@
 <template>
     <div style="height:100%;display:flex;flex-direction:column;flex:1;margin:0 5px;position:relative" id="conversation">
-        <div style="display:flex" v-if="conversation.character" class="header">
+        <div style="display:flex" v-if="isPrivate(conversation)" class="header">
             <img :src="characterImage" style="height:60px;width:60px;margin-right:10px" v-if="settings.showAvatars"/>
             <div style="flex:1;position:relative;display:flex;flex-direction:column">
                 <div>
                     <user :character="conversation.character"></user>
-                    <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn">
+                    <a href="#" @click.prevent="showLogs()" class="btn">
                         <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
                     </a>
-                    <a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn">
+                    <a href="#" @click.prevent="showSettings()" class="btn">
                         <span class="fa fa-cog"></span> <span class="btn-text">{{l('conversationSettings.title')}}</span>
                     </a>
-                    <a href="#" @click.prevent="reportDialog.report();" class="btn">
+                    <a href="#" @click.prevent="reportDialog.report()" class="btn">
                         <span class="fa fa-exclamation-triangle"></span><span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
                 <div style="overflow:auto;max-height:50px">
@@ -20,7 +20,7 @@
                 </div>
             </div>
         </div>
-        <div v-else-if="conversation.channel" class="header">
+        <div v-else-if="isChannel(conversation)" class="header">
             <div style="display: flex; align-items: center;">
                 <div style="flex: 1;">
                     <span v-show="conversation.channel.id.substr(0, 4) !== 'adh-'" class="fa fa-star" :title="l('channel.official')"
@@ -30,33 +30,33 @@
                         <span class="fa" :class="{'fa-chevron-down': !descriptionExpanded, 'fa-chevron-up': descriptionExpanded}"></span>
                         <span class="btn-text">{{l('channel.description')}}</span>
                     </a>
-                    <a href="#" @click.prevent="$refs['manageDialog'].show()" v-show="isChannelMod" class="btn">
+                    <a href="#" @click.prevent="showManage()" v-show="isChannelMod" class="btn">
                         <span class="fa fa-edit"></span> <span class="btn-text">{{l('manageChannel.open')}}</span>
                     </a>
-                    <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn">
+                    <a href="#" @click.prevent="showLogs()" class="btn">
                         <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
                     </a>
-                    <a href="#" @click.prevent="$refs['settingsDialog'].show()" class="btn">
+                    <a href="#" @click.prevent="showSettings()" class="btn">
                         <span class="fa fa-cog"></span> <span class="btn-text">{{l('conversationSettings.title')}}</span>
                     </a>
-                    <a href="#" @click.prevent="reportDialog.report();" class="btn">
+                    <a href="#" @click.prevent="reportDialog.report()" class="btn">
                         <span class="fa fa-exclamation-triangle"></span><span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
                 <ul class="nav nav-pills mode-switcher">
                     <li v-for="mode in modes" class="nav-item">
-                        <a :class="{active: conversation.mode == mode, disabled: conversation.channel.mode != 'both'}"
+                        <a :class="isChannel(conversation) ? {active: conversation.mode == mode, disabled: conversation.channel.mode != 'both'} : undefined"
                             class="nav-link" href="#" @click.prevent="setMode(mode)">{{l('channel.mode.' + mode)}}</a>
                     </li>
                 </ul>
             </div>
             <div style="z-index:5;position:absolute;left:0;right:0;max-height:60%;overflow:auto"
-                :style="'display:' + (descriptionExpanded ? 'block' : 'none')" class="bg-solid-text border-bottom">
+                :style="{display: descriptionExpanded ? 'block' : 'none'}" class="bg-solid-text border-bottom">
                 <bbcode :text="conversation.channel.description"></bbcode>
             </div>
         </div>
         <div v-else class="header" style="display:flex;align-items:center">
             <h4>{{l('chat.consoleTab')}}</h4>
-            <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn">
+            <a href="#" @click.prevent="showLogs()" class="btn">
                 <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
             </a>
         </div>
@@ -64,31 +64,32 @@
             <div class="input-group-prepend">
                 <div class="input-group-text"><span class="fas fa-search"></span></div>
             </div>
-            <input v-model="searchInput" @keydown.esc="hideSearch" @keypress="lastSearchInput = Date.now()"
+            <input v-model="searchInput" @keydown.esc="hideSearch()" @keypress="lastSearchInput = Date.now()"
                 :placeholder="l('chat.search')" ref="searchField" class="form-control"/>
             <a class="btn btn-sm btn-light" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);line-height:0;z-index:10"
                 @click="hideSearch"><i class="fas fa-times"></i></a>
         </div>
-        <div class="border-top messages" :class="'messages-' + conversation.mode" ref="messages" @scroll="onMessagesScroll"
-            style="flex:1;overflow:auto;margin-top:2px;position:relative">
+        <div class="border-top messages" :class="isChannel(conversation) ? 'messages-' + conversation.mode : undefined" ref="messages"
+            @scroll="onMessagesScroll" style="flex:1;overflow:auto;margin-top:2px">
             <template v-for="message in messages">
-                <message-view :message="message" :channel="conversation.channel" :key="message.id"
+                <message-view :message="message" :channel="isChannel(conversation) ? conversation.channel : undefined" :key="message.id"
                     :classes="message == conversation.lastRead ? 'last-read' : ''">
                 </message-view>
-                <span v-if="message.sfc && message.sfc.action == 'report'" :key="'r' + message.id">
+                <span v-if="hasSFC(message) && message.sfc.action === 'report'" :key="'r' + message.id">
                     <a :href="'https://www.f-list.net/fchat/getLog.php?log=' + message.sfc.logid"
                         v-if="message.sfc.logid" target="_blank">{{l('events.report.viewLog')}}</a>
                     <span v-else>{{l('events.report.noLog')}}</span>
                     <span v-show="!message.sfc.confirmed">
-                        | <a href="#" @click.prevent="acceptReport(message.sfc)">{{l('events.report.confirm')}}</a>
+                        | <a href="#" @click.prevent="message.sfc.action === 'report' && acceptReport(message.sfc)">{{l('events.report.confirm')}}</a>
                     </span>
                 </span>
             </template>
         </div>
         <bbcode-editor v-model="conversation.enteredText" @keydown="onKeyDown" :extras="extraButtons" @input="keepScroll"
-            :classes="'form-control chat-text-box' + (conversation.isSendingAds ? ' ads-text-box' : '')" :hasToolbar="settings.bbCodeBar"
-            ref="textBox" style="position:relative;margin-top:5px" :maxlength="conversation.maxMessageLength">
-            <span v-if="conversation.typingStatus && conversation.typingStatus !== 'clear'" class="chat-info-text">
+            :classes="'form-control chat-text-box' + (isChannel(conversation) && conversation.isSendingAds ? ' ads-text-box' : '')"
+            :hasToolbar="settings.bbCodeBar" ref="textBox" style="position:relative;margin-top:5px"
+            :maxlength="isChannel(conversation) || isPrivate(conversation) ? conversation.maxMessageLength : undefined">
+            <span v-if="isPrivate(conversation) && conversation.typingStatus !== 'clear'" class="chat-info-text">
                 {{l('chat.typing.' + conversation.typingStatus, conversation.name)}}
             </span>
             <div v-show="conversation.infoText" class="chat-info-text">
@@ -100,10 +101,10 @@
                 <span class="redText" style="flex:1;margin-left:5px">{{conversation.errorText}}</span>
             </div>
             <div class="bbcode-editor-controls">
-                <div v-show="conversation.maxMessageLength" style="margin-right:5px">
+                <div v-if="isChannel(conversation) || isPrivate(conversation)" style="margin-right:5px">
                     {{getByteLength(conversation.enteredText)}} / {{conversation.maxMessageLength}}
                 </div>
-                <ul class="nav nav-pills send-ads-switcher" v-if="conversation.channel"
+                <ul class="nav nav-pills send-ads-switcher" v-if="isChannel(conversation)"
                     style="position:relative;z-index:10;margin-right:5px">
                     <li class="nav-item">
                         <a href="#" :class="{active: !conversation.isSendingAds, disabled: conversation.channel.mode != 'both'}"
@@ -120,14 +121,13 @@
         <command-help ref="helpDialog"></command-help>
         <settings ref="settingsDialog" :conversation="conversation"></settings>
         <logs ref="logsDialog" :conversation="conversation"></logs>
-        <manage-channel ref="manageDialog" :channel="conversation.channel" v-if="conversation.channel"></manage-channel>
+        <manage-channel ref="manageDialog" v-if="isChannel(conversation)" :channel="conversation.channel"></manage-channel>
     </div>
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
     import {EditorButton, EditorSelection} from '../bbcode/editor';
     import {isShowing as anyDialogsShown} from '../components/Modal.vue';
     import {Keys} from '../keys';
@@ -177,7 +177,10 @@
         ignoreScroll = false;
         adCountdown = 0;
         adsMode = l('channel.mode.ads');
+        isChannel = Conversation.isChannel;
+        isPrivate = Conversation.isPrivate;
 
+        @Hook('mounted')
         mounted(): void {
             this.extraButtons = [{
                 title: 'Help\n\nClick this button for a quick overview of slash commands.',
@@ -218,6 +221,7 @@
             });
         }
 
+        @Hook('destroyed')
         destroyed(): void {
             window.removeEventListener('resize', this.resizeHandler);
             window.removeEventListener('keydown', this.keydownHandler);
@@ -234,7 +238,7 @@
             return core.conversations.selectedConversation;
         }
 
-        get messages(): ReadonlyArray<Conversation.Message> {
+        get messages(): ReadonlyArray<Conversation.Message | Conversation.SFCMessage> {
             if(this.search === '') return this.conversation.messages;
             const filter = new RegExp(this.search.replace(/[^\w]/gi, '\\$&'), 'i');
             return this.conversation.messages.filter((x) => filter.test(x.text));
@@ -359,6 +363,22 @@
                 conv.isSendingAds = is;
                 (<Editor>this.$refs['textBox']).focus();
             }
+        }
+
+        showLogs(): void {
+            (<Logs>this.$refs['logsDialog']).show();
+        }
+
+        showSettings(): void {
+            (<ConversationSettings>this.$refs['settingsDialog']).show();
+        }
+
+        showManage(): void {
+            (<ManageChannel>this.$refs['manageDialog']).show();
+        }
+
+        hasSFC(message: Conversation.Message): message is Conversation.SFCMessage {
+            return (<Partial<Conversation.SFCMessage>>message).sfc !== undefined;
         }
 
         get characterImage(): string {

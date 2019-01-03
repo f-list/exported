@@ -1,8 +1,9 @@
 const path = require('path');
 const fs = require('fs');
-const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const ForkTsCheckerWebpackPlugin = require('@f-list/fork-ts-checker-webpack-plugin');
 const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const VueLoaderPlugin = require('vue-loader/lib/plugin');
+const vueTransformer = require('@f-list/vue-ts/transform').default;
 
 const mainConfig = {
     entry: [path.join(__dirname, 'main.ts'), path.join(__dirname, 'package.json')],
@@ -69,7 +70,8 @@ const mainConfig = {
                 options: {
                     appendTsSuffixTo: [/\.vue$/],
                     configFile: __dirname + '/tsconfig-renderer.json',
-                    transpileOnly: true
+                    transpileOnly: true,
+                    getCustomTransformers: () => ({before: [vueTransformer]})
                 }
             },
             {test: /\.eot(\?v=\d+\.\d+\.\d+)?$/, loader: 'file-loader'},

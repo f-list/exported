@@ -138,7 +138,7 @@ export namespace Connection {
         readonly vars: Vars
         readonly isOpen: boolean
         connect(character: string): void
-        close(): void
+        close(keepState?: boolean): void
         onMessage<K extends keyof ServerCommands>(type: K, handler: CommandHandler<K>): void
         offMessage<K extends keyof ServerCommands>(type: K, handler: CommandHandler<K>): void
         onEvent(type: EventType, handler: EventHandler): void
@@ -232,6 +232,10 @@ export namespace Channel {
 
 export type Channel = Channel.Channel;
 
+export namespace WebSocketConnection {
+    export enum ReadyState { CONNECTING, OPEN, CLOSING, CLOSED }
+}
+
 export interface WebSocketConnection {
     close(): void
     onMessage(handler: (message: string) => Promise<void>): void
@@ -239,4 +243,5 @@ export interface WebSocketConnection {
     onClose(handler: () => void): void
     onError(handler: (error: Error) => void): void
     send(message: string): void
+    readyState: WebSocketConnection.ReadyState
 }

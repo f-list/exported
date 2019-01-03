@@ -9,8 +9,8 @@
             </div>
             <div class="form-inline">
                 <select v-model="highlightGroup" class="form-control">
-                    <option :value="null">None</option>
-                    <option v-for="group in kinkGroups" :value="group.id" :key="group.id">{{group.name}}</option>
+                    <option :value="undefined">None</option>
+                    <option v-for="group in kinkGroups" v-if="group" :value="group.id" :key="group.id">{{group.name}}</option>
                 </select>
             </div>
         </div>
@@ -65,33 +65,29 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
+    import {Kink, KinkChoice} from '../../interfaces';
     import * as Utils from '../utils';
     import CopyCustomMenu from './copy_custom_menu.vue';
     import {methods, Store} from './data_store';
-    import {Character, DisplayKink, Kink, KinkChoice, KinkGroup} from './interfaces';
+    import {Character, DisplayKink, KinkGroup} from './interfaces';
     import KinkView from './kink.vue';
 
     @Component({
-        components: {
-            'context-menu': CopyCustomMenu,
-            kink: KinkView
-        }
+        components: {'context-menu': CopyCustomMenu, kink: KinkView}
     })
     export default class CharacterKinksView extends Vue {
-        //tslint:disable:no-null-keyword
         @Prop({required: true})
-        private readonly character!: Character;
+        readonly character!: Character;
         @Prop()
         readonly oldApi?: true;
-        private shared = Store;
+        shared = Store;
         characterToCompare = Utils.Settings.defaultCharacter;
-        highlightGroup: number | null = null;
+        highlightGroup: number | undefined;
 
-        private loading = false;
-        private comparing = false;
+        loading = false;
+        comparing = false;
         highlighting: {[key: string]: boolean} = {};
         comparison: {[key: string]: KinkChoice} = {};
 
@@ -142,7 +138,7 @@
             return this.comparing ? 'Clear' : 'Compare';
         }
 
-        get groupedKinks(): {[key in KinkChoice]: DisplayKink[]} | undefined {
+        get groupedKinks(): {[key in KinkChoice]: DisplayKink[]} {
             const kinks = this.shared.kinks.kinks;
             const characterKinks = this.character.character.kinks;
             const characterCustoms = this.character.character.customs;
@@ -167,8 +163,9 @@
                 return a.name < b.name ? -1 : 1;
             };
 
-            for(const custom of characterCustoms)
-                displayCustoms[custom.id] = {
+            for(const id in characterCustoms) {
+                const custom = characterCustoms[id]!;
+                displayCustoms[id] = {
                     id: custom.id,
                     name: custom.name,
                     description: custom.description,
@@ -179,6 +176,7 @@
                     ignore: false,
                     subkinks: []
                 };
+            }
 
             for(const kinkId in characterKinks) {
                 const kinkChoice = characterKinks[kinkId]!;

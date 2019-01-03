@@ -5,7 +5,6 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "allowJs": true,
-    "outDir": "build",
     "noEmitHelpers": true,
     "importHelpers": true,
     "forceConsistentCasingInFileNames": true,
@@ -13,8 +12,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["chat.ts", "../**/*.d.ts"],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["chat.ts", "../**/*.d.ts"]
 }

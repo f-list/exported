@@ -18,14 +18,14 @@
                     </a>
                 </li>
                 <li v-show="canOpenTab" class="addTab nav-item" id="addTab">
-                    <a href="#" @click.prevent="addTab" class="nav-link"><i class="fa fa-plus"></i></a>
+                    <a href="#" @click.prevent="addTab()" class="nav-link"><i class="fa fa-plus"></i></a>
                 </li>
             </ul>
             <div style="flex:1;display:flex;justify-content:flex-end;-webkit-app-region:drag" class="btn-group"
                 id="windowButtons">
-                <i class="far fa-window-minimize btn btn-light" @click.stop="minimize"></i>
-                <i class="far btn btn-light" :class="'fa-window-' + (isMaximized ? 'restore' : 'maximize')" @click="maximize"></i>
-                <span class="btn btn-light" @click.stop="close">
+                <i class="far fa-window-minimize btn btn-light" @click.stop="minimize()"></i>
+                <i class="far btn btn-light" :class="'fa-window-' + (isMaximized ? 'restore' : 'maximize')" @click="maximize()"></i>
+                <span class="btn btn-light" @click.stop="close()">
                     <i class="fa fa-times fa-lg"></i>
                 </span>
             </div>
@@ -36,12 +36,12 @@
 <script lang="ts">
     import Sortable = require('sortablejs'); //tslint:disable-line:no-require-imports
 
+    import {Component, Hook} from '@f-list/vue-ts';
     import * as electron from 'electron';
     import * as fs from 'fs';
     import * as path from 'path';
     import * as url from 'url';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
     import l from '../chat/localize';
     import {GeneralSettings} from './common';
 
@@ -71,10 +71,9 @@
 
     @Component
     export default class Window extends Vue {
-        //tslint:disable:no-null-keyword
         settings!: GeneralSettings;
         tabs: Tab[] = [];
-        activeTab: Tab | null = null;
+        activeTab: Tab | undefined;
         tabMap: {[key: number]: Tab} = {};
         isMaximized = browserWindow.isMaximized();
         canOpenTab = true;
@@ -83,6 +82,7 @@
         platform = process.platform;
         lockTab = false;
 
+        @Hook('mounted')
         mounted(): void {
             this.addTab();
             electron.ipcRenderer.on('settings', (_: Event, settings: GeneralSettings) => this.settings = settings);
@@ -105,7 +105,6 @@
                     tab.hasNew = false;
                     electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
                 }
-                electron.ipcRenderer.send('disconnect', tab.user);
                 tab.user = undefined;
                 tab.tray.setToolTip(l('title'));
                 tab.tray.setContextMenu(electron.remote.Menu.buildFromTemplate(this.createTrayMenu(tab)));
@@ -115,14 +114,8 @@
                 tab.hasNew = hasNew;
                 electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
             });
-            browserWindow.on('maximize', () => {
-                this.isMaximized = true;
-                this.activeTab!.view.setBounds(getWindowBounds());
-            });
-            browserWindow.on('unmaximize', () => {
-                this.isMaximized = false;
-                this.activeTab!.view.setBounds(getWindowBounds());
-            });
+            browserWindow.on('maximize', () => this.isMaximized = true);
+            browserWindow.on('unmaximize', () => this.isMaximized = false);
             electron.ipcRenderer.on('switch-tab', (_: Event) => {
                 const index = this.tabs.indexOf(this.activeTab!);
                 this.show(this.tabs[index + 1 === this.tabs.length ? 0 : index + 1]);
@@ -133,12 +126,12 @@
             document.addEventListener('click', () => this.activeTab!.view.webContents.focus());
             window.addEventListener('focus', () => this.activeTab!.view.webContents.focus());
 
-            Sortable.create(this.$refs['tabs'], {
+            Sortable.create(<HTMLElement>this.$refs['tabs'], {
                 animation: 50,
-                onEnd: (e: {oldIndex: number, newIndex: number}) => {
+                onEnd: (e) => {
                     if(e.oldIndex === e.newIndex) return;
-                    const tab = this.tabs.splice(e.oldIndex, 1)[0];
-                    this.tabs.splice(e.newIndex, 0, tab);
+                    const tab = this.tabs.splice(e.oldIndex!, 1)[0];
+                    this.tabs.splice(e.newIndex!, 0, tab);
                 },
                 onMove: (e: {related: HTMLElement}) => e.related.id !== 'addTab',
                 filter: '.addTab'
@@ -163,7 +156,7 @@
         }
 
         destroyAllTabs(): void {
-            browserWindow.setBrowserView(null!);
+            browserWindow.setBrowserView(null!); //tslint:disable-line:no-null-keyword
             this.tabs.forEach(destroyTab);
             this.tabs = [];
         }
@@ -230,7 +223,7 @@
             electron.ipcRenderer.send('has-new', this.tabs.reduce((cur, t) => cur || t.hasNew, false));
             delete this.tabMap[tab.view.webContents.id];
             if(this.tabs.length === 0) {
-                browserWindow.setBrowserView(null!);
+                browserWindow.setBrowserView(null!); //tslint:disable-line:no-null-keyword
                 if(process.env.NODE_ENV === 'production') browserWindow.close();
             } else if(this.activeTab === tab) this.show(this.tabs[0]);
             destroyTab(tab);

@@ -25,7 +25,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
+    import {Component, Hook} from '@f-list/vue-ts';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
     import core from './core';
@@ -55,6 +55,7 @@
             return this.commands.filter((x) => filter.test(x.name));
         }
 
+        @Hook('mounted')
         mounted(): void {
             const permissions = core.connection.vars.permissions;
             for(const key in commands) {

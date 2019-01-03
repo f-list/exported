@@ -86,11 +86,12 @@ export default class Connection implements Interfaces.Connection {
         this.reconnectDelay = this.reconnectDelay >= 30000 ? 60000 : this.reconnectDelay >= 10000 ? 30000 : 10000;
     }
 
-    close(): void {
+    close(keepState: boolean = true): void {
         if(this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer);
         this.reconnectTimer = undefined;
         this.cleanClose = true;
         if(this.socket !== undefined) this.socket.close();
+        if(!keepState) this.character = '';
     }
 
     get isOpen(): boolean {
@@ -143,7 +144,7 @@ export default class Connection implements Interfaces.Connection {
     }
 
     send<K extends keyof Interfaces.ClientCommands>(command: K, data?: Interfaces.ClientCommands[K]): void {
-        if(this.socket !== undefined)
+        if(this.socket !== undefined && this.socket.readyState === WebSocketConnection.ReadyState.OPEN)
             this.socket.send(<string>command + (data !== undefined ? ` ${JSON.stringify(data)}` : ''));
     }
 

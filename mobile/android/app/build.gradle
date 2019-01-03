@@ -2,14 +2,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-	compileSdkVersion 27
-	buildToolsVersion "27.0.3"
+	compileSdkVersion 28
+	buildToolsVersion "28.0.3"
 	defaultConfig {
 		applicationId "net.f_list.fchat"
-		minSdkVersion 19
+		minSdkVersion 21
 		targetSdkVersion 27
-		versionCode 20
-		versionName "3.0.9"
+		versionCode 21
+		versionName "3.0.10"
 	}
 	buildTypes {
 		release {
@@ -20,7 +20,7 @@ android {
 }
 
 dependencies {
-	compile "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+	implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 repositories {
 	mavenCentral()

@@ -15,9 +15,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
 
     @Component
     export default class Sidebar extends Vue {

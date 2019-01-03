@@ -4,12 +4,13 @@
         <slot v-else slot="title" :option="selected">{{label}}</slot>
 
         <div style="padding:10px;">
-            <input v-model="filter" class="form-control" :placeholder="placeholder" @mousedown.stop @focus="keepOpen = true"  @blur="keepOpen = false"/>
+            <input v-model="filter" class="form-control" :placeholder="placeholder" @mousedown.stop @focus="keepOpen = true"
+                @blur="keepOpen = false"/>
         </div>
         <div class="dropdown-items">
             <template v-if="multiple">
                 <a href="#" @click.stop="select(option)" v-for="option in filtered" class="dropdown-item">
-                    <input type="checkbox" :checked="selected.indexOf(option) !== -1"/>
+                    <input type="checkbox" :checked="isSelected(option)"/>
                     <slot :option="option">{{option}}</slot>
                 </a>
             </template>
@@ -23,16 +24,14 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
     import Dropdown from '../components/Dropdown.vue';
 
     @Component({
         components: {dropdown: Dropdown}
     })
     export default class FilterableSelect extends Vue {
-        //tslint:disable:no-null-keyword
         @Prop()
         readonly placeholder?: string;
         @Prop({required: true})
@@ -46,11 +45,11 @@
         @Prop()
         readonly title?: string;
         filter = '';
-        selected: object | object[] | null = this.value !== undefined ? this.value : (this.multiple !== undefined ? [] : null);
+        selected: object | object[] | undefined = this.value !== undefined ? this.value : (this.multiple !== undefined ? [] : undefined);
         keepOpen = false;
 
         @Watch('value')
-        watchValue(newValue: object | object[] | null): void {
+        watchValue(newValue: object | object[] | undefined): void {
             this.selected = newValue;
         }
 
@@ -67,13 +66,17 @@
             this.$emit('input', this.selected);
         }
 
+        isSelected(option: object): boolean {
+            return (<object[]>this.selected).indexOf(option) !== -1;
+        }
+
         get filtered(): object[] {
             return this.options.filter((x) => this.filterFunc(this.filterRegex, x));
         }
 
         get label(): string | undefined {
             return this.multiple !== undefined ? `${this.title} - ${(<object[]>this.selected).length}` :
-                (this.selected !== null ? this.selected.toString() : this.title);
+                (this.selected !== undefined ? this.selected.toString() : this.title);
         }
 
         get filterRegex(): RegExp {

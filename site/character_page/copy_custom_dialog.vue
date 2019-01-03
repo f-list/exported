@@ -1,11 +1,11 @@
 <template>
-    <modal id="copyCustomDialog" action="Copy Custom Kink" :disabled="!valid || submitting" @submit.prevent="copyCustom">
+    <modal id="copyCustomDialog" action="Copy Custom Kink" :disabled="!valid || submitting" @submit.prevent="copyCustom()">
         <form-group field="name" :errors="formErrors" label="Name" id="copyCustomName">
-            <input type="text" class="form-control" maxlength="30" required v-model="name" id="copyCustomName"
-                slot-scope="props" :class="props.cls"/>
+            <input type="text" class="form-control" maxlength="30" required v-model="name" slot-scope="props" id="copyCustomName"
+                :class="props.cls"/>
         </form-group>
         <form-group field="description" :errors="formErrors" label="Description" id="copyCustomDescription">
-            <input type="text" class="form-control" max-length="250" id="copyCustomDescription" v-model="description" required
+            <input type="text" class="form-control" max-length="250" v-model="description" required id="copyCustomDescription"
                 slot-scope="props" :class="props.cls"/>
         </form-group>
         <form-group field="choice" :errors="formErrors" label="Choice" id="copyCustomChoice">
@@ -17,28 +17,28 @@
             </select>
         </form-group>
         <form-group field="target" :errors="formErrors" label="Target Character" id="copyCustomTarget">
-            <character-select id="copyCustomTarget" v-model="target" slot-scope="props" :class="props.cls"></character-select>
+            <character-select v-model="target" slot-scope="props" :class="props.cls" id="copyCustomTarget"></character-select>
         </form-group>
     </modal>
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
+    import {Component} from '@f-list/vue-ts';
     import CustomDialog from '../../components/custom_dialog';
     import FormGroup from '../../components/form_group.vue';
     import Modal from '../../components/Modal.vue';
+    import {KinkChoice} from '../../interfaces';
     import * as Utils from '../utils';
     import {methods} from './data_store';
-    import {KinkChoice} from './interfaces';
 
     @Component({
         components: {'form-group': FormGroup, modal: Modal}
     })
     export default class CopyCustomDialog extends CustomDialog {
-        private name = '';
-        private description = '';
-        private choice: KinkChoice = 'favorite';
-        private target = Utils.Settings.defaultCharacter;
+        name = '';
+        description = '';
+        choice: KinkChoice = 'favorite';
+        target = Utils.Settings.defaultCharacter;
         formErrors = {};
         submitting = false;
 

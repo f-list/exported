@@ -10,16 +10,16 @@
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="account">{{l('login.account')}}</label>
-                        <input class="form-control" id="account" v-model="settings.account" @keypress.enter="login" :disabled="loggingIn"/>
+                        <input class="form-control" id="account" v-model="settings.account" @keypress.enter="login()" :disabled="loggingIn"/>
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="password">{{l('login.password')}}</label>
-                        <input class="form-control" type="password" id="password" v-model="settings.password" @keypress.enter="login" :disabled="loggingIn"/>
+                        <input class="form-control" type="password" id="password" v-model="settings.password" @keypress.enter="login()" :disabled="loggingIn"/>
                     </div>
                     <div class="form-group" v-show="showAdvanced">
                         <label class="control-label" for="host">{{l('login.host')}}</label>
                         <div class="input-group">
-                            <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login" :disabled="loggingIn"/>
+                            <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login()" :disabled="loggingIn"/>
                             <div class="input-group-append">
                                 <button class="btn btn-outline-secondary" @click="resetHost"><span class="fas fa-undo-alt"></span></button>
                             </div>
@@ -40,7 +40,7 @@
                         <label for="save"><input type="checkbox" id="save" v-model="saveLogin"/> {{l('login.save')}}</label>
                     </div>
                     <div class="form-group" style="text-align:right">
-                        <button class="btn btn-primary" @click="login" :disabled="loggingIn">
+                        <button class="btn btn-primary" @click="login()" :disabled="loggingIn">
                             {{l(loggingIn ? 'login.working' : 'login.submit')}}
                         </button>
                     </div>
@@ -57,11 +57,11 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook} from '@f-list/vue-ts';
     import Axios from 'axios';
     import * as qs from 'qs';
     import * as Raven from 'raven-js';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
     import Chat from '../chat/Chat.vue';
     import core, {init as initCore} from '../chat/core';
     import l from '../chat/localize';
@@ -94,18 +94,18 @@
         components: {chat: Chat, modal: Modal, characterPage: CharacterPage}
     })
     export default class Index extends Vue {
-        //tslint:disable:no-null-keyword
         showAdvanced = false;
         saveLogin = false;
         loggingIn = false;
-        characters: ReadonlyArray<string> | null = null;
+        characters?: ReadonlyArray<string>;
         error = '';
-        defaultCharacter: string | null = null;
+        defaultCharacter?: string;
         settingsStore = new SettingsStore();
         l = l;
-        settings: GeneralSettings | null = null;
+        settings!: GeneralSettings;
         profileName = '';
 
+        @Hook('created')
         async created(): Promise<void> {
             document.addEventListener('open-profile', (e: Event) => {
                 const profileViewer = <Modal>this.$refs['profileViewer'];
@@ -123,13 +123,13 @@
         }
 
         resetHost(): void {
-            this.settings!.host = new GeneralSettings().host;
+            this.settings.host = new GeneralSettings().host;
         }
 
         get styling(): string {
-            if(window.NativeView !== undefined) window.NativeView.setTheme(this.settings!.theme);
+            if(window.NativeView !== undefined) window.NativeView.setTheme(this.settings.theme);
             //tslint:disable-next-line:no-require-imports
-            return `<style>${require('../scss/fa.scss')}${require(`../scss/themes/chat/${this.settings!.theme}.scss`)}</style>`;
+            return `<style>${require('../scss/fa.scss')}${require(`../scss/themes/chat/${this.settings.theme}.scss`)}</style>`;
         }
 
         async login(): Promise<void> {
@@ -138,17 +138,17 @@
             try {
                 const data = <{ticket?: string, error: string, characters: {[key: string]: number}, default_character: number}>
                     (await Axios.post('https://www.f-list.net/json/getApiTicket.php', qs.stringify({
-                        account: this.settings!.account, password: this.settings!.password, no_friends: true, no_bookmarks: true,
+                        account: this.settings.account, password: this.settings.password, no_friends: true, no_bookmarks: true,
                         new_character_list: true
                     }))).data;
                 if(data.error !== '') {
                     this.error = data.error;
                     return;
                 }
-                if(this.saveLogin) await setGeneralSettings(this.settings!);
-                Socket.host = this.settings!.host;
+                if(this.saveLogin) await setGeneralSettings(this.settings);
+                Socket.host = this.settings.host;
                 const connection = new Connection('F-Chat 3.0 (Mobile)', appVersion, Socket,
-                    this.settings!.account, this.settings!.password);
+                    this.settings.account, this.settings.password);
                 connection.onEvent('connected', () => {
                     Raven.setUserContext({username: core.connection.character});
                     document.addEventListener('backbutton', confirmBack);

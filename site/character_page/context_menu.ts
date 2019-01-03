@@ -1,12 +1,13 @@
+import {Component} from '@f-list/vue-ts';
 import Vue from 'vue';
 
+@Component
 export default abstract class ContextMenu extends Vue {
-    //tslint:disable:no-null-keyword
     abstract propName: string;
     showMenu = false;
-    private position = {left: 0, top: 0};
-    private selectedItem: HTMLElement | null = null;
-    private touchTimer = 0;
+    position = {left: 0, top: 0};
+    selectedItem: HTMLElement | undefined;
+    touchTimer = 0;
 
     abstract itemSelected(element: HTMLElement): void;
 
@@ -16,7 +17,7 @@ export default abstract class ContextMenu extends Vue {
 
     hideMenu(): void {
         this.showMenu = false;
-        this.selectedItem = null;
+        this.selectedItem = undefined;
     }
 
     bindOffclick(): void {
@@ -40,7 +41,7 @@ export default abstract class ContextMenu extends Vue {
         this.position = {left, top};
     }
 
-    protected innerClick(): void {
+    innerClick(): void {
         this.itemSelected(this.selectedItem!);
         this.hideMenu();
     }
@@ -84,8 +85,8 @@ export default abstract class ContextMenu extends Vue {
         });
     }
 
-    get positionText(): string {
-        return `left: ${this.position.left}px; top: ${this.position.top}px;`;
+    get positionStyle(): object {
+        return {left: `${this.position.left}px`, top: `${this.position.top}px;`};
     }
 
 }

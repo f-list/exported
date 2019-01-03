@@ -1,10 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es2017",
     "module": "commonjs",
     "sourceMap": true,
     "allowJs": true,
-    "outDir": "build",
     "noEmitHelpers": true,
     "importHelpers": true,
     "forceConsistentCasingInFileNames": true,

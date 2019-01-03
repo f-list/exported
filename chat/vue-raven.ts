@@ -25,7 +25,7 @@ function VueRaven(this: void, raven: Raven.RavenStatic): Raven.RavenStatic {
             }
         });
 
-        if(typeof oldOnError === 'function') oldOnError.call(this, error, vm);
+        if(typeof oldOnError === 'function') oldOnError.call(this, error, vm, info);
         else console.log(error);
     };
 

@@ -1,5 +1,5 @@
 <template>
-    <Modal id="memoDialog" :action="'Memo for ' + name" buttonText="Save and Close" @close="onClose" @submit="save" dialog-class="modal-lg modal-dialog-centered">
+    <Modal :action="'Memo for ' + name" buttonText="Save and Close" @close="onClose" @submit="save" dialog-class="modal-lg modal-dialog-centered">
         <div class="form-group" v-if="editing">
             <textarea v-model="message" maxlength="1000" class="form-control"></textarea>
         </div>
@@ -12,33 +12,46 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {Component, Prop, Watch} from '@f-list/vue-ts';
     import CustomDialog from '../../components/custom_dialog';
     import Modal from '../../components/Modal.vue';
+    import {SimpleCharacter} from '../../interfaces';
     import * as Utils from '../utils';
     import {methods} from './data_store';
-    import {Character} from './interfaces';
+
+    export interface Memo {
+        id: number
+        memo: string
+        character: SimpleCharacter
+        created_at: number
+        updated_at: number
+    }
 
     @Component({
         components: {Modal}
     })
     export default class MemoDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character!: Character;
-
-        private message = '';
+        readonly character!: {id: number, name: string};
+        @Prop()
+        readonly memo?: Memo;
+        message = '';
         editing = false;
         saving = false;
 
         get name(): string {
-            return this.character.character.name;
+            return this.character.name;
         }
 
         show(): void {
             super.show();
-            if(this.character.memo !== undefined)
-                this.message = this.character.memo.memo;
+            this.setMemo();
+        }
+
+        @Watch('memo')
+        setMemo(): void {
+            if(this.memo !== undefined)
+                this.message = this.memo.memo;
         }
 
         onClose(): void {
@@ -48,7 +61,7 @@
         async save(): Promise<void> {
             try {
                 this.saving = true;
-                const memoReply = await methods.memoUpdate(this.character.character.id, this.message);
+                const memoReply = await methods.memoUpdate(this.character.id, this.message);
                 this.$emit('memo', this.message !== '' ? memoReply : undefined);
                 this.hide();
             } catch(e) {

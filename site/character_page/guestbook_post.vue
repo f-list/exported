@@ -48,9 +48,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
     import CharacterLink from '../../components/character_link.vue';
     import DateDisplay from '../../components/date_display.vue';
     import * as Utils from '../utils';
@@ -62,13 +61,13 @@
     })
     export default class GuestbookPostView extends Vue {
         @Prop({required: true})
-        private readonly post!: GuestbookPost;
+        readonly post!: GuestbookPost;
         @Prop({required: true})
         readonly canEdit!: boolean;
 
         replying = false;
         replyBox = false;
-        private replyMessage = this.post.reply;
+        replyMessage = this.post.reply;
 
         approving = false;
         deleting = false;

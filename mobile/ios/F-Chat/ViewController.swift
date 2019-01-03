@@ -87,7 +87,10 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
             let start = str.index(of: ",")!
             let file = FileManager.default.temporaryDirectory.appendingPathComponent(str[str.index(str.startIndex, offsetBy: 5)..<start].removingPercentEncoding!)
             try! str.suffix(from: str.index(after: start)).removingPercentEncoding!.write(to: file, atomically: false, encoding: .utf8)
-            self.present(UIActivityViewController(activityItems: [file], applicationActivities: nil), animated: true, completion: nil)
+            let controller = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+            controller.popoverPresentationController?.sourceView = webView
+            controller.popoverPresentationController?.sourceRect = CGRect(origin: webView.bounds.origin, size: CGSize(width: 0, height: 0))
+            self.present(controller, animated: true, completion: nil)
             return
         }
         let match = profileRegex.matches(in: str, range: NSRange(location: 0, length: str.count))

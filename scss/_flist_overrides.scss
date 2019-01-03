@@ -11,6 +11,28 @@ hr {
   font-weight: bold;
 }
 
+.nav-tabs-scroll {
+  overflow-x: auto;
+
+  .nav-tabs {
+    flex-wrap: nowrap;
+
+    .nav-item {
+      flex-shrink: 0;
+    }
+  }
+}
+
+sub {
+  position: static;
+  vertical-align: sub;
+}
+
+sup {
+  position: static;
+  vertical-align: super;
+}
+
 $theme-is-dark: false !default;
 
 // HACK: Bootstrap offers no way to override these by default, and they are SUPER bright.

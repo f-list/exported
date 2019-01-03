@@ -1,5 +1,5 @@
 <template>
-    <modal :action="l('conversationSettings.action', conversation.name)" @submit="submit" ref="dialog" @close="init()" dialogClass="w-100"
+    <modal :action="l('conversationSettings.action', conversation.name)" @submit="submit" ref="dialog" @open="load()" dialogClass="w-100"
         :buttonText="l('conversationSettings.save')">
         <div class="form-group">
             <label class="control-label" :for="'notify' + conversation.key">{{l('conversationSettings.notify')}}</label>
@@ -39,8 +39,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
+    import {Component, Prop} from '@f-list/vue-ts';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
     import {Conversation} from './interfaces';
@@ -60,23 +59,13 @@
         joinMessages!: Conversation.Setting;
         defaultHighlights!: boolean;
 
-        constructor() {
-            super();
-            this.init();
-        }
-
-        init = function(this: ConversationSettings): void {
+        load(): void {
             const settings = this.conversation.settings;
             this.notify = settings.notify;
             this.highlight = settings.highlight;
             this.highlightWords = settings.highlightWords.join(',');
             this.joinMessages = settings.joinMessages;
             this.defaultHighlights = settings.defaultHighlights;
-        };
-
-        @Watch('conversation')
-        conversationChanged(): void {
-            this.init();
         }
 
         submit(): void {

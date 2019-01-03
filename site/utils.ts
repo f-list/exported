@@ -8,7 +8,6 @@ interface Dictionary<T> {
 type flashMessageType = 'info' | 'success' | 'warning' | 'danger';
 type flashMessageImpl = (type: flashMessageType, message: string) => void;
 
-
 let flashImpl: flashMessageImpl = (type: flashMessageType, message: string) => {
     console.log(`${type}: ${message}`);
 };

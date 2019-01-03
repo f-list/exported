@@ -91,6 +91,7 @@ const strings: {[key: string]: string | undefined} = {
     'logs.corruption.mobile': 'Log corruption has been detected. This is usually caused by a crash/force close or power loss mid-write. Will now attempt to fix corrupted logs.',
     'logs.corruption.mobile.success': 'Your logs have been fixed.',
     'logs.corruption.mobile.error': 'Unable to fix corrupted logs. Please clear the application data or reinstall the app.',
+    'logs.corruption.web': 'Error reading logs from browser storage. If this issue persists, please clear your stored browser data for F-Chat.',
     'user.profile': 'Profile',
     'user.message': 'Open conversation',
     'user.messageJump': 'View conversation',
@@ -111,10 +112,9 @@ const strings: {[key: string]: string | undefined} = {
     'users.members': 'Members',
     'users.memberCount': '{0} Members',
     'chat.report': 'Alert Staff',
-    'chat.report.description': `
-[color=red]Before you alert the moderators, PLEASE READ:[/color]
+    'chat.report.description': `[color=red]Before you alert the moderators, PLEASE READ:[/color]
 If you're just having personal trouble with someone, right-click their name and ignore them.
-Please make sure what you're reporting is a violation of the site's [url=https://wiki.f-list.net/Code_of_Conduct]Code of Conduct[/url] otherwise nothing will be done.
+Please make sure what you're reporting is a violation of the site's [url=https://wiki.f-list.net/Code_of_Conduct]Code of Conduct[/url], otherwise nothing will be done.
 
 This tool is intended for chat moderation. If you have a question, please visit our [url=https://wiki.f-list.net/Frequently_Asked_Questions]FAQ[/url] first, and if that doesn't help, join [session=Helpdesk]Helpdesk[/session] and ask your question there.
 
@@ -123,25 +123,26 @@ If your problem lies anywhere outside of the chat, please send in a Ticket inste
 For a more comprehensive guide as how and when to report another user, please [url=https://wiki.f-list.net/How_to_Report_a_User]consult this page.[/url]
 
 Please provide a brief summary of your problem and the rules that have been violated.
-[color=red]DO NOT PASTE LOGS INTO THIS FIELD.
+[color=red]DO NOT PASTE LOGS INTO THE "REPORT TEXT" FIELD.
 SELECT THE TAB YOU WISH TO REPORT, LOGS ARE AUTOMATICALLY ATTACHED[/color]`,
-    'chat.report.channel.user': 'Reporting user {0} in channel {1}',
-    'chat.report.channel': 'General report for channel {0}',
-    'chat.report.channel.description': 'If you wish to report a specific user, please right-click them and select "Report".',
-    'chat.report.private': 'Reporting private conversation with user {0}',
+    'chat.report.conversation': 'Reporting tab',
+    'chat.report.reporting': 'Reporting user',
+    'chat.report.general': 'No one in particular. If you wish to report a specific user, please right-click them and select "Report".',
     'chat.report.text': 'Report text',
     'chat.recentConversations': 'Recent conversations',
     'settings.tabs.general': 'General',
     'settings.tabs.notifications': 'Notifications',
+    'settings.tabs.hideAds': 'Hidden users',
     'settings.tabs.import': 'Import',
     'settings.open': 'Settings',
     'settings.action': 'Change settings',
+    'settings.hideAds.empty': `You aren't currently hiding the ads of any users.`,
     'settings.import': 'Import settings',
     'settings.import.selectCharacter': 'Select a character',
     'settings.import.confirm': `You are importing settings from your character {0}.
 This will overwrite any and all settings, pinned conversations and conversation settings of character {1}.
 Logs and recent conversations will not be touched.
-You may need to log out and back in for some settings to take effect.
+You will be logged out. Once you log back in, the settings will have been imported.
 Are you sure?`,
     'settings.playSound': 'Play notification sounds',
     'settings.notifications': 'Show desktop/push notifications',
@@ -258,6 +259,7 @@ Once this process has started, do not interrupt it or your logs will get corrupt
     'events.ignore_add': 'You are now ignoring {0}\'s messages. Should they go around this by any means, please report it using the Alert Staff button.',
     'events.ignore_delete': '{0} is now allowed to send you messages again.',
     'events.uptime': 'Server has been running since {0}, with currently {1} channels and {2} users, a total of {3} accepted connections, and {4} maximum users.',
+    'events.highlight': '{0} said "{1}" in {2}',
     'commands.unknown': 'Unknown command. For a list of valid commands, please click the ? button.',
     'commands.badContext': 'This command cannot be used here. Please use the Help (click the ? button) if you need further information.',
     'commands.tooFewParams': 'This command requires more parameters. Please use the Help (click the ? button) if you need further information.',

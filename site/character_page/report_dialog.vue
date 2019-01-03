@@ -1,5 +1,5 @@
 <template>
-    <modal id="reportDialog" :action="'Report character' + name" :disabled="!dataValid || submitting" @submit.prevent="submitReport">
+    <modal id="reportDialog" :action="'Report character' + name" :disabled="!dataValid || submitting" @submit.prevent="submitReport()">
         <div class="form-group">
             <label>Type</label>
             <select v-select="validTypes" v-model="type" class="form-control"></select>
@@ -25,8 +25,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {Component, Prop} from '@f-list/vue-ts';
     import CustomDialog from '../../components/custom_dialog';
     import Modal from '../../components/Modal.vue';
     import * as Utils from '../utils';
@@ -38,12 +37,12 @@
     })
     export default class ReportDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character!: Character;
+        readonly character!: Character;
 
-        private ourCharacter = Utils.Settings.defaultCharacter;
-        private type = '';
-        private violation = '';
-        private message = '';
+        ourCharacter = Utils.Settings.defaultCharacter;
+        type = '';
+        violation = '';
+        message = '';
 
         submitting = false;
 

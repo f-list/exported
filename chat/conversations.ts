@@ -2,7 +2,7 @@ import {queuedJoin} from '../fchat/channels';
 import {decodeHTML} from '../fchat/common';
 import {characterImage, ConversationSettings, EventMessage, Message, messageToString} from './common';
 import core from './core';
-import {Channel, Character, Connection, Conversation as Interfaces} from './interfaces';
+import {Channel, Character, Conversation as Interfaces} from './interfaces';
 import l from './localize';
 import {CommandContext, isAction, isCommand, isWarn, parse as parseCommand} from './slash_commands';
 import MessageType = Interfaces.Message.Type;
@@ -353,7 +353,8 @@ class State implements Interfaces.State {
     channelMap: {[key: string]: ChannelConversation | undefined} = {};
     consoleTab!: ConsoleConversation;
     selectedConversation: Conversation = this.consoleTab;
-    recent: Interfaces.RecentConversation[] = [];
+    recent: Interfaces.RecentPrivateConversation[] = [];
+    recentChannels: Interfaces.RecentChannelConversation[] = [];
     pinned!: {channels: string[], private: string[]};
     settings!: {[key: string]: Interfaces.Settings};
     modes!: {[key: string]: Channel.Mode | undefined};
@@ -371,13 +372,18 @@ class State implements Interfaces.State {
         conv = new PrivateConversation(character);
         this.privateConversations.push(conv);
         this.privateMap[key] = conv;
-        state.addRecent(conv); //tslint:disable-line:no-floating-promises
+        const index = this.recent.findIndex((c) => c.character === conv!.name);
+        if(index !== -1) this.recent.splice(index, 1);
+        if(this.recent.length >= 50) this.recent.pop();
+        this.recent.unshift({character: conv.name});
+        core.settingsStore.set('recent', this.recent); //tslint:disable-line:no-floating-promises
         return conv;
     }
 
     byKey(key: string): Conversation | undefined {
         if(key === '_') return this.consoleTab;
-        return (key[0] === '#' ? this.channelMap : this.privateMap)[key];
+        key = key.toLowerCase();
+        return key[0] === '#' ? this.channelMap[key.substr(1)] : this.privateMap[key];
     }
 
     async savePinned(): Promise<void> {
@@ -395,25 +401,6 @@ class State implements Interfaces.State {
         await core.settingsStore.set('conversationSettings', this.settings);
     }
 
-    async addRecent(conversation: Conversation): Promise<void> {
-        const remove = <T extends Interfaces.RecentConversation>(predicate: (item: T) => boolean) => {
-            for(let i = 0; i < this.recent.length; ++i)
-                if(predicate(<T>this.recent[i])) {
-                    this.recent.splice(i, 1);
-                    break;
-                }
-        };
-        if(Interfaces.isChannel(conversation)) {
-            remove<Interfaces.RecentChannelConversation>((c) => c.channel === conversation.channel.id);
-            this.recent.unshift({channel: conversation.channel.id, name: conversation.channel.name});
-        } else {
-            remove<Interfaces.RecentPrivateConversation>((c) => c.character === conversation.name);
-            state.recent.unshift({character: conversation.name});
-        }
-        if(this.recent.length >= 50) this.recent.pop();
-        await core.settingsStore.set('recent', this.recent);
-    }
-
     show(conversation: Conversation): void {
         this.selectedConversation.onHide();
         conversation.unread = Interfaces.UnreadState.None;
@@ -429,13 +416,14 @@ class State implements Interfaces.State {
         for(const conversation of this.privateConversations)
             conversation._isPinned = this.pinned.private.indexOf(conversation.name) !== -1;
         this.recent = await core.settingsStore.get('recent') || [];
+        this.recentChannels = await core.settingsStore.get('recentChannels') || [];
         const settings = <{[key: string]: ConversationSettings}> await core.settingsStore.get('conversationSettings') || {};
         for(const key in settings) {
             const settingsItem = new ConversationSettings();
             for(const itemKey in settings[key])
                 settingsItem[<keyof ConversationSettings>itemKey] = settings[key][<keyof ConversationSettings>itemKey];
             settings[key] = settingsItem;
-            const conv = (key[0] === '#' ? this.channelMap : this.privateMap)[key];
+            const conv = this.byKey(key);
             if(conv !== undefined) conv._settings = settingsItem;
         }
         this.settings = settings;
@@ -494,7 +482,11 @@ export default function(this: void): Interfaces.State {
                 const conv = new ChannelConversation(channel);
                 state.channelMap[channel.id] = conv;
                 state.channelConversations.push(conv);
-                await state.addRecent(conv);
+                const index = state.recentChannels.findIndex((c) => c.channel === channel.id);
+                if(index !== -1) state.recentChannels.splice(index, 1);
+                if(state.recentChannels.length >= 50) state.recentChannels.pop();
+                state.recentChannels.unshift({channel: channel.id, name: conv.channel.name});
+                core.settingsStore.set('recentChannels', state.recentChannels); //tslint:disable-line:no-floating-promises
             } else {
                 const conv = state.channelMap[channel.id];
                 if(conv === undefined) return;
@@ -548,6 +540,8 @@ export default function(this: void): Interfaces.State {
                 characterImage(data.character), 'attention');
             if(conversation !== state.selectedConversation || !state.windowFocused) conversation.unread = Interfaces.UnreadState.Mention;
             message.isHighlight = true;
+            await state.consoleTab.addMessage(new EventMessage(l('events.highlight', `[user]${data.character}[/user]`, results[0],
+                `[session=${conversation.name}]${data.channel}[/session]`), time));
         } else if(conversation.settings.notify === Interfaces.Setting.True) {
             await core.notifications.notify(conversation, conversation.name, messageToString(message),
                 characterImage(data.character), 'attention');
@@ -655,7 +649,9 @@ export default function(this: void): Interfaces.State {
 
     connection.onMessage('IGN', async(data, time) => {
         if(data.action !== 'add' && data.action !== 'delete') return;
-        return addEventMessage(new EventMessage(l(`events.ignore_${data.action}`, data.character), time));
+        const text = l(`events.ignore_${data.action}`, data.character);
+        state.selectedConversation.infoText = text;
+        return addEventMessage(new EventMessage(text, time));
     });
     connection.onMessage('RTB', async(data, time) => {
         let url = 'https://www.f-list.net/';
@@ -711,8 +707,7 @@ export default function(this: void): Interfaces.State {
         if(data.type === 'note')
             await core.notifications.notify(state.consoleTab, character, text, characterImage(character), 'newnote');
     });
-    type SFCMessage = (Interfaces.Message & {sfc: Connection.ServerCommands['SFC'] & {confirmed?: true}});
-    const sfcList: SFCMessage[] = [];
+    const sfcList: Interfaces.SFCMessage[] = [];
     connection.onMessage('SFC', async(data, time) => {
         let text: string, message: Interfaces.Message;
         if(data.action === 'report') {
@@ -721,7 +716,7 @@ export default function(this: void): Interfaces.State {
                 await core.notifications.notify(state.consoleTab, data.character, text, characterImage(data.character), 'modalert');
             message = new EventMessage(text, time);
             safeAddMessage(sfcList, message, 500);
-            (<SFCMessage>message).sfc = data;
+            (<Interfaces.SFCMessage>message).sfc = data;
         } else {
             text = l('events.report.confirmed', `[user]${data.moderator}[/user]`, `[user]${data.character}[/user]`);
             for(const item of sfcList)

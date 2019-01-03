@@ -9,9 +9,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
     import * as Utils from '../utils';
     import {Store} from './data_store';
     import {Character, CONTACT_GROUP_ID, DisplayInfotag} from './interfaces';
@@ -19,15 +18,14 @@
     import InfotagView from './infotag.vue';
 
     interface DisplayInfotagGroup {
+        id: number
         name: string
         sortOrder: number
         infotags: DisplayInfotag[]
     }
 
     @Component({
-        components: {
-            infotag: InfotagView
-        }
+        components: {infotag: InfotagView}
     })
     export default class InfotagsView extends Vue {
         @Prop({required: true})
@@ -63,6 +61,7 @@
                     return infotagA.name < infotagB.name ? -1 : 1;
                 });
                 outputGroups.push({
+                    id: group.id,
                     name: group.name,
                     sortOrder: group.sort_order,
                     infotags: collectedTags

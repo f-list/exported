@@ -24,7 +24,6 @@ export const BBCodeView: Component = {
                 if(element.cleanup !== undefined) element.cleanup();
             }
         };
-        context.data.staticClass = `bbcode${context.data.staticClass !== undefined ? ` ${context.data.staticClass}` : ''}`;
         const vnode = createElement('span', context.data);
         vnode.key = context.props.text;
         return vnode;
@@ -84,18 +83,22 @@ export default class BBCodeParser extends CoreBBCodeParser {
             return img;
         }));
         this.addTag(new BBCodeTextTag('session', (parser, parent, param, content) => {
+            const root = parser.createElement('span');
             const el = parser.createElement('span');
-            parent.appendChild(el);
+            parent.appendChild(root);
+            root.appendChild(el);
             const view = new ChannelView({el, propsData: {id: content, text: param}});
             this.cleanup.push(view);
-            return el;
+            return root;
         }));
         this.addTag(new BBCodeTextTag('channel', (parser, parent, _, content) => {
+            const root = parser.createElement('span');
             const el = parser.createElement('span');
-            parent.appendChild(el);
+            parent.appendChild(root);
+            root.appendChild(el);
             const view = new ChannelView({el, propsData: {id: content, text: content}});
             this.cleanup.push(view);
-            return el;
+            return root;
         }));
     }
 

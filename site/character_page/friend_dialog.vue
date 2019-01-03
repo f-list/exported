@@ -1,5 +1,5 @@
 <template>
-    <Modal id="memoDialog" :action="'Friends for ' + name" :buttons="false" dialog-class="modal-dialog-centered modal-lg">
+    <Modal :action="'Friends for ' + name" :buttons="false" dialog-class="modal-dialog-centered modal-lg">
         <div v-show="loading" class="alert alert-info">Loading friend information.</div>
         <div v-show="error" class="alert alert-danger">{{error}}</div>
         <template v-if="!loading">
@@ -79,8 +79,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {Component, Prop} from '@f-list/vue-ts';
     import CustomDialog from '../../components/custom_dialog';
     import Modal from '../../components/Modal.vue';
     import * as Utils from '../utils';
@@ -92,13 +91,13 @@
     })
     export default class FriendDialog extends CustomDialog {
         @Prop({required: true})
-        private readonly character!: Character;
+        readonly character!: Character;
 
-        private ourCharacter = Utils.Settings.defaultCharacter;
+        ourCharacter = Utils.Settings.defaultCharacter;
 
-        private incoming: FriendRequest[] = [];
-        private pending: FriendRequest[] = [];
-        private existing: Friend[] = [];
+        incoming: FriendRequest[] = [];
+        pending: FriendRequest[] = [];
+        existing: Friend[] = [];
 
         requesting = false;
         loading = true;

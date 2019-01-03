@@ -72,9 +72,8 @@ export class CoreBBCodeParser extends BBCodeParser {
             a.textContent = display;
             element.appendChild(a);
             const span = document.createElement('span');
-            span.className = 'link-domain';
+            span.className = 'link-domain bbcode-pseudo';
             span.textContent = ` [${domain(url)}]`;
-            (<HTMLElement & {bbcodeHide: true}>span).bbcodeHide = true;
             element.appendChild(span);
             return element;
         }));

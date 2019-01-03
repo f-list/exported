@@ -1,8 +1,8 @@
 <template>
-    <modal :action="l('settings.action')" @submit="submit" @close="init()" id="settings" dialogClass="w-100">
+    <modal :action="l('settings.action')" @submit="submit" @open="load()" id="settings" dialogClass="w-100">
         <tabs style="flex-shrink:0;margin-bottom:10px" v-model="selectedTab"
-            :tabs="[l('settings.tabs.general'), l('settings.tabs.notifications'), l('settings.tabs.import')]"></tabs>
-        <div v-show="selectedTab == 0">
+            :tabs="[l('settings.tabs.general'), l('settings.tabs.notifications'), l('settings.tabs.hideAds'), l('settings.tabs.import')]"></tabs>
+        <div v-show="selectedTab === '0'">
             <div class="form-group">
                 <label class="control-label" for="disallowedTags">{{l('settings.disallowedTags')}}</label>
                 <input id="disallowedTags" class="form-control" v-model="disallowedTags"/>
@@ -70,7 +70,7 @@
                 <input id="fontSize" type="number" min="10" max="24" class="form-control" v-model="fontSize"/>
             </div>
         </div>
-        <div v-show="selectedTab == 1">
+        <div v-show="selectedTab === '1'">
             <div class="form-group">
                 <label class="control-label" for="playSound">
                     <input type="checkbox" id="playSound" v-model="playSound"/>
@@ -118,7 +118,16 @@
                 </label>
             </div>
         </div>
-        <div v-show="selectedTab == 2" style="display:flex;padding-top:10px">
+        <div v-show="selectedTab === '2'">
+            <template v-if="hidden.length">
+                <div v-for="(user, i) in hidden">
+                    <span class="fa fa-times" style="cursor:pointer" @click.stop="hidden.splice(i, 1)"></span>
+                    {{user}}
+                </div>
+            </template>
+            <template v-else>{{l('settings.hideAds.empty')}}</template>
+        </div>
+        <div v-show="selectedTab === '3'" style="display:flex;padding-top:10px">
             <select id="import" class="form-control" v-model="importCharacter" style="flex:1;margin-right:10px">
                 <option value="">{{l('settings.import.selectCharacter')}}</option>
                 <option v-for="character in availableImports" :value="character">{{character}}</option>
@@ -129,7 +138,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
+    import {Component} from '@f-list/vue-ts';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
     import Tabs from '../components/tabs';
@@ -166,16 +175,7 @@
         colorBookmarks!: boolean;
         bbCodeBar!: boolean;
 
-        constructor() {
-            super();
-            this.init();
-        }
-
-        async created(): Promise<void> {
-            this.availableImports = (await core.settingsStore.getAvailableCharacters()).filter((x) => x !== core.connection.character);
-        }
-
-        init = function(this: SettingsView): void {
+        async load(): Promise<void> {
             const settings = core.state.settings;
             this.playSound = settings.playSound;
             this.clickOpensMessage = settings.clickOpensMessage;
@@ -197,7 +197,8 @@
             this.enterSend = settings.enterSend;
             this.colorBookmarks = settings.colorBookmarks;
             this.bbCodeBar = settings.bbCodeBar;
-        };
+            this.availableImports = (await core.settingsStore.getAvailableCharacters()).filter((x) => x !== core.connection.character);
+        }
 
         async doImport(): Promise<void> {
             if(!confirm(l('settings.import.confirm', this.importCharacter, core.connection.character))) return;
@@ -209,9 +210,11 @@
             await importKey('pinned');
             await importKey('modes');
             await importKey('conversationSettings');
-            this.init();
-            core.reloadSettings();
-            core.conversations.reloadSettings();
+            core.connection.close(false);
+        }
+
+        get hidden(): string[] {
+            return core.state.hiddenUsers;
         }
 
         async submit(): Promise<void> {

@@ -8,10 +8,13 @@ import CharacterSelect from '../components/character_select.vue';
 import {setCharacters} from '../components/character_select/character_list';
 import DateDisplay from '../components/date_display.vue';
 import SimplePager from '../components/simple_pager.vue';
+import {
+    Character as CharacterInfo, CharacterImage, CharacterImageOld, CharacterInfotag, CharacterSettings, KinkChoice
+} from '../interfaces';
 import {registerMethod, Store} from '../site/character_page/data_store';
 import {
-    Character, CharacterCustom, CharacterFriend, CharacterImage, CharacterImageOld, CharacterInfo, CharacterInfotag, CharacterKink,
-    CharacterSettings, Friend, FriendRequest, FriendsByCharacter, GuestbookState, KinkChoice, KinkChoiceFull, SharedKinks
+    Character, CharacterFriend, CharacterKink, Friend, FriendRequest, FriendsByCharacter, GuestbookState, KinkChoiceFull,
+    SharedKinks
 } from '../site/character_page/interfaces';
 import '../site/directives/vue-select'; //tslint:disable-line:no-import-side-effect
 import * as Utils from '../site/utils';
@@ -25,40 +28,39 @@ const parserSettings = {
 };
 
 async function characterData(name: string | undefined): Promise<Character> {
-    const data = await core.connection.queryApi('character-data.php', {name}) as CharacterInfo & {
+    const data = await core.connection.queryApi<CharacterInfo & {
         badges: string[]
         customs_first: boolean
         character_list: {id: number, name: string}[]
         current_user: {inline_mode: number, animated_icons: boolean}
-        custom_kinks: {[key: number]: {choice: 'fave' | 'yes' | 'maybe' | 'no', name: string, description: string, children: number[]}}
+        custom_kinks: {
+            [key: number]:
+                {id: number, choice: 'favorite' | 'yes' | 'maybe' | 'no', name: string, description: string, children: number[]}
+        }
         custom_title: string
+        images: CharacterImage[]
         kinks: {[key: string]: string}
         infotags: {[key: string]: string}
         memo?: {id: number, memo: string}
         settings: CharacterSettings,
         timezone: number
-    };
+    }>('character-data.php', {name});
     const newKinks: {[key: string]: KinkChoiceFull} = {};
     for(const key in data.kinks)
         newKinks[key] = <KinkChoiceFull>(<string>data.kinks[key] === 'fave' ? 'favorite' : data.kinks[key]);
-    const newCustoms: CharacterCustom[] = [];
     for(const key in data.custom_kinks) {
         const custom = data.custom_kinks[key];
-        newCustoms.push({
-            id: parseInt(key, 10),
-            choice: custom.choice === 'fave' ? 'favorite' : custom.choice,
-            name: custom.name,
-            description: custom.description
-        });
+        if((<'fave'>custom.choice) === 'fave') custom.choice = 'favorite';
+        custom.id = parseInt(key, 10);
         for(const childId of custom.children)
-            newKinks[childId] = parseInt(key, 10);
+            newKinks[childId] = custom.id;
     }
+    (<any>data.settings).block_bookmarks = (<any>data.settings).prevent_bookmarks; //tslint:disable-line:no-any
     const newInfotags: {[key: string]: CharacterInfotag} = {};
     for(const key in data.infotags) {
         const characterInfotag = data.infotags[key];
         const infotag = Store.kinks.infotags[key];
         if(infotag === undefined) continue;
-
         newInfotags[key] = infotag.type === 'list' ? {list: parseInt(characterInfotag, 10)} : {string: characterInfotag};
     }
     parserSettings.inlineDisplayMode = data.current_user.inline_mode;
@@ -73,13 +75,14 @@ async function characterData(name: string | undefined): Promise<Character> {
             created_at: data.created_at,
             updated_at: data.updated_at,
             views: data.views,
-            image_count: data.images!.length,
+            image_count: data.images.length,
             inlines: data.inlines,
             kinks: newKinks,
-            customs: newCustoms,
+            customs: data.custom_kinks,
             infotags: newInfotags,
             online_chat: false,
-            timezone: data.timezone
+            timezone: data.timezone,
+            deleted: false
         },
         memo: data.memo,
         character_list: data.character_list,
@@ -97,7 +100,7 @@ function contactMethodIconUrl(name: string): string {
 async function fieldsGet(): Promise<void> {
     if(Store.kinks !== undefined) return; //tslint:disable-line:strict-type-predicates
     try {
-        const fields = (await(Axios.get(`${Utils.siteDomain}json/api/mapping-list.php`))).data as SharedKinks & {
+        const fields = (await (Axios.get(`${Utils.siteDomain}json/api/mapping-list.php`))).data as SharedKinks & {
             kinks: {[key: string]: {group_id: number}}
             infotags: {[key: string]: {list: string, group_id: string}}
         };
@@ -221,7 +224,7 @@ export function init(characters: {[key: string]: number}): void {
         core.connection.queryApi<void>('friend-remove.php', {source_id: friend.source.id, dest_id: friend.target.id}));
     registerMethod('friendRequestAccept', async(req: FriendRequest) => {
         await core.connection.queryApi('request-accept.php', {request_id: req.id});
-        return { id: undefined!, source: req.target, target: req.source, createdAt: Date.now() / 1000 };
+        return {id: undefined!, source: req.target, target: req.source, createdAt: Date.now() / 1000};
     });
     registerMethod('friendRequestCancel', async(req: FriendRequest) =>
         core.connection.queryApi<void>('request-cancel.php', {request_id: req.id}));

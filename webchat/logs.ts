@@ -1,6 +1,7 @@
 import {EventMessage, Message, Settings as SettingsImpl} from '../chat/common';
 import core from '../chat/core';
 import {Conversation, Logs as Logging, Settings} from '../chat/interfaces';
+import l from '../chat/localize';
 
 type StoredConversation = {id: number, key: string, name: string};
 type StoredMessage = {
@@ -10,7 +11,7 @@ type StoredMessage = {
 async function promisifyRequest<T>(req: IDBRequest): Promise<T> {
     return new Promise<T>((resolve, reject) => {
         req.onsuccess = () => resolve(<T>req.result);
-        req.onerror = reject;
+        req.onerror = () => reject(req.error);
     });
 }
 
@@ -23,7 +24,7 @@ async function iterate<S, T>(request: IDBRequest, map: (stored: S) => T, count: 
             array.push(map(<S>c.value));
             c.continue();
         };
-        request.onerror = reject;
+        request.onerror = () => reject(request.error);
     });
 }
 
@@ -55,10 +56,15 @@ async function openDatabase(character: string): Promise<IDBDatabase> {
 }
 
 async function getIndex(db: IDBDatabase): Promise<Index> {
-    const trans = db.transaction(['conversations']);
-    const index: Index = {};
-    await iterate(trans.objectStore('conversations').openCursor(), (x: StoredConversation) => index[x.key] = x);
-    return index;
+    try {
+        const trans = db.transaction(['conversations']);
+        const index: Index = {};
+        await iterate(trans.objectStore('conversations').openCursor(), (x: StoredConversation) => index[x.key] = x);
+        return index;
+    } catch {
+        alert(l('logs.corruption.web'));
+        return {};
+    }
 }
 
 export class Logs implements Logging {
@@ -114,7 +120,7 @@ export class Logs implements Logging {
         if(character === this.loadedCharacter) return this.loadedIndex!;
         if(character === core.connection.character) {
             this.loadedDb = this.db;
-            this.loadedIndex = this.index;
+            this.loadedIndex = this.index !== undefined ? this.index : {};
         } else
             try {
                 this.loadedDb = await openDatabase(character);
@@ -124,7 +130,7 @@ export class Logs implements Logging {
                 return {};
             }
         this.loadedCharacter = character;
-        return this.loadedIndex!;
+        return this.loadedIndex;
     }
 
     async getConversations(character: string): Promise<ReadonlyArray<{key: string, name: string}>> {

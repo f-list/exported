@@ -12,7 +12,7 @@
                         <span class="fa fa-2x" :class="{'fa-sort-amount-down': sortCount, 'fa-sort-alpha-down': !sortCount}"></span>
                     </a>
                 </div>
-                <div style="overflow: auto;" v-show="tab == 0">
+                <div style="overflow: auto;" v-show="tab === '0'">
                     <div v-for="channel in officialChannels" :key="channel.id">
                         <label :for="channel.id">
                             <input type="checkbox" :checked="channel.isJoined" :id="channel.id" @click.prevent="setJoined(channel)"/>
@@ -20,7 +20,7 @@
                         </label>
                     </div>
                 </div>
-                <div style="overflow: auto;" v-show="tab == 1">
+                <div style="overflow: auto;" v-show="tab === '1'">
                     <div v-for="channel in openRooms" :key="channel.id">
                         <label :for="channel.id">
                             <input type="checkbox" :checked="channel.isJoined" :id="channel.id" @click.prevent="setJoined(channel)"/>
@@ -42,7 +42,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
+    import {Component} from '@f-list/vue-ts';
     import CustomDialog from '../components/custom_dialog';
     import Modal from '../components/Modal.vue';
     import Tabs from '../components/tabs';

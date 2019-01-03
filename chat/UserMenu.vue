@@ -8,7 +8,7 @@
                 {{l('status.' + character.status)}}
             </div>
             <bbcode id="userMenuStatus" :text="character.statusText" v-show="character.statusText" class="list-group-item"
-            style="max-height:200px;overflow:auto;clear:both"></bbcode>
+                style="max-height:200px;overflow:auto;clear:both"></bbcode>
             <a tabindex="-1" :href="profileLink" target="_blank" v-if="showProfileFirst" class="list-group-item list-group-item-action">
                 <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a>
             <a tabindex="-1" href="#" @click.prevent="openConversation(true)" class="list-group-item list-group-item-action">
@@ -17,19 +17,19 @@
                 <span class="fa fa-fw fa-plus"></span>{{l('user.message')}}</a>
             <a tabindex="-1" :href="profileLink" target="_blank" v-if="!showProfileFirst" class="list-group-item list-group-item-action">
                 <span class="fa fa-fw fa-user"></span>{{l('user.profile')}}</a>
-            <a tabindex="-1" href="#" @click.prevent="showMemo" class="list-group-item list-group-item-action">
+            <a tabindex="-1" href="#" @click.prevent="showMemo()" class="list-group-item list-group-item-action">
                 <span class="far fa-fw fa-sticky-note"></span>{{l('user.memo')}}</a>
-            <a tabindex="-1" href="#" @click.prevent="setBookmarked" class="list-group-item list-group-item-action">
+            <a tabindex="-1" href="#" @click.prevent="setBookmarked()" class="list-group-item list-group-item-action">
                 <span class="far fa-fw fa-bookmark"></span>{{l('user.' + (character.isBookmarked ? 'unbookmark' : 'bookmark'))}}</a>
-            <a tabindex="-1" href="#" @click.prevent="setIgnored" class="list-group-item list-group-item-action">
-                <span class="fa fa-fw fa-minus-circle"></span>{{l('user.' + (character.isIgnored ? 'unignore' : 'ignore'))}}</a>
-            <a tabindex="-1" href="#" @click.prevent="setHidden" class="list-group-item list-group-item-action" v-show="!isChatOp">
+            <a tabindex="-1" href="#" @click.prevent="setHidden()" class="list-group-item list-group-item-action" v-show="!isChatOp">
                 <span class="fa fa-fw fa-eye-slash"></span>{{l('user.' + (isHidden ? 'unhide' : 'hide'))}}</a>
-            <a tabindex="-1" href="#" @click.prevent="report" class="list-group-item list-group-item-action">
+            <a tabindex="-1" href="#" @click.prevent="report()" class="list-group-item list-group-item-action" style="border-top-width:1px">
                 <span class="fa fa-fw fa-exclamation-triangle"></span>{{l('user.report')}}</a>
-            <a tabindex="-1" href="#" @click.prevent="channelKick" class="list-group-item list-group-item-action" v-show="isChannelMod">
+            <a tabindex="-1" href="#" @click.prevent="setIgnored()" class="list-group-item list-group-item-action">
+                <span class="fa fa-fw fa-minus-circle"></span>{{l('user.' + (character.isIgnored ? 'unignore' : 'ignore'))}}</a>
+            <a tabindex="-1" href="#" @click.prevent="channelKick()" class="list-group-item list-group-item-action" v-show="isChannelMod">
                 <span class="fa fa-fw fa-ban"></span>{{l('user.channelKick')}}</a>
-            <a tabindex="-1" href="#" @click.prevent="chatKick" style="color:#f00" class="list-group-item list-group-item-action"
+            <a tabindex="-1" href="#" @click.prevent="chatKick()" style="color:#f00" class="list-group-item list-group-item-action"
                 v-show="isChatOp"><span class="fas fa-fw fa-trash"></span>{{l('user.chatKick')}}</a>
         </div>
         <modal :action="l('user.memo.action')" ref="memo" :disabled="memoLoading" @submit="updateMemo" dialogClass="w-100">
@@ -40,9 +40,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
     import Modal from '../components/Modal.vue';
     import {BBCodeView} from './bbcode';
     import {characterImage, errorToString, getByteLength, profileLink} from './common';
@@ -55,17 +54,16 @@
         components: {bbcode: BBCodeView, modal: Modal}
     })
     export default class UserMenu extends Vue {
-        //tslint:disable:no-null-keyword
         @Prop({required: true})
         readonly reportDialog!: ReportDialog;
         l = l;
         showContextMenu = false;
         getByteLength = getByteLength;
-        character: Character | null = null;
+        character: Character | undefined;
         position = {left: '', top: ''};
-        characterImage: string | null = null;
+        characterImage: string | undefined;
         touchedElement: HTMLElement | undefined;
-        channel: Channel | null = null;
+        channel: Channel | undefined;
         memo = '';
         memoId = 0;
         memoLoading = false;
@@ -107,7 +105,7 @@
             this.memo = '';
             (<Modal>this.$refs['memo']).show();
             try {
-                const memo = <{note: string | null, id: number}>await core.connection.queryApi('character-memo-get2.php',
+                const memo = await core.connection.queryApi<{note: string | null, id: number}>('character-memo-get2.php',
                     {target: this.character!.name});
                 this.memoId = memo.id;
                 this.memo = memo.note !== null ? memo.note : '';
@@ -123,7 +121,7 @@
         }
 
         get isChannelMod(): boolean {
-            if(this.channel === null) return false;
+            if(this.channel === undefined) return false;
             if(core.characters.ownCharacter.isChatOp) return true;
             const member = this.channel.members[core.connection.character];
             return member !== undefined && member.rank > Channel.Rank.Member;
@@ -189,9 +187,9 @@
         }
 
         private openMenu(touch: MouseEvent | Touch, character: Character, channel: Channel | undefined): void {
-            this.channel = channel !== undefined ? channel : null;
+            this.channel = channel;
             this.character = character;
-            this.characterImage = null;
+            this.characterImage = undefined;
             this.showContextMenu = true;
             this.position = {left: `${touch.clientX}px`, top: `${touch.clientY}px`};
             this.$nextTick(() => {
@@ -212,7 +210,7 @@
     }
 
     #userMenu .list-group-item-action {
-        border-top: 0;
+        border-top-width: 0;
         z-index: -1;
     }
 </style>

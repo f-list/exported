@@ -49,19 +49,17 @@ document.addEventListener('keydown', (e: KeyboardEvent) => {
 
 process.env.SPELLCHECKER_PREFER_HUNSPELL = '1';
 const sc = nativeRequire<{
-    Spellchecker: {
-        new(): {
-            add(word: string): void
-            remove(word: string): void
-            isMisspelled(x: string): boolean
-            setDictionary(name: string | undefined, dir: string): void
-            getCorrectionsForMisspelling(word: string): ReadonlyArray<string>
-        }
+    Spellchecker: new() => {
+        add(word: string): void
+        remove(word: string): void
+        isMisspelled(x: string): boolean
+        setDictionary(name: string | undefined, dir: string): void
+        getCorrectionsForMisspelling(word: string): ReadonlyArray<string>
     }
 }>('spellchecker/build/Release/spellchecker.node');
 const spellchecker = new sc.Spellchecker();
 
-Axios.defaults.params = { __fchat: `desktop/${electron.remote.app.getVersion()}` };
+Axios.defaults.params = {__fchat: `desktop/${electron.remote.app.getVersion()}`};
 
 if(process.env.NODE_ENV === 'production') {
     setupRaven('https://a9239b17b0a14f72ba85e8729b9d1612@sentry.f-list.net/2', electron.remote.app.getVersion());
@@ -72,30 +70,23 @@ if(process.env.NODE_ENV === 'production') {
     });
 }
 let browser: string | undefined;
+
 function openIncognito(url: string): void {
     if(browser === undefined)
         try { //tslint:disable-next-line:max-line-length
             browser = execSync(`FOR /F "skip=2 tokens=3" %A IN ('REG QUERY HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice /v ProgId') DO @(echo %A)`)
-                .toString().trim();
+                .toString().trim().toLowerCase();
         } catch(e) {
             console.error(e);
         }
-    switch(browser) {
-        case 'FirefoxURL':
-            exec(`start firefox.exe -private-window ${url}`);
-            break;
-        case 'ChromeHTML':
-            exec(`start chrome.exe -incognito ${url}`);
-            break;
-        case 'VivaldiHTM':
-            exec(`start vivaldi.exe -incognito ${url}`);
-            break;
-        case 'OperaStable':
-            exec(`start opera.exe -private ${url}`);
-            break;
-        default:
-            exec(`start iexplore.exe -private ${url}`);
-    }
+    const commands  = {
+        chrome: 'chrome.exe -incognito', firefox: 'firefox.exe -private-window', vivaldi: 'vivaldi.exe -incognito',
+        opera: 'opera.exe -private'
+    };
+    let start = 'iexplore.exe -private';
+    for(const key in commands)
+        if(browser!.indexOf(key) !== -1) start = commands[<keyof typeof commands>key];
+    exec(`start ${start} ${url}`);
 }
 
 const webContents = electron.remote.getCurrentWebContents();
@@ -172,14 +163,16 @@ webContents.on('context-menu', (_, props) => {
 });
 
 let dictDir = path.join(electron.remote.app.getPath('userData'), 'spellchecker');
-if(process.platform === 'win32')
-   exec(`for /d %I in ("${dictDir}") do @echo %~sI`, (_, stdout) => { dictDir = stdout.trim(); });
+if(process.platform === 'win32') //get the path in DOS (8-character) format as special characters cause problems otherwise
+    exec(`for /d %I in ("${dictDir}") do @echo %~sI`, (_, stdout) => dictDir = stdout.trim());
 electron.webFrame.setSpellCheckProvider('', false, {spellCheck: (text) => !spellchecker.isMisspelled(text)});
+
 function onSettings(s: GeneralSettings): void {
     settings = s;
     spellchecker.setDictionary(s.spellcheckLang, dictDir);
     for(const word of s.customDictionary) spellchecker.add(word);
 }
+
 electron.ipcRenderer.on('settings', (_: Event, s: GeneralSettings) => onSettings(s));
 
 const params = <{[key: string]: string | undefined}>qs.parse(window.location.search.substr(1));

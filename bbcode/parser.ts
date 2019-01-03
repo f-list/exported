@@ -166,10 +166,14 @@ export class BBCodeParser {
                     if(tag instanceof BBCodeTextTag) {
                         i = this.parse(input, i + 1, tag, undefined, isAllowed);
                         element = tag.createElement(this, parent, param, input.substring(mark, input.lastIndexOf('[', i)));
+                        if(element === undefined) parent.appendChild(document.createTextNode(input.substring(tagStart, i + 1)));
                     } else {
                         element = tag.createElement(this, parent, param, '');
+                        if(element === undefined) parent.appendChild(document.createTextNode(input.substring(tagStart, i + 1)));
                         if(!tag.noClosingTag)
                             i = this.parse(input, i + 1, tag, element !== undefined ? element : parent, isAllowed);
+                        if(element === undefined)
+                            parent.appendChild(document.createTextNode(input.substring(input.lastIndexOf('[', i), i + 1)));
                     }
                     mark = i + 1;
                     this._currentTag = currentTag;
@@ -182,7 +186,7 @@ export class BBCodeParser {
                             parent.appendChild(document.createTextNode(input.substring(mark, selfAllowed ? tagStart : i + 1)));
                         return i;
                     } else if(!selfAllowed)
-                        return tagStart - 1;
+                        return mark - 1;
                      else if(isAllowed(tagKey))
                          this.warning(`Unexpected closing ${tagKey} tag. Needed ${self} tag instead.`);
                 } else if(isAllowed(tagKey)) this.warning(`Found closing ${tagKey} tag that was never opened.`);

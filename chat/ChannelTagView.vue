@@ -1,11 +1,14 @@
 <template>
-    <a href="#" @click.prevent="joinChannel" :disabled="channel && channel.isJoined"><span class="fa fa-hashtag"></span>{{displayText}}</a>
+    <a href="#" @click.prevent="joinChannel()" :disabled="channel && channel.isJoined">
+        <span class="fa fa-hashtag"></span>
+        <template v-if="channel">{{channel.name}}<span class="bbcode-pseudo"> ({{channel.memberCount}})</span></template>
+        <template v-else>{{text}}</template>
+    </a>
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
     import core from './core';
     import {Channel} from './interfaces';
 
@@ -16,6 +19,7 @@
         @Prop({required: true})
         readonly text!: string;
 
+        @Hook('mounted')
         mounted(): void {
             core.channels.requestChannelsIfNeeded(300000);
         }
@@ -23,10 +27,8 @@
         joinChannel(): void {
             if(this.channel === undefined || !this.channel.isJoined)
                 core.channels.join(this.id);
-        }
-
-        get displayText(): string {
-            return this.channel !== undefined ? `${this.channel.name} (${this.channel.memberCount})` : this.text;
+            const channel = core.conversations.byKey(`#${this.id}`);
+            if(channel !== undefined) channel.show();
         }
 
         get channel(): Channel.ListItem | undefined {

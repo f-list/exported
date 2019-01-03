@@ -1,7 +1,9 @@
 <template>
     <div class="row character-page" id="pageBody">
-        <div class="alert alert-info" v-show="loading" style="margin:0 15px;flex:1">Loading character information.</div>
-        <div class="alert alert-danger" v-show="error" style="margin:0 15px;flex:1">{{error}}</div>
+        <div class="col-12" style="min-height:0">
+            <div class="alert alert-info" v-show="loading">Loading character information.</div>
+            <div class="alert alert-danger" v-show="error">{{error}}</div>
+        </div>
         <div class="col-md-4 col-lg-3 col-xl-2" v-if="!loading && character">
             <sidebar :character="character" @memo="memo" @bookmarked="bookmarked" :oldApi="oldApi"></sidebar>
         </div>
@@ -33,25 +35,25 @@
                         </div>
                         <div class="card-body">
                             <div class="tab-content">
-                                <div role="tabpanel" class="tab-pane" :class="{active: tab == 0}" id="overview">
+                                <div role="tabpanel" class="tab-pane" :class="{active: tab === '0'}" id="overview">
                                     <div v-bbcode="character.character.description" style="margin-bottom: 10px"></div>
                                     <character-kinks :character="character" :oldApi="oldApi" ref="tab0"></character-kinks>
                                 </div>
-                                <div role="tabpanel" class="tab-pane" :class="{active: tab == 1}" id="infotags">
+                                <div role="tabpanel" class="tab-pane" :class="{active: tab === '1'}" id="infotags">
                                     <character-infotags :character="character" ref="tab1"></character-infotags>
                                 </div>
-                                <div role="tabpanel" class="tab-pane" id="groups" :class="{active: tab == 2}" v-if="!oldApi">
+                                <div role="tabpanel" class="tab-pane" id="groups" :class="{active: tab === '2'}" v-if="!oldApi">
                                     <character-groups :character="character" ref="tab2"></character-groups>
                                 </div>
-                                <div role="tabpanel" class="tab-pane" id="images" :class="{active: tab == 3}">
+                                <div role="tabpanel" class="tab-pane" id="images" :class="{active: tab === '3'}">
                                     <character-images :character="character" ref="tab3" :use-preview="imagePreview"></character-images>
                                 </div>
-                                <div v-if="character.settings.guestbook" role="tabpanel" class="tab-pane" :class="{active: tab == 4}"
+                                <div v-if="character.settings.guestbook" role="tabpanel" class="tab-pane" :class="{active: tab === '4'}"
                                     id="guestbook">
                                     <character-guestbook :character="character" :oldApi="oldApi" ref="tab4"></character-guestbook>
                                 </div>
                                 <div v-if="character.is_self || character.settings.show_friends" role="tabpanel" class="tab-pane"
-                                    :class="{active: tab == 5}" id="friends">
+                                    :class="{active: tab === '5'}" id="friends">
                                     <character-friends :character="character" ref="tab5"></character-friends>
                                 </div>
                             </div>
@@ -64,9 +66,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
     import {standardParser} from '../../bbcode/standard';
     import * as Utils from '../utils';
     import {methods, Store} from './data_store';
@@ -99,29 +100,30 @@
         }
     })
     export default class CharacterPage extends Vue {
-        //tslint:disable:no-null-keyword
         @Prop()
-        private readonly name?: string;
+        readonly name?: string;
         @Prop()
-        private readonly characterid?: number;
+        readonly characterid?: number;
         @Prop({required: true})
-        private readonly authenticated!: boolean;
+        readonly authenticated!: boolean;
         @Prop()
         readonly oldApi?: true;
         @Prop()
         readonly imagePreview?: true;
-        private shared: SharedStore = Store;
-        private character: Character | null = null;
+        shared: SharedStore = Store;
+        character: Character | undefined;
         loading = true;
         error = '';
         tab = '0';
 
+        @Hook('beforeMount')
         beforeMount(): void {
             this.shared.authenticated = this.authenticated;
         }
 
+        @Hook('mounted')
         async mounted(): Promise<void> {
-            if(this.character === null) await this._getCharacter();
+            if(this.character === undefined) await this._getCharacter();
         }
 
         @Watch('tab')
@@ -147,7 +149,7 @@
 
         private async _getCharacter(): Promise<void> {
             this.error = '';
-            this.character = null;
+            this.character = undefined;
             if(this.name === undefined || this.name.length === 0)
                 return;
             try {

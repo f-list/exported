@@ -38,7 +38,7 @@
             <label for="date" class="col-sm-2 col-form-label">{{l('logs.date')}}</label>
             <div class="col-sm-8 col-10 col-xl-9">
                 <select class="form-control" v-model="selectedDate" id="date" @change="loadMessages">
-                    <option :value="null">{{l('logs.allDates')}}</option>
+                    <option :value="undefined">{{l('logs.allDates')}}</option>
                     <option v-for="date in dates" :value="date.getTime()">{{formatDate(date)}}</option>
                 </select>
             </div>
@@ -47,8 +47,8 @@
                     class="fa fa-download"></span></button>
             </div>
         </div>
-        <div class="messages-both" style="overflow:auto" ref="messages" tabindex="-1" @scroll="onMessagesScroll">
-            <message-view v-for="message in filteredMessages" :message="message" :key="message.id"></message-view>
+        <div class="messages messages-both" style="overflow:auto;overscroll-behavior:none;" ref="messages" tabindex="-1" @scroll="onMessagesScroll">
+            <message-view v-for="message in displayedMessages" :message="message" :key="message.id" :logs="true"></message-view>
         </div>
         <div class="input-group" style="flex-shrink:0">
             <div class="input-group-prepend">
@@ -60,9 +60,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop, Watch} from '@f-list/vue-ts';
     import {format} from 'date-fns';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
     import CustomDialog from '../components/custom_dialog';
     import FilterableSelect from '../components/FilterableSelect.vue';
     import Modal from '../components/Modal.vue';
@@ -86,13 +85,12 @@
         components: {modal: Modal, 'message-view': MessageView, 'filterable-select': FilterableSelect}
     })
     export default class Logs extends CustomDialog {
-        //tslint:disable:no-null-keyword
         @Prop()
         readonly conversation?: Conversation;
-        selectedConversation: LogInterface.Conversation | null = null;
-        dates: ReadonlyArray<Date> = [];
-        selectedDate: string | null = null;
         conversations: LogInterface.Conversation[] = [];
+        selectedConversation: LogInterface.Conversation | undefined;
+        dates: ReadonlyArray<Date> = [];
+        selectedDate: string | undefined;
         l = l;
         filter = '';
         messages: ReadonlyArray<Conversation.Message> = [];
@@ -103,6 +101,14 @@
         showFilters = true;
         canZip = core.logs.canZip;
         dateOffset = -1;
+        windowStart = 0;
+        windowEnd = 0;
+        resizeListener = async() => this.onMessagesScroll();
+
+        get displayedMessages(): ReadonlyArray<Conversation.Message> {
+            if(this.selectedDate !== undefined) return this.filteredMessages;
+            return this.filteredMessages.slice(this.windowStart, this.windowEnd);
+        }
 
         get filteredMessages(): ReadonlyArray<Conversation.Message> {
             if(this.filter.length === 0) return this.messages;
@@ -111,35 +117,42 @@
                 (x) => filter.test(x.text) || x.type !== Conversation.Message.Type.Event && filter.test(x.sender.name));
         }
 
+        @Hook('mounted')
         async mounted(): Promise<void> {
             this.characters = await core.logs.getAvailableCharacters();
-            await this.loadCharacter();
-            return this.conversationChanged();
+            window.addEventListener('resize', this.resizeListener);
+        }
+
+        @Hook('beforeDestroy')
+        beforeDestroy(): void {
+            window.removeEventListener('resize', this.resizeListener);
         }
 
         async loadCharacter(): Promise<void> {
+            this.selectedConversation = undefined;
+            return this.loadConversations();
+        }
+
+        async loadConversations(): Promise<void> {
             if(this.selectedCharacter === '') return;
             this.conversations = (await core.logs.getConversations(this.selectedCharacter)).slice();
             this.conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
-            this.selectedConversation = null;
         }
 
-        filterConversation(filter: RegExp, conversation: {key: string, name: string}): boolean {
+        async loadDates(): Promise<void> {
+            this.dates = this.selectedConversation === undefined ? [] :
+                (await core.logs.getLogDates(this.selectedCharacter, this.selectedConversation.key)).slice().reverse();
+        }
+
+        filterConversation(filter: RegExp, conversation: LogInterface.Conversation): boolean {
             return filter.test(conversation.name);
         }
 
-        @Watch('conversation')
-        async conversationChanged(): Promise<void> {
-            if(this.conversation === undefined) return;
-            //tslint:disable-next-line:strict-boolean-expressions
-            this.selectedConversation = this.conversations.filter((x) => x.key === this.conversation!.key)[0] || null;
-        }
-
         @Watch('selectedConversation')
-        async conversationSelected(): Promise<void> {
-            this.dates = this.selectedConversation === null ? [] :
-                (await core.logs.getLogDates(this.selectedCharacter, this.selectedConversation.key)).slice().reverse();
-            this.selectedDate = null;
+        async conversationSelected(oldValue: Conversation | undefined, newValue: Conversation | undefined): Promise<void> {
+            if(oldValue !== undefined && newValue !== undefined && oldValue.key === newValue.key) return;
+            await this.loadDates();
+            this.selectedDate = undefined;
             this.dateOffset = -1;
             this.filter = '';
             await this.loadMessages();
@@ -147,7 +160,16 @@
 
         @Watch('filter')
         onFilterChanged(): void {
+            if(this.selectedDate === undefined) {
+                this.windowEnd = this.filteredMessages.length;
+                this.windowStart = this.windowEnd - 50;
+            }
             this.$nextTick(async() => this.onMessagesScroll());
+        }
+
+        @Watch('showFilters')
+        async onFilterToggle(): Promise<void> {
+            return this.onMessagesScroll();
         }
 
         download(file: string, logs: string): void {
@@ -164,13 +186,13 @@
         }
 
         downloadDay(): void {
-            if(this.selectedConversation === null || this.selectedDate === null || this.messages.length === 0) return;
+            if(this.selectedConversation === undefined || this.selectedDate === undefined || this.messages.length === 0) return;
             const name = `${this.selectedConversation.name}-${formatDate(new Date(this.selectedDate))}.txt`;
             this.download(name, `data:${encodeURIComponent(name)},${encodeURIComponent(getLogs(this.messages))}`);
         }
 
         async downloadConversation(): Promise<void> {
-            if(this.selectedConversation === null) return;
+            if(this.selectedConversation === undefined) return;
             const zip = new Zip();
             for(const date of this.dates) {
                 const messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key, date);
@@ -195,14 +217,17 @@
 
         async onOpen(): Promise<void> {
             if(this.selectedCharacter !== '') {
-                this.conversations = (await core.logs.getConversations(this.selectedCharacter)).slice();
-                this.conversations.sort((x, y) => (x.name < y.name ? -1 : (x.name > y.name ? 1 : 0)));
-                this.dates = this.selectedConversation === null ? [] :
-                    (await core.logs.getLogDates(this.selectedCharacter, this.selectedConversation.key)).slice().reverse();
-                await this.loadMessages();
+                await this.loadConversations();
+                if(this.conversation !== undefined)
+                    this.selectedConversation = this.conversations.filter((x) => x.key === this.conversation!.key)[0];
+                else {
+                    await this.loadDates();
+                    await this.loadMessages();
+                }
             }
             this.keyDownListener = (e) => {
                 if(getKey(e) === Keys.KeyA && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+                    if((<HTMLElement>e.target).tagName.toLowerCase() === 'input') return;
                     e.preventDefault();
                     const selection = document.getSelection();
                     if(selection === null) return;
@@ -223,36 +248,69 @@
             window.removeEventListener('keydown', this.keyDownListener!);
         }
 
-        async loadMessages(): Promise<ReadonlyArray<Conversation.Message>> {
-            if(this.selectedConversation === null)
-                return this.messages = [];
-            if(this.selectedDate !== null) {
+        async loadMessages(): Promise<void> {
+            if(this.selectedConversation === undefined) this.messages = [];
+            else if(this.selectedDate !== undefined) {
                 this.dateOffset = -1;
-                return this.messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key,
-                    new Date(this.selectedDate));
-            }
-            if(this.dateOffset === -1) {
+                this.messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key, new Date(this.selectedDate));
+            } else if(this.dateOffset === -1) {
                 this.messages = [];
                 this.dateOffset = 0;
-            }
-            this.$nextTick(async() => this.onMessagesScroll());
-            return this.messages;
+                this.windowStart = 0;
+                this.windowEnd = 0;
+                this.lastScroll = -1;
+                this.lockScroll = false;
+                this.$nextTick(async() => this.onMessagesScroll());
+            } else return this.onMessagesScroll();
         }
 
-        async onMessagesScroll(): Promise<void> {
+        lockScroll = false;
+        lastScroll = -1;
+
+        async onMessagesScroll(ev?: Event): Promise<void> {
             const list = <HTMLElement | undefined>this.$refs['messages'];
-            if(this.selectedConversation === null || this.selectedDate !== null || list === undefined || list.scrollTop > 15
-                || !this.dialog.isShown || this.dateOffset >= this.dates.length) return;
-            const messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key,
-                this.dates[this.dateOffset++]);
-            this.messages = messages.concat(this.messages);
-            const noOverflow = list.offsetHeight === list.scrollHeight;
-            const firstMessage = <HTMLElement>list.firstElementChild!;
-            this.$nextTick(() => {
-                if(list.offsetHeight === list.scrollHeight) return this.onMessagesScroll();
-                else if(noOverflow) setTimeout(() => list.scrollTop = list.scrollHeight, 0);
-                else setTimeout(() => list.scrollTop = firstMessage.offsetTop, 0);
-            });
+            if(this.lockScroll) return;
+            if(list === undefined || ev !== undefined && Math.abs(list.scrollTop - this.lastScroll) < 50) return;
+            this.lockScroll = true;
+            function getTop(index: number): number {
+                return (<HTMLElement>list!.children[index]).offsetTop;
+            }
+            while(this.selectedConversation !== undefined && this.selectedDate === undefined && this.dialog.isShown) {
+                const oldHeight = list.scrollHeight, oldTop = list.scrollTop;
+                const oldFirst = this.displayedMessages[0];
+                const oldEnd = this.windowEnd;
+                const length = this.displayedMessages.length;
+                const oldTotal = this.filteredMessages.length;
+                let loaded = false;
+                if(length <= 20 || getTop(20) > list.scrollTop)
+                    this.windowStart -= 50;
+                else if(length > 100 && getTop(100) < list.scrollTop)
+                    this.windowStart += 50;
+                else if(length >= 100 && getTop(length - 100) > list.scrollTop + list.offsetHeight)
+                    this.windowEnd -= 50;
+                else if(getTop(length - 20) < list.scrollTop + list.offsetHeight)
+                    this.windowEnd += 50;
+                if(this.windowStart <= 0 && this.dateOffset < this.dates.length) {
+                    const messages = await core.logs.getLogs(this.selectedCharacter, this.selectedConversation.key,
+                        this.dates[this.dateOffset++]);
+                    this.messages = messages.concat(this.messages);
+                    const addedTotal = this.filteredMessages.length - oldTotal;
+                    this.windowStart += addedTotal;
+                    this.windowEnd += addedTotal;
+                    loaded = true;
+                }
+                this.windowStart = Math.max(this.windowStart, 0);
+                this.windowEnd = Math.min(this.windowEnd, this.filteredMessages.length);
+                if(this.displayedMessages[0] !== oldFirst) {
+                    list.style.overflow = 'hidden';
+                    await this.$nextTick();
+                    list.scrollTop = oldTop + list.scrollHeight - oldHeight;
+                    list.style.overflow = 'auto';
+                } else if(this.windowEnd === oldEnd && !loaded) break;
+                else await this.$nextTick();
+            }
+            this.lastScroll = list.scrollTop;
+            this.lockScroll = false;
         }
     }
 </script>

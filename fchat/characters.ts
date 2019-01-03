@@ -59,9 +59,9 @@ export default function(this: void, connection: Connection): Interfaces.State {
     connection.onEvent('connecting', async(isReconnect) => {
         state.friends = [];
         state.bookmarks = [];
-        state.bookmarkList = (<{characters: string[]}>await connection.queryApi('bookmark-list.php')).characters;
-        state.friendList = ((<{friends: {source: string, dest: string, last_online: number}[]}>await connection.queryApi('friend-list.php'))
-            .friends).map((x) => x.dest);
+        state.bookmarkList = (await connection.queryApi<{characters: string[]}>('bookmark-list.php')).characters;
+        state.friendList = (await connection.queryApi<{friends: {source: string, dest: string, last_online: number}[]}>('friend-list.php'))
+            .friends.map((x) => x.dest);
         if(isReconnect && (<Character | undefined>state.ownCharacter) !== undefined)
             reconnectStatus = {status: state.ownCharacter.status, statusmsg: state.ownCharacter.statusText};
         for(const key in state.characters) {

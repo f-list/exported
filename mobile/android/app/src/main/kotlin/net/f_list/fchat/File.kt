@@ -5,6 +5,7 @@ import android.webkit.JavascriptInterface
 import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
+import java.io.RandomAccessFile
 import java.util.*
 
 class File(private val ctx: Context) {
@@ -12,7 +13,7 @@ class File(private val ctx: Context) {
 	fun read(name: String): String? {
 		val file = File(ctx.filesDir, name)
 		if(!file.exists()) return null
-		Scanner(file).useDelimiter("\\Z").use { return it.next() }
+		return file.readText()
 	}
 
 	@JavascriptInterface

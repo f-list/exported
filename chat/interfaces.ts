@@ -1,35 +1,33 @@
 //tslint:disable:no-shadowed-variable
-declare global {
-    interface Function {
-        //tslint:disable-next-line:ban-types no-any
-        bind<T extends Function>(this: T, thisArg: any): T;
-        //tslint:disable-next-line:ban-types no-any
-        bind<T, TReturn>(this: (t: T) => TReturn, thisArg: any, arg: T): () => TReturn;
-    }
-}
+import {Connection} from '../fchat';
 
 import {Channel, Character} from '../fchat/interfaces';
 export {Connection, Channel, Character} from '../fchat/interfaces';
-export const userStatuses = ['online', 'looking', 'away', 'busy', 'dnd'];
-export const channelModes = ['chat', 'ads', 'both'];
+export const userStatuses: ReadonlyArray<Character.Status> = ['online', 'looking', 'away', 'busy', 'dnd'];
+export const channelModes: ReadonlyArray<Channel.Mode> = ['chat', 'ads', 'both'];
 
 export namespace Conversation {
-    export interface EventMessage {
-        readonly type: Message.Type.Event,
-        readonly text: string,
+    interface BaseMessage {
+        readonly id: number
+        readonly type: Message.Type
+        readonly text: string
         readonly time: Date
-        readonly sender?: undefined
     }
 
-    export interface ChatMessage {
-        readonly type: Message.Type,
-        readonly sender: Character,
-        readonly text: string,
-        readonly time: Date
+    export interface EventMessage extends BaseMessage {
+        readonly type: Message.Type.Event
+    }
+
+    export interface ChatMessage extends BaseMessage {
         readonly isHighlight: boolean
+        readonly sender: Character
     }
 
     export type Message = EventMessage | ChatMessage;
+
+    export interface SFCMessage extends EventMessage {
+        sfc: Connection.ServerCommands['SFC'] & {confirmed?: true}
+    }
 
     export namespace Message {
         export enum Type {
@@ -44,7 +42,6 @@ export namespace Conversation {
 
     export type RecentChannelConversation = {readonly channel: string, readonly name: string};
     export type RecentPrivateConversation = {readonly character: string};
-    export type RecentConversation = RecentChannelConversation | RecentPrivateConversation;
 
     export type TypingStatus = 'typing' | 'paused' | 'clear';
 
@@ -79,12 +76,12 @@ export namespace Conversation {
         readonly privateConversations: ReadonlyArray<PrivateConversation>
         readonly channelConversations: ReadonlyArray<ChannelConversation>
         readonly consoleTab: Conversation
-        readonly recent: ReadonlyArray<RecentConversation>
+        readonly recent: ReadonlyArray<RecentPrivateConversation>
+        readonly recentChannels: ReadonlyArray<RecentChannelConversation>
         readonly selectedConversation: Conversation
         readonly hasNew: boolean;
         byKey(key: string): Conversation | undefined
         getPrivate(character: Character): PrivateConversation
-        reloadSettings(): void
     }
 
     export enum Setting {
@@ -142,7 +139,8 @@ export namespace Settings {
         pinned: {channels: string[], private: string[]},
         conversationSettings: {[key: string]: Conversation.Settings | undefined}
         modes: {[key: string]: Channel.Mode | undefined}
-        recent: Conversation.RecentConversation[]
+        recent: Conversation.RecentPrivateConversation[]
+        recentChannels: Conversation.RecentChannelConversation[]
         hiddenUsers: string[]
     };
 

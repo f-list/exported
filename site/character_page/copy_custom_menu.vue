@@ -1,7 +1,7 @@
 <template>
     <div>
-        <ul class="dropdown-menu" role="menu" @click="innerClick($event)" @touchstart="innerClick($event)" @touchend="innerClick($event)"
-            style="position: fixed; display: block;" :style="positionText" ref="menu" v-show="showMenu">
+        <ul class="dropdown-menu" role="menu" @click="innerClick" @touchstart="innerClick" @touchend="innerClick"
+            style="position: fixed; display: block;" :style="positionStyle" ref="menu" v-show="showMenu">
             <li><a class="dropdown-item" href="#">Copy Custom</a></li>
         </ul>
         <copy-dialog ref="copy-dialog"></copy-dialog>
@@ -9,15 +9,12 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import {Component, Hook, Prop} from '@f-list/vue-ts';
     import ContextMenu from './context_menu';
     import CopyCustomDialog from './copy_custom_dialog.vue';
 
     @Component({
-        components: {
-            'copy-dialog': CopyCustomDialog
-        }
+        components: {'copy-dialog': CopyCustomDialog}
     })
     export default class CopyCustomMenu extends ContextMenu {
         @Prop({required: true})
@@ -35,6 +32,7 @@
             (<CopyCustomDialog>this.$refs['copy-dialog']).showDialog(name, description);
         }
 
+        @Hook('mounted')
         mounted(): void {
             this.bindOffclick();
         }

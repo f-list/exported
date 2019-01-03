@@ -1,5 +1,5 @@
 <template>
-    <modal :action="l('characterSearch.action')" @submit.prevent="submit" dialogClass="w-100"
+    <modal :action="l('characterSearch.action')" @submit.prevent="submit()" dialogClass="w-100"
         :buttonText="results ? l('characterSearch.again') : undefined" class="character-search">
         <div v-if="options && !results">
             <div v-show="error" class="alert alert-danger">{{error}}</div>
@@ -7,7 +7,7 @@
                 :title="l('characterSearch.kinks')" :filterFunc="filterKink" :options="options.kinks">
                 <template slot-scope="s">{{s.option.name}}</template>
             </filterable-select>
-            <filterable-select v-for="item in ['genders', 'orientations', 'languages', 'furryprefs', 'roles', 'positions']" :multiple="true"
+            <filterable-select v-for="item in listItems" :multiple="true"
                 v-model="data[item]" :placeholder="l('filter')" :title="l('characterSearch.' + item)" :options="options[item]" :key="item">
             </filterable-select>
         </div>
@@ -26,8 +26,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook} from '@f-list/vue-ts';
     import Axios from 'axios';
-    import Component from 'vue-class-component';
     import CustomDialog from '../components/custom_dialog';
     import FilterableSelect from '../components/FilterableSelect.vue';
     import Modal from '../components/Modal.vue';
@@ -39,7 +39,7 @@
     import UserView from './user_view';
 
     type Options = {
-        kinks: {id: number, name: string, description: string}[],
+        kinks: Kink[],
         listitems: {id: string, name: string, value: string}[]
     };
 
@@ -55,35 +55,30 @@
         return 0;
     }
 
+    interface Data {
+        kinks: Kink[]
+        genders: string[]
+        orientations: string[]
+        languages: string[]
+        furryprefs: string[]
+        roles: string[]
+        positions: string[]
+    }
+
     @Component({
         components: {modal: Modal, user: UserView, 'filterable-select': FilterableSelect, bbcode: BBCodeView}
     })
     export default class CharacterSearch extends CustomDialog {
-        //tslint:disable:no-null-keyword
         l = l;
         kinksFilter = '';
         error = '';
-        results: Character[] | null = null;
+        results: Character[] | undefined;
         characterImage = characterImage;
-        options: {
-            kinks: Kink[]
-            genders: string[]
-            orientations: string[]
-            languages: string[]
-            furryprefs: string[]
-            roles: string[]
-            positions: string[]
-        } | null = null;
-        data: {[key: string]: (string | Kink)[]} = {
-            kinks: <Kink[]>[],
-            genders: <string[]>[],
-            orientations: <string[]>[],
-            languages: <string[]>[],
-            furryprefs: <string[]>[],
-            roles: <string[]>[],
-            positions: <string[]>[]
-        };
+        options!: Data;
+        data: Data = {kinks: [], genders: [], orientations: [], languages: [], furryprefs: [], roles: [], positions: []};
+        listItems: ReadonlyArray<keyof Data> = ['genders', 'orientations', 'languages', 'furryprefs', 'roles', 'positions'];
 
+        @Hook('created')
         async created(): Promise<void> {
             if(options === undefined)
                 options = <Options | undefined>(await Axios.get('https://www.f-list.net/json/api/mapping-list.php')).data;
@@ -99,6 +94,7 @@
             });
         }
 
+        @Hook('mounted')
         mounted(): void {
             core.connection.onMessage('ERR', (data) => {
                 switch(data.number) {
@@ -129,15 +125,17 @@
         }
 
         submit(): void {
-            if(this.results !== null) {
-                this.results = null;
+            if(this.results !== undefined) {
+                this.results = undefined;
                 return;
             }
             this.error = '';
             const data: Connection.ClientCommands['FKS'] & {[key: string]: (string | number)[]} = {kinks: []};
-            for(const key in this.data)
-                if(this.data[key].length > 0)
-                    data[key] = key === 'kinks' ? (<Kink[]>this.data[key]).map((x) => x.id) : (<string[]>this.data[key]);
+            for(const key in this.data) {
+                const item = this.data[<keyof Data>key];
+                if(item.length > 0)
+                    data[key] = key === 'kinks' ? (<Kink[]>item).map((x) => x.id) : (<string[]>item);
+            }
             core.connection.send('FKS', data);
         }
     }

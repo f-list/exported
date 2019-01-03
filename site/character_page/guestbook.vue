@@ -26,9 +26,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
     import * as Utils from '../utils';
     import {methods, Store} from './data_store';
     import {Character, GuestbookPost} from './interfaces';
@@ -36,13 +35,11 @@
     import GuestbookPostView from './guestbook_post.vue';
 
     @Component({
-        components: {
-            'guestbook-post': GuestbookPostView
-        }
+        components: {'guestbook-post': GuestbookPostView}
     })
     export default class GuestbookView extends Vue {
         @Prop({required: true})
-        private readonly character!: Character;
+        readonly character!: Character;
         @Prop()
         readonly oldApi?: true;
         loading = true;
@@ -51,11 +48,11 @@
 
         posts: GuestbookPost[] = [];
 
-        private unapprovedOnly = false;
-        private page = 1;
+        unapprovedOnly = false;
+        page = 1;
         hasNextPage = false;
         canEdit = false;
-        private newPost = {
+        newPost = {
             posting: false,
             privatePost: false,
             character: Utils.Settings.defaultCharacter,

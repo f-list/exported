@@ -1,7 +1,7 @@
 <template>
     <sidebar id="user-list" :label="l('users.title')" icon="fa-users" :right="true" :open="expanded">
         <tabs style="flex-shrink:0" :tabs="channel ? [l('users.friends'), l('users.members')] : [l('users.friends')]" v-model="tab"></tabs>
-        <div class="users" style="padding-left:10px" v-show="tab == 0">
+        <div class="users" style="padding-left:10px" v-show="tab === '0'">
             <h4>{{l('users.friends')}}</h4>
             <div v-for="character in friends" :key="character.name">
                 <user :character="character" :showStatus="true" :bookmark="false"></user>
@@ -11,7 +11,7 @@
                 <user :character="character" :showStatus="true" :bookmark="false"></user>
             </div>
         </div>
-        <div v-if="channel" style="padding-left:5px;flex:1;display:flex;flex-direction:column" v-show="tab == 1">
+        <div v-if="channel" style="padding-left:5px;flex:1;display:flex;flex-direction:column" v-show="tab === '1'">
             <div class="users" style="flex:1;padding-left:5px">
                 <h4>{{l('users.memberCount', channel.sortedMembers.length)}}</h4>
                 <div v-for="member in filteredMembers" :key="member.character.name">
@@ -29,8 +29,8 @@
 </template>
 
 <script lang="ts">
+    import {Component} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
     import Tabs from '../components/tabs';
     import core from './core';
     import {Channel, Character, Conversation} from './interfaces';

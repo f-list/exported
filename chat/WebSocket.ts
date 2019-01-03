@@ -9,6 +9,10 @@ export default class Socket implements WebSocketConnection {
         this.socket = new WebSocket(Socket.host);
     }
 
+    get readyState(): WebSocketConnection.ReadyState {
+        return this.socket.readyState;
+    }
+
     close(): void {
         this.socket.close();
     }

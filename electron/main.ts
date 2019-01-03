@@ -381,7 +381,10 @@ function onReady(): void {
         settings.customDictionary.splice(settings.customDictionary.indexOf(word), 1);
         setGeneralSettings(settings);
     });
-    electron.ipcMain.on('disconnect', (_: Event, character: string) => characters.splice(characters.indexOf(character), 1));
+    electron.ipcMain.on('disconnect', (_: Event, character: string) => {
+        const index = characters.indexOf(character);
+        if(index !== -1) characters.splice(index, 1);
+    });
     const emptyBadge = electron.nativeImage.createEmpty();
     //tslint:disable-next-line:no-require-imports
     const badge = electron.nativeImage.createFromPath(path.join(__dirname, <string>require('./build/badge.png')));

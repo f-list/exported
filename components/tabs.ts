@@ -6,9 +6,9 @@ const Tabs = Vue.extend({
     render(this: Vue & {readonly value?: string, _v?: string, selected?: string, tabs: {readonly [key: string]: string}},
            createElement: CreateElement): VNode {
         let children: {[key: string]: string | VNode | undefined};
-        if(<VNode[] | undefined>this.$slots['default'] !== undefined) {
+        if(this.$slots['default'] !== undefined) {
             children = {};
-            this.$slots['default'].forEach((child, i) => {
+            this.$slots['default']!.forEach((child, i) => {
                 if(child.context !== undefined) children[child.key !== undefined ? child.key : i] = child;
             });
         } else children = this.tabs;
@@ -19,14 +19,11 @@ const Tabs = Vue.extend({
             this.$emit('input', this._v = keys[0]);
         if(this.selected !== this._v && children[this.selected!] !== undefined)
             this.$emit('input', this._v = this.selected);
-        return createElement('ul', {staticClass: 'nav nav-tabs'}, keys.map((key) => createElement('li', {staticClass: 'nav-item'},
-            [createElement('a', {
-                staticClass: 'nav-link', class: {active: this._v === key}, on: {
-                    click: () => {
-                        this.$emit('input', key);
-                    }
-                }
-            }, [children[key]!])])));
+        return createElement('div', {staticClass: 'nav-tabs-scroll'},
+            [createElement('ul', {staticClass: 'nav nav-tabs'}, keys.map((key) => createElement('li', {staticClass: 'nav-item'},
+                [createElement('a', {
+                    staticClass: 'nav-link', class: {active: this._v === key}, on: { click: () => this.$emit('input', key) }
+                }, [children[key]!])])))]);
     }
 });
 

@@ -3,10 +3,9 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop, Watch} from '@f-list/vue-ts';
     import {distanceInWordsToNow, format} from 'date-fns';
-    import Vue, {ComponentOptions} from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
+    import Vue from 'vue';
     import {Settings} from '../site/utils';
 
     @Component
@@ -16,8 +15,9 @@
         primary: string | undefined;
         secondary: string | undefined;
 
-        constructor(options?: ComponentOptions<Vue>) {
-            super(options);
+        @Hook('mounted')
+        @Watch('time')
+        update(): void {
             if(this.time === null || this.time === 0)
                 return;
             const date = isNaN(+this.time) ? new Date(`${this.time}+00:00`) : new Date(+this.time * 1000);

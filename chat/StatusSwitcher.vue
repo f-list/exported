@@ -21,7 +21,7 @@
 </template>
 
 <script lang="ts">
-    import Component from 'vue-class-component';
+    import {Component} from '@f-list/vue-ts';
     import CustomDialog from '../components/custom_dialog';
     import Dropdown from '../components/Dropdown.vue';
     import Modal from '../components/Modal.vue';
@@ -36,16 +36,15 @@
         components: {modal: Modal, editor: Editor, dropdown: Dropdown}
     })
     export default class StatusSwitcher extends CustomDialog {
-        //tslint:disable:no-null-keyword
-        selectedStatus: Character.Status | null = null;
-        enteredText: string | null = null;
+        selectedStatus: Character.Status | undefined;
+        enteredText: string | undefined;
         statuses = userStatuses;
         l = l;
         getByteLength = getByteLength;
         getStatusIcon = getStatusIcon;
 
         get status(): Character.Status {
-            return this.selectedStatus !== null ? this.selectedStatus : this.character.status;
+            return this.selectedStatus !== undefined ? this.selectedStatus : this.character.status;
         }
 
         set status(status: Character.Status) {
@@ -53,7 +52,7 @@
         }
 
         get text(): string {
-            return this.enteredText !== null ? this.enteredText : this.character.statusText;
+            return this.enteredText !== undefined ? this.enteredText : this.character.statusText;
         }
 
         set text(text: string) {
@@ -69,8 +68,8 @@
         }
 
         reset(): void {
-            this.selectedStatus = null;
-            this.enteredText = null;
+            this.selectedStatus = undefined;
+            this.enteredText = undefined;
         }
     }
 </script>

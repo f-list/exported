@@ -10,18 +10,18 @@
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="account">{{l('login.account')}}</label>
-                        <input class="form-control" id="account" v-model="settings.account" @keypress.enter="login" :disabled="loggingIn"/>
+                        <input class="form-control" id="account" v-model="settings.account" @keypress.enter="login()" :disabled="loggingIn"/>
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="password">{{l('login.password')}}</label>
-                        <input class="form-control" type="password" id="password" v-model="password" @keypress.enter="login" :disabled="loggingIn"/>
+                        <input class="form-control" type="password" id="password" v-model="password" @keypress.enter="login()" :disabled="loggingIn"/>
                     </div>
                     <div class="form-group" v-show="showAdvanced">
                         <label class="control-label" for="host">{{l('login.host')}}</label>
                         <div class="input-group">
-                            <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login" :disabled="loggingIn"/>
+                            <input class="form-control" id="host" v-model="settings.host" @keypress.enter="login()" :disabled="loggingIn"/>
                             <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" @click="resetHost"><span class="fas fa-undo-alt"></span></button>
+                                <button class="btn btn-outline-secondary" @click="resetHost()"><span class="fas fa-undo-alt"></span></button>
                             </div>
                         </div>
                     </div>
@@ -65,6 +65,7 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook} from '@f-list/vue-ts';
     import Axios from 'axios';
     import * as electron from 'electron';
     import log from 'electron-log'; //tslint:disable-line:match-default-export-name
@@ -74,7 +75,6 @@
     import * as Raven from 'raven-js';
     import {promisify} from 'util';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
     import Chat from '../chat/Chat.vue';
     import {getKey, Settings} from '../chat/common';
     import core, {init as initCore} from '../chat/core';
@@ -109,15 +109,14 @@
         components: {chat: Chat, modal: Modal, characterPage: CharacterPage}
     })
     export default class Index extends Vue {
-        //tslint:disable:no-null-keyword
         showAdvanced = false;
         saveLogin = false;
         loggingIn = false;
         password = '';
         character: string | undefined;
-        characters: string[] | null = null;
+        characters: string[] | undefined;
         error = '';
-        defaultCharacter: string | null = null;
+        defaultCharacter: string | undefined;
         l = l;
         settings!: GeneralSettings;
         importProgress = 0;
@@ -125,6 +124,7 @@
         fixCharacters: ReadonlyArray<string> = [];
         fixCharacter = '';
 
+        @Hook('created')
         async created(): Promise<void> {
             if(this.settings.account.length > 0) this.saveLogin = true;
             keyStore.getPassword(this.settings.account)
@@ -192,8 +192,8 @@
                 });
                 connection.onEvent('closed', () => {
                     if(this.character === undefined) return;
+                    electron.ipcRenderer.send('disconnect', this.character);
                     this.character = undefined;
-                    electron.ipcRenderer.send('disconnect', connection.character);
                     parent.send('disconnect', webContents.id);
                     Raven.setUserContext();
                 });

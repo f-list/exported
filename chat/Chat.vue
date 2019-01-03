@@ -4,7 +4,7 @@
             <div class="alert alert-danger" v-show="error">{{error}}</div>
             <h3 class="card-header" style="margin-top:0;display:flex">
                 {{l('title')}}
-                <a href="#" @click.prevent="$refs['logsDialog'].show()" class="btn" style="flex:1;text-align:right">
+                <a href="#" @click.prevent="showLogs()" class="btn" style="flex:1;text-align:right">
                     <span class="fa fa-file-alt"></span> <span class="btn-text">{{l('logs.title')}}</span>
                 </a>
             </h3>
@@ -32,9 +32,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop} from 'vue-property-decorator';
     import Modal from '../components/Modal.vue';
     import Channels from '../fchat/channels';
     import Characters from '../fchat/characters';
@@ -46,7 +45,7 @@
     import l from './localize';
     import Logs from './Logs.vue';
 
-    type BBCodeNode = Node & {bbcodeTag?: string, bbcodeParam?: string, bbcodeHide?: boolean};
+    type BBCodeNode = Node & {bbcodeTag?: string, bbcodeParam?: string};
 
     function copyNode(str: string, node: BBCodeNode, end: Node, range: Range, flags: {endFound?: true}): string {
         if(node === end) flags.endFound = true;
@@ -54,7 +53,7 @@
             str = `[${node.bbcodeTag}${node.bbcodeParam !== undefined ? `=${node.bbcodeParam}` : ''}]${str}[/${node.bbcodeTag}]`;
         if(node.nextSibling !== null && !flags.endFound) {
             if(node instanceof HTMLElement && getComputedStyle(node).display === 'block') str += '\r\n';
-            str += scanNode(node.nextSibling!, end, range, flags);
+            str += scanNode(node.nextSibling, end, range, flags);
         }
         if(node.parentElement === null) return str;
         return copyNode(str, node.parentNode!, end, range, flags);
@@ -62,7 +61,7 @@
 
     function scanNode(node: BBCodeNode, end: Node, range: Range, flags: {endFound?: true}, hide?: boolean): string {
         let str = '';
-        hide = hide || node.bbcodeHide;
+        hide = hide || node instanceof HTMLElement && node.classList.contains('bbcode-pseudo');
         if(node === end) flags.endFound = true;
         if(node.bbcodeTag !== undefined) str += `[${node.bbcodeTag}${node.bbcodeParam !== undefined ? `=${node.bbcodeParam}` : ''}]`;
         if(node instanceof Text) str += node === range.endContainer ? node.nodeValue!.substr(0, range.endOffset) : node.nodeValue;
@@ -91,6 +90,7 @@
         l = l;
         copyPlain = false;
 
+        @Hook('mounted')
         mounted(): void {
             document.title = l('title', core.connection.character);
             document.addEventListener('copy', ((e: ClipboardEvent) => {
@@ -102,10 +102,11 @@
                 if(selection === null || selection.isCollapsed) return;
                 const range = selection.getRangeAt(0);
                 let start = range.startContainer, end = range.endContainer;
-                let startValue: string;
+                let startValue = '';
                 if(start instanceof HTMLElement) {
                     start = start.childNodes[range.startOffset];
-                    startValue = start instanceof HTMLImageElement ? start.alt : scanNode(start.firstChild!, end, range, {});
+                    if(<Node | undefined>start === undefined) start = range.startContainer;
+                    else startValue = start instanceof HTMLImageElement ? start.alt : scanNode(start.firstChild!, end, range, {});
                 } else
                     startValue = start.nodeValue!.substring(range.startOffset, start === range.endContainer ? range.endOffset : undefined);
                 if(end instanceof HTMLElement && range.endOffset > 0) end = end.childNodes[range.endOffset - 1];
@@ -155,6 +156,10 @@
         cancelReconnect(): void {
             core.connection.close();
             (<Modal>this.$refs['reconnecting']).hide();
+        }
+
+        showLogs(): void {
+            (<Logs>this.$refs['logsDialog']).show();
         }
 
         async connect(): Promise<void> {

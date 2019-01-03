@@ -6,7 +6,7 @@
                 <slot name="title" style="flex:1"></slot>
             </div>
         </a>
-        <div class="dropdown-menu" :style="open ? 'display:block' : ''" @mousedown.stop.prevent @click="isOpen = false"
+        <div class="dropdown-menu" :style="open ? {display: 'block'} : undefined" @mousedown.stop.prevent @click="isOpen = false"
             ref="menu">
             <slot></slot>
         </div>
@@ -14,9 +14,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
 
     @Component
     export default class Dropdown extends Vue {
@@ -35,7 +34,7 @@
                 menu.style.cssText = '';
                 return;
             }
-            let element: HTMLElement | null = this.$el;
+            let element = <HTMLElement | null>this.$el;
             while(element !== null) {
                 if(getComputedStyle(element).position === 'fixed') {
                     menu.style.display = 'block';

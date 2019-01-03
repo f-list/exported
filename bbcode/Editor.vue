@@ -5,7 +5,7 @@
             style="border-bottom-left-radius:0;border-bottom-right-radius:0" v-if="hasToolbar">
             <i class="fa fa-code"></i>
         </a>
-        <div class="bbcode-toolbar btn-toolbar" role="toolbar" :style="showToolbar ? 'display:flex' : ''" @mousedown.stop.prevent
+        <div class="bbcode-toolbar btn-toolbar" role="toolbar" :style="showToolbar ? {display: 'flex'} : undefined" @mousedown.stop.prevent
             v-if="hasToolbar" style="flex:1 51%">
             <div class="btn-group" style="flex-wrap:wrap">
                 <div class="btn btn-light btn-sm" v-for="button in buttons" :title="button.title" @click.prevent.stop="apply(button)">
@@ -21,7 +21,7 @@
         <div class="bbcode-editor-text-area" style="order:100;width:100%;">
             <textarea ref="input" v-model="text" @input="onInput" v-show="!preview" :maxlength="maxlength" :placeholder="placeholder"
                 :class="finalClasses" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste" @keypress="$emit('keypress', $event)"
-                :style="hasToolbar ? 'border-top-left-radius:0' : ''"@keydown="onKeyDown"></textarea>
+                :style="hasToolbar ? {'border-top-left-radius': 0} : undefined" @keydown="onKeyDown"></textarea>
             <textarea ref="sizer"></textarea>
             <div class="bbcode-preview" v-show="preview">
                 <div class="bbcode-preview-warnings">
@@ -36,9 +36,8 @@
 </template>
 
 <script lang="ts">
+    import {Component, Hook, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import Component from 'vue-class-component';
-    import {Prop, Watch} from 'vue-property-decorator';
     import {BBCodeElement} from '../chat/bbcode';
     import {getKey} from '../chat/common';
     import {Keys} from '../keys';
@@ -82,6 +81,7 @@
         //tslint:disable:strict-boolean-expressions
         private resizeListener!: () => void;
 
+        @Hook('created')
         created(): void {
             this.parser = new CoreBBCodeParser();
             this.resizeListener = () => {
@@ -91,6 +91,7 @@
             };
         }
 
+        @Hook('mounted')
         mounted(): void {
             this.element = <HTMLTextAreaElement>this.$refs['input'];
             const styles = getComputedStyle(this.element);
@@ -113,8 +114,10 @@
             this.resize();
             window.addEventListener('resize', this.resizeListener);
         }
+
         //tslint:enable
 
+        @Hook('destroyed')
         destroyed(): void {
             window.removeEventListener('resize', this.resizeListener);
         }
@@ -189,7 +192,7 @@
             // Allow emitted variations for custom buttons.
             this.$once('insert', (startText: string, endText: string) => this.applyText(startText, endText));
             if(button.handler !== undefined)
-                return <void>button.handler.call(this, this);
+                return button.handler.call(this, this);
             if(button.startText === undefined)
                 button.startText = `[${button.tag}]`;
             if(button.endText === undefined)
