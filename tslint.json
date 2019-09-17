@@ -119,6 +119,7 @@
       true,
       "allow-declarations"
     ],
+    "ordered-imports": true,
     "prefer-function-over-method": [
       true,
       "allow-public"
@@ -138,7 +139,8 @@
       true,
       "never"
     ],
-    "strict-boolean-expressions": [true, "allow-boolean-or-undefined"],
+    "strict-boolean-expressions": false,
+    "strict-comparisons": false,
     "switch-default": false,
     "trailing-comma": [
       true,

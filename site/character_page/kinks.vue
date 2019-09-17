@@ -21,7 +21,7 @@
                         <h4>Favorites</h4>
                     </div>
                     <div class="card-body">
-                        <kink v-for="kink in groupedKinks['favorite']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                        <kink v-for="kink in groupedKinks['favorite']" :kink="kink" :key="kink.key" :highlights="highlighting"
                             :comparisons="comparison"></kink>
                     </div>
                 </div>
@@ -32,7 +32,7 @@
                         <h4>Yes</h4>
                     </div>
                     <div class="card-body">
-                        <kink v-for="kink in groupedKinks['yes']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                        <kink v-for="kink in groupedKinks['yes']" :kink="kink" :key="kink.key" :highlights="highlighting"
                             :comparisons="comparison"></kink>
                     </div>
                 </div>
@@ -43,7 +43,7 @@
                         <h4>Maybe</h4>
                     </div>
                     <div class="card-body">
-                        <kink v-for="kink in groupedKinks['maybe']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                        <kink v-for="kink in groupedKinks['maybe']" :kink="kink" :key="kink.key" :highlights="highlighting"
                             :comparisons="comparison"></kink>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
                         <h4>No</h4>
                     </div>
                     <div class="card-body">
-                        <kink v-for="kink in groupedKinks['no']" :kink="kink" :key="kink.id" :highlights="highlighting"
+                        <kink v-for="kink in groupedKinks['no']" :kink="kink" :key="kink.key" :highlights="highlighting"
                             :comparisons="comparison"></kink>
                     </div>
                 </div>
@@ -67,11 +67,11 @@
 <script lang="ts">
     import {Component, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import {Kink, KinkChoice} from '../../interfaces';
+    import {Kink, KinkChoice, KinkGroup} from '../../interfaces';
     import * as Utils from '../utils';
     import CopyCustomMenu from './copy_custom_menu.vue';
     import {methods, Store} from './data_store';
-    import {Character, DisplayKink, KinkGroup} from './interfaces';
+    import {Character, DisplayKink} from './interfaces';
     import KinkView from './kink.vue';
 
     @Component({
@@ -80,10 +80,10 @@
     export default class CharacterKinksView extends Vue {
         @Prop({required: true})
         readonly character!: Character;
-        @Prop()
+        @Prop
         readonly oldApi?: true;
         shared = Store;
-        characterToCompare = Utils.Settings.defaultCharacter;
+        characterToCompare = Utils.settings.defaultCharacter;
         highlightGroup: number | undefined;
 
         loading = false;
@@ -120,8 +120,8 @@
             this.highlighting = {};
             if(group === null) return;
             const toAssign: {[key: string]: boolean} = {};
-            for(const kinkId in this.shared.kinks.kinks) {
-                const kink = this.shared.kinks.kinks[kinkId]!;
+            for(const kinkId in Store.shared.kinks) {
+                const kink = Store.shared.kinks[kinkId];
                 if(kink.kink_group === group)
                     toAssign[kinkId] = true;
             }
@@ -129,7 +129,7 @@
         }
 
         get kinkGroups(): {[key: string]: KinkGroup | undefined} {
-            return this.shared.kinks.kink_groups;
+            return Store.shared.kinkGroups;
         }
 
         get compareButtonText(): string {
@@ -139,7 +139,7 @@
         }
 
         get groupedKinks(): {[key in KinkChoice]: DisplayKink[]} {
-            const kinks = this.shared.kinks.kinks;
+            const kinks = Store.shared.kinks;
             const characterKinks = this.character.character.kinks;
             const characterCustoms = this.character.character.customs;
             const displayCustoms: {[key: string]: DisplayKink | undefined} = {};
@@ -152,7 +152,8 @@
                 isCustom: false,
                 hasSubkinks: false,
                 ignore: false,
-                subkinks: []
+                subkinks: [],
+                key: kink.id.toString()
             });
             const kinkSorter = (a: DisplayKink, b: DisplayKink) => {
                 if(this.character.settings.customs_first && a.isCustom !== b.isCustom)
@@ -174,13 +175,14 @@
                     isCustom: true,
                     hasSubkinks: false,
                     ignore: false,
-                    subkinks: []
+                    subkinks: [],
+                    key: `c${custom.id}`
                 };
             }
 
             for(const kinkId in characterKinks) {
                 const kinkChoice = characterKinks[kinkId]!;
-                const kink = kinks[kinkId];
+                const kink = <Kink | undefined>kinks[kinkId];
                 if(kink === undefined) continue;
                 const newKink = makeKink(kink);
                 if(typeof kinkChoice === 'number' && typeof displayCustoms[kinkChoice] !== 'undefined') {

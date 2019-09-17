@@ -16,8 +16,8 @@
                 </template>
                 <template v-else>
                     <span v-if="character.self_staff || character.settings.block_bookmarks !== true">
-                        <a @click.prevent="toggleBookmark()" :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}"
-                            href="#" class="btn">
+                        <a @click.prevent="toggleBookmark()" href="#" class="btn"
+                            :class="{bookmarked: character.bookmarked, unbookmarked: !character.bookmarked}">
                             <i class="fa fa-fw" :class="{'fa-minus': character.bookmarked, 'fa-plus': !character.bookmarked}"></i>Bookmark
                         </a>
                         <span v-if="character.settings.block_bookmarks" class="prevents-bookmarks">!</span>
@@ -39,11 +39,13 @@
             <div v-if="character.character.online_chat" @click="showInChat()" class="character-page-online-chat">Online In Chat</div>
 
             <div class="contact-block">
-                <contact-method v-for="method in contactMethods" :method="method" :key="method.id"></contact-method>
+                <contact-method v-for="method in contactMethods" :infotag="method" :key="method.id"
+                    :data="character.character.infotags[method.id]"></contact-method>
             </div>
 
             <div class="quick-info-block">
-                <infotag-item v-for="infotag in quickInfoItems" :infotag="infotag" :key="infotag.id"></infotag-item>
+                <infotag-item v-for="id in quickInfoIds" v-if="character.character.infotags[id]" :infotag="getInfotag(id)"
+                    :data="character.character.infotags[id]" :key="id"></infotag-item>
                 <div class="quick-info">
                     <span class="quick-info-label">Created: </span>
                     <span class="quick-info-value"><date :time="character.character.created_at"></date></span>
@@ -99,7 +101,7 @@
     import DuplicateDialog from './duplicate_dialog.vue';
     import FriendDialog from './friend_dialog.vue';
     import InfotagView from './infotag.vue';
-    import {Character, CONTACT_GROUP_ID, SharedStore} from './interfaces';
+    import {Character, CONTACT_GROUP_ID} from './interfaces';
     import MemoDialog from './memo_dialog.vue';
     import ReportDialog from './report_dialog.vue';
 
@@ -139,9 +141,8 @@
     export default class Sidebar extends Vue {
         @Prop({required: true})
         readonly character!: Character;
-        @Prop()
+        @Prop
         readonly oldApi?: true;
-        readonly shared: SharedStore = Store;
         readonly quickInfoIds: ReadonlyArray<number> = [1, 3, 2, 49, 9, 29, 15, 41, 25]; // Do not sort these.
         readonly avatarUrl = Utils.avatarURL;
 
@@ -209,20 +210,16 @@
         }
 
         async toggleBookmark(): Promise<void> {
-            const previousState = this.character.bookmarked;
             try {
-                const state = !this.character.bookmarked;
-                this.$emit('bookmarked', state);
-                const actualState = await methods.bookmarkUpdate(this.character.character.id, state);
-                this.$emit('bookmarked', actualState);
+                await methods.bookmarkUpdate(this.character.character.id, !this.character.bookmarked);
+                this.character.bookmarked = !this.character.bookmarked;
             } catch(e) {
-                this.$emit('bookmarked', previousState);
                 Utils.ajaxError(e, 'Unable to change bookmark state.');
             }
         }
 
         get editUrl(): string {
-            return `${Utils.siteDomain}character/${this.character.character.id}/`;
+            return `${Utils.siteDomain}character/${this.character.character.id}/edit`;
         }
 
         get noteUrl(): string {
@@ -230,33 +227,13 @@
         }
 
         get contactMethods(): {id: number, value?: string}[] {
-            const contactInfotags = Utils.groupObjectBy(Store.kinks.infotags, 'infotag_group');
-            contactInfotags[CONTACT_GROUP_ID]!.sort((a: Infotag, b: Infotag) => a.name < b.name ? -1 : 1);
-            const contactMethods = [];
-            for(const infotag of contactInfotags[CONTACT_GROUP_ID]!) {
-                const charTag = this.character.character.infotags[infotag.id];
-                if(charTag === undefined) continue;
-                contactMethods.push({
-                    id: infotag.id,
-                    value: charTag.string
-                });
-            }
-            return contactMethods;
+            return Object.keys(Store.shared.infotags).map((x) => Store.shared.infotags[x])
+                .filter((x) => x.infotag_group === CONTACT_GROUP_ID && this.character.character.infotags[x.id] !== undefined)
+                .sort((a, b) => a.name < b.name ? -1 : 1);
         }
 
-        get quickInfoItems(): {id: number, string?: string, list?: number, number?: number}[] {
-            const quickItems = [];
-            for(const id of this.quickInfoIds) {
-                const infotag = this.character.character.infotags[id];
-                if(infotag === undefined) continue;
-                quickItems.push({
-                    id,
-                    string: infotag.string,
-                    list: infotag.list,
-                    number: infotag.number
-                });
-            }
-            return quickItems;
+        getInfotag(id: number): Infotag {
+            return Store.shared.infotags[id];
         }
 
         get authenticated(): boolean {

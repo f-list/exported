@@ -2,7 +2,7 @@
     <div style="height:100%;display:flex;flex-direction:column;flex:1;margin:0 5px;position:relative" id="conversation">
         <div style="display:flex" v-if="isPrivate(conversation)" class="header">
             <img :src="characterImage" style="height:60px;width:60px;margin-right:10px" v-if="settings.showAvatars"/>
-            <div style="flex:1;position:relative;display:flex;flex-direction:column">
+            <div style="flex:1;position:relative;display:flex;flex-direction:column;user-select:text">
                 <div>
                     <user :character="conversation.character"></user>
                     <a href="#" @click.prevent="showLogs()" class="btn">
@@ -14,7 +14,7 @@
                     <a href="#" @click.prevent="reportDialog.report()" class="btn">
                         <span class="fa fa-exclamation-triangle"></span><span class="btn-text">{{l('chat.report')}}</span></a>
                 </div>
-                <div style="overflow:auto;max-height:50px">
+                <div style="overflow:auto;overflow-x:hidden;max-height:50px;user-select:text">
                     {{l('status.' + conversation.character.status)}}
                     <span v-show="conversation.character.statusText"> – <bbcode :text="conversation.character.statusText"></bbcode></span>
                 </div>
@@ -129,9 +129,10 @@
     import {Component, Hook, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
     import {EditorButton, EditorSelection} from '../bbcode/editor';
+    import {BBCodeView} from '../bbcode/view';
     import {isShowing as anyDialogsShown} from '../components/Modal.vue';
     import {Keys} from '../keys';
-    import {BBCodeView, Editor} from './bbcode';
+    import {Editor} from './bbcode';
     import CommandHelp from './CommandHelp.vue';
     import {characterImage, getByteLength, getKey} from './common';
     import ConversationSettings from './ConversationSettings.vue';
@@ -148,7 +149,7 @@
     @Component({
         components: {
             user: UserView, 'bbcode-editor': Editor, 'manage-channel': ManageChannel, settings: ConversationSettings,
-            logs: Logs, 'message-view': MessageView, bbcode: BBCodeView, 'command-help': CommandHelp
+            logs: Logs, 'message-view': MessageView, bbcode: BBCodeView(core.bbCodeParser), 'command-help': CommandHelp
         }
     })
     export default class ConversationView extends Vue {
@@ -281,8 +282,13 @@
             if(this.messageView.scrollTop < 20) {
                 if(!this.scrolledUp) {
                     const firstMessage = this.messageView.firstElementChild;
-                    if(this.conversation.loadMore() && firstMessage !== null)
-                        this.$nextTick(() => setTimeout(() => this.messageView.scrollTop = (<HTMLElement>firstMessage).offsetTop, 0));
+                    if(this.conversation.loadMore() && firstMessage !== null) {
+                        this.messageView.style.overflow = 'hidden';
+                        this.$nextTick(() => {
+                            this.messageView.scrollTop = (<HTMLElement>firstMessage).offsetTop;
+                            this.messageView.style.overflow = 'auto';
+                        });
+                    }
                 }
                 this.scrolledUp = true;
             } else this.scrolledUp = false;

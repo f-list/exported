@@ -15,14 +15,15 @@
     import Vue from 'vue';
     import * as Utils from '../utils';
     import {methods} from './data_store';
-    import {Character, CharacterFriend} from './interfaces';
+    import {Character} from './interfaces';
+    import {SimpleCharacter} from '../../interfaces';
 
     @Component
     export default class FriendsView extends Vue {
         @Prop({required: true})
         private readonly character!: Character;
         private shown = false;
-        friends: CharacterFriend[] = [];
+        friends: SimpleCharacter[] = [];
         loading = true;
         error = '';
 

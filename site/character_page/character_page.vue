@@ -5,7 +5,7 @@
             <div class="alert alert-danger" v-show="error">{{error}}</div>
         </div>
         <div class="col-md-4 col-lg-3 col-xl-2" v-if="!loading && character">
-            <sidebar :character="character" @memo="memo" @bookmarked="bookmarked" :oldApi="oldApi"></sidebar>
+            <sidebar :character="character" @memo="memo" :oldApi="oldApi"></sidebar>
         </div>
         <div class="col-md-8 col-lg-9 col-xl-10 profile-body" v-if="!loading && character">
             <div id="characterView">
@@ -34,28 +34,26 @@
                             </tabs>
                         </div>
                         <div class="card-body">
-                            <div class="tab-content">
-                                <div role="tabpanel" class="tab-pane" :class="{active: tab === '0'}" id="overview">
-                                    <div v-bbcode="character.character.description" style="margin-bottom: 10px"></div>
-                                    <character-kinks :character="character" :oldApi="oldApi" ref="tab0"></character-kinks>
+                            <div role="tabpanel" v-show="tab === '0'">
+                                <div style="margin-bottom:10px">
+                                    <bbcode :text="character.character.description"></bbcode>
                                 </div>
-                                <div role="tabpanel" class="tab-pane" :class="{active: tab === '1'}" id="infotags">
-                                    <character-infotags :character="character" ref="tab1"></character-infotags>
-                                </div>
-                                <div role="tabpanel" class="tab-pane" id="groups" :class="{active: tab === '2'}" v-if="!oldApi">
-                                    <character-groups :character="character" ref="tab2"></character-groups>
-                                </div>
-                                <div role="tabpanel" class="tab-pane" id="images" :class="{active: tab === '3'}">
-                                    <character-images :character="character" ref="tab3" :use-preview="imagePreview"></character-images>
-                                </div>
-                                <div v-if="character.settings.guestbook" role="tabpanel" class="tab-pane" :class="{active: tab === '4'}"
-                                    id="guestbook">
-                                    <character-guestbook :character="character" :oldApi="oldApi" ref="tab4"></character-guestbook>
-                                </div>
-                                <div v-if="character.is_self || character.settings.show_friends" role="tabpanel" class="tab-pane"
-                                    :class="{active: tab === '5'}" id="friends">
-                                    <character-friends :character="character" ref="tab5"></character-friends>
-                                </div>
+                                <character-kinks :character="character" :oldApi="oldApi" ref="tab0"></character-kinks>
+                            </div>
+                            <div role="tabpanel" v-show="tab === '1'">
+                                <character-infotags :character="character" ref="tab1"></character-infotags>
+                            </div>
+                            <div role="tabpanel" v-show="tab === '2'" v-if="!oldApi">
+                                <character-groups :character="character" ref="tab2"></character-groups>
+                            </div>
+                            <div role="tabpanel" v-show="tab === '3'">
+                                <character-images :character="character" ref="tab3" :use-preview="imagePreview"></character-images>
+                            </div>
+                            <div v-if="character.settings.guestbook" role="tabpanel" v-show="tab === '4'">
+                                <character-guestbook :character="character" :oldApi="oldApi" ref="tab4"></character-guestbook>
+                            </div>
+                            <div v-if="character.is_self || character.settings.show_friends" role="tabpanel" v-show="tab === '5'">
+                                <character-friends :character="character" ref="tab5"></character-friends>
                             </div>
                         </div>
                     </div>
@@ -68,18 +66,18 @@
 <script lang="ts">
     import {Component, Hook, Prop, Watch} from '@f-list/vue-ts';
     import Vue from 'vue';
-    import {standardParser} from '../../bbcode/standard';
-    import * as Utils from '../utils';
-    import {methods, Store} from './data_store';
-    import {Character, SharedStore} from './interfaces';
-
+    import {StandardBBCodeParser} from '../../bbcode/standard';
+    import {BBCodeView} from '../../bbcode/view';
     import DateDisplay from '../../components/date_display.vue';
     import Tabs from '../../components/tabs';
+    import * as Utils from '../utils';
+    import {methods, Store} from './data_store';
     import FriendsView from './friends.vue';
     import GroupsView from './groups.vue';
     import GuestbookView from './guestbook.vue';
     import ImagesView from './images.vue';
     import InfotagsView from './infotags.vue';
+    import {Character, SharedStore} from './interfaces';
     import CharacterKinksView from './kinks.vue';
     import Sidebar from './sidebar.vue';
 
@@ -87,28 +85,25 @@
         show?(): void
     }
 
+    const standardParser = new StandardBBCodeParser();
+
     @Component({
         components: {
-            sidebar: Sidebar,
-            date: DateDisplay, tabs: Tabs,
-            'character-friends': FriendsView,
-            'character-guestbook': GuestbookView,
-            'character-groups': GroupsView,
-            'character-infotags': InfotagsView,
-            'character-images': ImagesView,
-            'character-kinks': CharacterKinksView
+            sidebar: Sidebar, date: DateDisplay, 'character-friends': FriendsView, 'character-guestbook': GuestbookView,
+            'character-groups': GroupsView, 'character-infotags': InfotagsView, 'character-images': ImagesView, tabs: Tabs,
+            'character-kinks': CharacterKinksView, bbcode: BBCodeView(standardParser)
         }
     })
     export default class CharacterPage extends Vue {
-        @Prop()
+        @Prop
         readonly name?: string;
-        @Prop()
-        readonly characterid?: number;
+        @Prop
+        readonly id?: number;
         @Prop({required: true})
         readonly authenticated!: boolean;
-        @Prop()
+        @Prop
         readonly oldApi?: true;
-        @Prop()
+        @Prop
         readonly imagePreview?: true;
         shared: SharedStore = Store;
         character: Character | undefined;
@@ -143,20 +138,15 @@
             Vue.set(this.character!, 'memo', memo);
         }
 
-        bookmarked(state: boolean): void {
-            Vue.set(this.character!, 'bookmarked', state);
-        }
-
         private async _getCharacter(): Promise<void> {
             this.error = '';
             this.character = undefined;
-            if(this.name === undefined || this.name.length === 0)
+            if((this.name === undefined || this.name.length === 0) && !this.id)
                 return;
             try {
                 this.loading = true;
                 await methods.fieldsGet();
-                this.character = await methods.characterData(this.name, this.characterid);
-                standardParser.allowInlines = true;
+                this.character = await methods.characterData(this.name, this.id);
                 standardParser.inlines = this.character.character.inlines;
             } catch(e) {
                 this.error = Utils.isJSONError(e) ? <string>e.response.data.error : (<Error>e).message;

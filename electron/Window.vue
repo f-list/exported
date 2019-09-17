@@ -75,7 +75,7 @@
         tabs: Tab[] = [];
         activeTab: Tab | undefined;
         tabMap: {[key: number]: Tab} = {};
-        isMaximized = browserWindow.isMaximized();
+        isMaximized = false;
         canOpenTab = true;
         l = l;
         hasUpdate = false;
@@ -83,8 +83,8 @@
         lockTab = false;
 
         @Hook('mounted')
-        mounted(): void {
-            this.addTab();
+        async mounted(): Promise<void> {
+            await this.addTab();
             electron.ipcRenderer.on('settings', (_: Event, settings: GeneralSettings) => this.settings = settings);
             electron.ipcRenderer.on('allow-new-tabs', (_: Event, allow: boolean) => this.canOpenTab = allow);
             electron.ipcRenderer.on('open-tab', () => this.addTab());
@@ -153,6 +153,7 @@
                 browserWindow.hide();
                 return false;
             };
+            this.isMaximized = browserWindow.isMaximized();
         }
 
         destroyAllTabs(): void {
@@ -186,12 +187,12 @@
             ];
         }
 
-        addTab(): void {
+        async addTab(): Promise<void> {
             if(this.lockTab) return;
             const tray = new electron.remote.Tray(trayIcon);
             tray.setToolTip(l('title'));
             tray.on('click', (_) => this.trayClicked(tab));
-            const view = new electron.remote.BrowserView();
+            const view = new electron.remote.BrowserView({webPreferences: {nodeIntegration: true}});
             view.setAutoResize({width: true, height: true});
             electron.ipcRenderer.send('tab-added', view.webContents.id);
             const tab = {active: false, view, user: undefined, hasNew: false, tray};
@@ -200,13 +201,14 @@
             this.tabMap[view.webContents.id] = tab;
             this.show(tab);
             this.lockTab = true;
-            view.webContents.loadURL(url.format({
+            await view.webContents.loadURL(url.format({
                 pathname: path.join(__dirname, 'index.html'),
                 protocol: 'file:',
                 slashes: true,
                 query: {settings: JSON.stringify(this.settings)}
             }));
-            view.webContents.on('did-stop-loading', () => this.lockTab = false);
+            tab.view.setBounds(getWindowBounds());
+            this.lockTab = false;
         }
 
         show(tab: Tab): void {
@@ -259,6 +261,7 @@
             align-items: center;
             line-height: 1;
             -webkit-app-region: no-drag;
+            flex-grow: 0;
         }
 
         .btn-default {

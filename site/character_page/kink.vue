@@ -1,5 +1,5 @@
 <template>
-    <div class="character-kink" :class="kinkClasses" :id="kinkId" @click="toggleSubkinks" :data-custom="customId"
+    <div class="character-kink" :class="kinkClasses" :id="kink.key" @click="toggleSubkinks"
         @mouseover.stop="showTooltip = true" @mouseout.stop="showTooltip = false">
         <i v-show="kink.hasSubkinks" class="fa" :class="{'fa-minus': !listClosed, 'fa-plus': listClosed}"></i>
         <i v-show="!kink.hasSubkinks && kink.isCustom" class="far fa-dot-circle custom-kink-icon"></i>
@@ -42,10 +42,6 @@
             this.listClosed = !this.listClosed;
         }
 
-        get kinkId(): number {
-            return this.kink.isCustom ? -this.kink.id : this.kink.id;
-        }
-
         get kinkClasses(): {[key: string]: boolean} {
             const classes: {[key: string]: boolean} = {
                 'stock-kink': !this.kink.isCustom,
@@ -53,7 +49,7 @@
                 highlighted: !this.kink.isCustom && this.highlights[this.kink.id],
                 subkink: this.kink.hasSubkinks
             };
-            classes[`kink-id-${this.kinkId}`] = true;
+            classes[`kink-id-${this.kink.key}`] = true;
             classes[`kink-group-${this.kink.group}`] = true;
             if(!this.kink.isCustom && typeof this.comparisons[this.kink.id] !== 'undefined')
                 classes[`comparison-${this.comparisons[this.kink.id]}`] = true;
