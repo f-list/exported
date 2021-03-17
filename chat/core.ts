@@ -44,12 +44,6 @@ const vue = <Vue & VueState>new Vue({
         characters: undefined,
         conversations: undefined,
         state
-    },
-    watch: {
-        'state.hiddenUsers': async(newValue: string[], oldValue: string[]) => {
-            if(data.settingsStore !== undefined && newValue !== oldValue)
-                await data.settingsStore.set('hiddenUsers', newValue);
-        }
     }
 });
 
@@ -86,6 +80,9 @@ export function init(this: void, connection: Connection, logsClass: new() => Log
     data.register('characters', Characters(connection));
     data.register('channels', Channels(connection, core.characters));
     data.register('conversations', Conversations());
+    data.watch(() => state.hiddenUsers, async(newValue) => {
+        if(data.settingsStore !== undefined) await data.settingsStore.set('hiddenUsers', newValue);
+    });
     connection.onEvent('connecting', async() => {
         await data.reloadSettings();
         data.bbCodeParser = createBBCodeParser();

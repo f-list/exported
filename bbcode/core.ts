@@ -79,6 +79,19 @@ export class CoreBBCodeParser extends BBCodeParser {
             element.appendChild(span);
             return element;
         }));
+        this.addTag(new BBCodeCustomTag('spoiler', (parser, parent) => {
+            const link = parser.createElement('a');
+            const content = parser.createElement('span');
+            link.href = '#';
+            link.onclick = (e) => {
+                const target = e.target as HTMLElement;
+                target.parentElement!.replaceChild(content, target);
+                return false;
+            };
+            link.appendChild(document.createTextNode('[click to show spoiler]'));
+            parent.appendChild(link);
+            return content;
+        }));
     }
 
     parseEverything(input: string): HTMLElement {

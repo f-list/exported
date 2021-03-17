@@ -77,7 +77,7 @@ export class BBCodeParser {
         const parent = document.createElement('span');
         parent.className = 'bbcode';
         this._currentTag = {tag: '<root>', line: 1, column: 1};
-        this.parse(input, 0, undefined, parent, () => true);
+        this.parse(input, 0, undefined, parent, () => true, 0);
 
         //if(process.env.NODE_ENV !== 'production' && this._warnings.length > 0)
         //    console.log(this._warnings);
@@ -115,7 +115,7 @@ export class BBCodeParser {
     }
 
     private parse(input: string, start: number, self: BBCodeTag | undefined, parent: HTMLElement | undefined,
-                  isAllowed: (tag: string) => boolean): number {
+                  isAllowed: (tag: string) => boolean, depth: number): number {
         let currentTag = this._currentTag;
         const selfAllowed = self !== undefined ? isAllowed(self.tag) : true;
         if(self !== undefined) {
@@ -157,21 +157,21 @@ export class BBCodeParser {
                         parent.appendChild(document.createTextNode(input.substring(mark, allowed ? tagStart : i + 1)));
                         mark = i + 1;
                     }
-                    if(!allowed || parent === undefined) {
-                        i = this.parse(input, i + 1, tag, parent, isAllowed);
+                    if(!allowed || parent === undefined || depth > 100) {
+                        i = this.parse(input, i + 1, tag, parent, isAllowed, depth + 1);
                         mark = i + 1;
                         continue;
                     }
                     let element: HTMLElement | undefined;
                     if(tag instanceof BBCodeTextTag) {
-                        i = this.parse(input, i + 1, tag, undefined, isAllowed);
+                        i = this.parse(input, i + 1, tag, undefined, isAllowed, depth + 1);
                         element = tag.createElement(this, parent, param, input.substring(mark, input.lastIndexOf('[', i)));
                         if(element === undefined) parent.appendChild(document.createTextNode(input.substring(tagStart, i + 1)));
                     } else {
                         element = tag.createElement(this, parent, param, '');
                         if(element === undefined) parent.appendChild(document.createTextNode(input.substring(tagStart, i + 1)));
                         if(!tag.noClosingTag)
-                            i = this.parse(input, i + 1, tag, element !== undefined ? element : parent, isAllowed);
+                            i = this.parse(input, i + 1, tag, element !== undefined ? element : parent, isAllowed, depth + 1);
                         if(element === undefined)
                             parent.appendChild(document.createTextNode(input.substring(input.lastIndexOf('[', i), i + 1)));
                     }

@@ -61,12 +61,14 @@ export function formatTime(this: void | never, date: Date, noDate: boolean = fal
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function messageToString(this: void | never, msg: Conversation.Message, timeFormatter: (date: Date) => string = formatTime): string {
+export function messageToString(this: void | never, msg: Conversation.Message, timeFormatter: (date: Date) => string = formatTime,
+                                characterTransform: (str: string) => string = (x) => x,
+                                textTransform: (str: string) => string = (x) => x): string {
     let text = `[${timeFormatter(msg.time)}] `;
     if(msg.type !== Conversation.Message.Type.Event)
-        text += (msg.type === Conversation.Message.Type.Action ? '*' : '') + msg.sender.name +
+        text += (msg.type === Conversation.Message.Type.Action ? '*' : '') + characterTransform(msg.sender.name) +
             (msg.type === Conversation.Message.Type.Message ? ':' : '');
-    return `${text} ${msg.text}\r\n`;
+    return `${text} ${textTransform(msg.text)}\r\n`;
 }
 
 export function getKey(e: KeyboardEvent): Keys {
