@@ -22,7 +22,8 @@
             <textarea ref="input" v-model="text" @input="onInput" v-show="!preview" :maxlength="maxlength" :placeholder="placeholder"
                 :class="finalClasses" @keyup="onKeyUp" :disabled="disabled" @paste="onPaste" @keypress="$emit('keypress', $event)"
                 :style="hasToolbar ? {'border-top-left-radius': 0} : undefined" @keydown="onKeyDown"></textarea>
-            <textarea ref="sizer"></textarea>
+            <textarea ref="sizer" :class="finalClasses"
+                style="height:0;min-height:0;overflow:hidden;position:absolute;top:0;visibility:hidden"></textarea>
             <div class="bbcode-preview" v-show="preview">
                 <div class="bbcode-preview-warnings">
                     <div class="alert alert-danger" v-show="previewWarnings.length">
@@ -93,23 +94,14 @@
         @Hook('mounted')
         mounted(): void {
             this.element = <HTMLTextAreaElement>this.$refs['input'];
-            const styles = getComputedStyle(this.element);
-            this.maxHeight = parseInt(styles.maxHeight!, 10) || 250;
-            this.minHeight = parseInt(styles.minHeight!, 10) || 60;
+            this.sizer = <HTMLTextAreaElement>this.$refs['sizer'];
             setInterval(() => {
                 if(Date.now() - this.lastInput >= 500 && this.text !== this.undoStack[0] && this.undoIndex === 0) {
                     if(this.undoStack.length >= 30) this.undoStack.pop();
                     this.undoStack.unshift(this.text);
                 }
             }, 500);
-            this.sizer = <HTMLTextAreaElement>this.$refs['sizer'];
-            this.sizer.style.cssText = styles.cssText;
-            this.sizer.style.height = '0';
-            this.sizer.style.minHeight = '0';
-            this.sizer.style.overflow = 'hidden';
-            this.sizer.style.position = 'absolute';
-            this.sizer.style.top = '0';
-            this.sizer.style.visibility = 'hidden';
+            this.resizeListener();
             this.resize();
             window.addEventListener('resize', this.resizeListener);
         }
@@ -246,11 +238,11 @@
         }
 
         resize(): void {
-            this.sizer.style.fontSize = this.element.style.fontSize;
-            this.sizer.style.lineHeight = this.element.style.lineHeight;
             this.sizer.style.width = `${this.element.offsetWidth}px`;
             this.sizer.value = this.element.value;
-            this.element.style.height = `${Math.max(Math.min(this.sizer.scrollHeight, this.maxHeight), this.minHeight)}px`;
+            const borderHeight = this.element.offsetHeight - this.element.clientHeight;
+            const borderBoxHeight = this.sizer.scrollHeight + borderHeight;
+            this.element.style.height = `${Math.max(Math.min(borderBoxHeight, this.maxHeight), this.minHeight)}px`;
             this.sizer.style.width = '0';
         }
 
