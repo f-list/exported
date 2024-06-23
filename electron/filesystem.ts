@@ -119,7 +119,6 @@ export function fixLogs(character: string): void {
         const fd = fs.openSync(full, 'r+');
         const indexPath = path.join(dir, `${file}.idx`);
         if(!fs.existsSync(indexPath)) {
-            fs.unlinkSync(full);
             continue;
         }
         const indexFd = fs.openSync(indexPath, 'r+');
