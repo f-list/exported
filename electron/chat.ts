@@ -91,7 +91,7 @@ function openIncognito(url: string): void {
     let start = 'iexplore.exe -private';
     for(const key in commands)
         if(browser!.indexOf(key) !== -1) start = commands[<keyof typeof commands>key];
-    exec(`start ${start} ${url}`);
+    exec(`start ${start} "${url}"`);
 }
 
 const webContents = electron.remote.getCurrentWebContents();
