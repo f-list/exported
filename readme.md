@@ -22,6 +22,34 @@ See https://electron.atom.io/docs/tutorial/application-distribution/
    - On Mac you can add your code signing identity as an argument. `zip` is required to be installed.
    - On Linux you can add a GPG key for signing and its password as arguments. `mksquashfs` and `zsyncmake` are required to be installed.
 
+### Building under Windows
+
+Because of the code's age, it's necessary to use some older versions of related tools. The specific steps that have gotten a successful build under Windows are:
+
+1) Install and use PowerShell 7 as Administrator
+2) Download and install Python 2.7.18: https://www.python.org/downloads/release/python-2718/
+3) Install Visual Studio 2015 C++ tools (Download `mu_visual_cpp_build_tools_2015_update_3_x64_dvd_dfd9a39c.iso` from Microsoft Developer)
+4) Install Scoop packager: https://scoop.sh/
+5) Install FNM with Scoop: `scoop install fnm`
+6) Install Git with Scoop: `scoop install git`
+7) Check that FNM is installed: `fnm --version`
+8) Add FNM environment variables to PowerShell 7:
+
+Create powershell profile: `if (-not (Test-Path $profile)) { New-Item $profile -Force }`
+Open profile in editor: `Invoke-Item $profile`
+Add to file and save: fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression`
+
+9) Install Node 10 with FNM: `fnm install 10.24.1`
+10) Set up Node 10 to be used globally: `fnm use 10.24.1`
+11) Check node version: `node -v`
+12) Install Yarn Classic: `npm install --global yarn`
+13) Clone this repo
+14) Enter the exported directory and install the Node modules: `yarn install`
+16) Enter 'electron' and build it: `yarn build` for dev, or `yarn build:dist` for prod
+17) To launch a test version of the app: `yarn start`
+18) To package it, enter electron: `yarn run pack`
+19) There should now be a "dist" folder with a ZIP, an installer and RELEASE/ NUPKG files.
+
 ## Building for Mobile
  - Change into the `mobile` directory.
  - Run `yarn build`/`yarn watch` to build assets. They are placed into the `www` directory.
