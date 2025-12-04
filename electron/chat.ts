@@ -30,7 +30,7 @@
  * @see {@link https://github.com/f-list/exported|GitHub repo}
  */
 import Axios from 'axios';
-import {exec, execSync} from 'child_process';
+import {exec, execSync, spawn} from 'child_process';
 import * as electron from 'electron';
 import * as path from 'path';
 import * as qs from 'querystring';
@@ -76,6 +76,7 @@ if(process.env.NODE_ENV === 'production') {
 }
 let browser: string | undefined;
 
+
 function openIncognito(url: string): void {
     if(browser === undefined)
         try { //tslint:disable-next-line:max-line-length
@@ -85,13 +86,24 @@ function openIncognito(url: string): void {
             console.error(e);
         }
     const commands = {
-        chrome: 'chrome.exe -incognito', firefox: 'firefox.exe -private-window', vivaldi: 'vivaldi.exe -incognito',
-        opera: 'opera.exe -private'
+        chrome: 'chrome.exe', firefox: 'firefox.exe', vivaldi: 'vivaldi.exe', opera: 'opera.exe'
     };
-    let start = 'iexplore.exe -private';
-    for(const key in commands)
-        if(browser!.indexOf(key) !== -1) start = commands[<keyof typeof commands>key];
-    exec(`start ${start} "${url}"`);
+    const params = {
+    chrome: '-incognito', firefox: '-private-window', vivaldi: '-incognito', opera: '-private'
+    };
+    let start = 'iexplore.exe';
+    let param = '-private';
+    for(const key in commands) 
+        if(browser!.indexOf(key) !== -1) {
+        start = commands[<keyof typeof commands>key];
+        param = params[<keyof typeof params>key];
+    }
+
+    let executableName = execSync(`where.exe /r "c:\\Program Files" "${start}"`, { encoding: 'utf-8', timeout: 3000})
+        .toString('utf-8')
+        .trim()
+        .split('\n', 2)[0];
+    spawn(executableName, [param, url]);
 }
 
 const webContents = electron.remote.getCurrentWebContents();
